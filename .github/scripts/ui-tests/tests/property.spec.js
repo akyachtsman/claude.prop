@@ -123,7 +123,7 @@ test('S11 one-screen — dashboard fits 1440×900 with no vertical scroll', asyn
 
 test('S12 deal summary — editable strip syncs with Offer & Debt card and derives All-In', async ({ page }) => {
   await loadSample(page);
-  const summaryOffer = page.locator('.deal-summary input[aria-label="Offer price"]');
+  const summaryOffer = page.locator('.deal-strip input[aria-label="Offer price"]');
   const debtOffer = page.locator('.card[aria-label="Offer & Debt Service"] input[aria-label="Offer price"]');
   const allIn = page.locator('.deal-cell--accent .deal-cell__val');
   await expect(allIn).toHaveText('$244,335');           // derived, painted into the strip

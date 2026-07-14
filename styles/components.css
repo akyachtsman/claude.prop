@@ -337,13 +337,18 @@ body {
 
 .dash-actions { display: flex; gap: var(--space-2); margin-top: var(--space-2); }
 
-/* deal summary strip — Offer / All-In / Fees / Improvement (mirrors workbook) */
-.deal-summary {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px var(--space-2);
-  margin-bottom: var(--space-1); padding-bottom: var(--space-1);
-  border-bottom: 1px solid var(--color-border);
+/* deal summary — full-width framed band above the cards (mirrors workbook) */
+.deal-strip {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
+  overflow: hidden; margin-bottom: 8px;
 }
-.deal-cell { display: flex; flex-direction: column; gap: 0; min-width: 0; }
+.deal-strip .deal-cell { padding: 5px var(--space-3); border-left: 1px solid var(--color-border); }
+.deal-strip .deal-cell:first-child { border-left: none; }
+.deal-strip .input { min-height: 28px; padding: 2px var(--space-2); font-size: var(--font-sm); }
+@media (pointer: coarse) { .deal-strip .input { min-height: 44px; font-size: 16px; } }
+.deal-cell { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .deal-cell__label {
   font-size: 10px; font-weight: 700; text-transform: uppercase;
   letter-spacing: 0.04em; color: var(--color-text-secondary);
