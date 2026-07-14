@@ -1,0 +1,88 @@
+# Competitive Analysis: Stessa (stessa.com)
+
+**Access note:** Stessa's own site and app-store pages block automated fetching from this environment, so this analysis is built from search-indexed content of stessa.com marketing/pricing pages, Stessa's public Help Center (support.stessa.com), Stessa's blog, press releases, and third-party reviews (Capterra, GetApp, Software Advice, Trustpilot, RETipster, Landlord Gurus, TurboTenant/Baselane comparisons). All claims below trace to those public sources; visual observations come from publicly posted product screenshots and reviewer descriptions.
+
+**Positioning summary:** Stessa (founded by investors Heath Silverman and Jonah Schwartz; acquired by JLL in 2018, then Roofstock in 2021) is *backward-looking asset management* — automated bookkeeping, rent collection, banking, and tax prep for existing rentals. It is **not** an underwriting tool. That's the strategic gap for a CAP/NOI/DSCR/IRR/NPV analytics product: Stessa tells you how your properties *did*; it barely touches how a deal *would* perform.
+
+---
+
+## 1. Information architecture
+
+- **Marketing site nav:** feature pillars (Accounting, Landlord Banking/Cash Management, Rent Collection, Tenant Screening, Leases & Applications), Pricing, and a huge Resources/Blog layer (Tax Center, templates, calculators, comparison pages). Distinct URL-per-feature pages (`/accounting/`, `/banking/`, `/pricing/`, `/overview/`, `/company/`) — each one a standalone SEO landing page with its own CTA.
+- **In-app organization is a three-level hierarchy: Portfolio → Property → Unit.** Properties can be grouped into named portfolios (useful for separate LLCs/ownership entities), and nearly everything — dashboards, reports, transactions — can be scoped to All Properties, one Portfolio, or one Property.
+- **In-app nav (per Help Center "Navigating Your Account"):** Dashboard, Properties, Transactions, Leases & Tenants (nested under each property), Tenant Screening, Cash Management/Banking, Documents, Reports, Connected Accounts. Financial data (Transactions) is deliberately separated from operational data (Leases & Tenants).
+- Two dashboard altitudes: a **portfolio-level rollup dashboard** and a **per-property dashboard**, same card system at both levels — a clean pattern for a comparison-oriented product to study.
+
+## 2. Core user flows
+
+- **Add property:** enter address → property auto-created with basic detail fields (acquisition date, acquisition price, units); from the portfolio kebab menu, "Add another property" → Continue. Unlimited properties on every tier, including free. Then optionally enter historical data (prior income/expenses, past valuations) via a dedicated flow so charts backfill.
+- **Track financials (the core loop):** link bank/credit-card/mortgage accounts via Plaid and MoneyKit → transactions auto-import (posted transactions only, refreshed multiple times daily, appearing within 6–12 hours; initial import up to 24h) → **auto-categorized into Schedule E-aligned categories** → user reviews, assigns to property/unit, splits, or recategorizes. Supplementary inputs: mobile receipt scanning with OCR, CSV import, and integrations pulling data from property-management systems (e.g., Propertyware, AppFolio).
+- **View metrics:** dashboard "comes to life" as data lands — the marketing explicitly sells the loop as "add your properties, link your financial accounts and watch your metrics dashboard come to life."
+- **Friction reported by users:** nearly every transaction still needs manual property/tenant attribution even when identical monthly; Stessa Payouts must be manually categorized as Transfers to avoid double-counting rent; bank-connection reliability complaints (wrong login pages, broken feeds).
+
+## 3. Content depth (metrics & inputs actually supported)
+
+**Dashboard metrics:** net cash flow, total income, monthly expenses, occupancy/vacancy, debt (loan balances), portfolio value (defined as market values − loan balances + cash on hand), equity, asset appreciation, rent roll, NOI, **cash-on-cash return** (computed from cash flow, actual cash invested, debt, and capex), and **cap rate** — at both property and portfolio level.
+
+**Valuation inputs (per-property, user-selectable method):** Zillow Zestimate (manual refresh from a "Valuation Over Time" card), Gross Rent Multiplier (Valuation = market rent × GRM), Cap Rate method (Valuation = NOI ÷ cap rate), or manual custom value.
+
+**Financial detail:** single-entry accounting on a Schedule E-aligned master category tree (income, operating expenses, capital expenses, transfers); mortgage balance tracking via linked loan accounts; capex tracked in a dedicated Schedule of Capital Expenses.
+
+**Reports:** Income Statement, Net Cash Flow, Balance Sheet, Schedule of Capital Expenses, Schedule of Real Estate Owned (SREO — a lender-ready document), Tenant Ledger, **Stress Test**, and a year-end **Tax Package** (Excel/PDF statements + ZIP of all receipt images). Reports are parameterized by scope (all/portfolio/property), date range, layout (by month, property, unit, or combined), and category depth.
+
+**What's absent:** no IRR, NPV, WACC, or DSCR anywhere in public docs; no 5-year pro-forma projection engine (the "pro-forma" in Pro is a *budget-vs-actual* monthly comparison, not a forward model); no acquisition/underwriting calculator in-product — they publish those only as free spreadsheet templates on the blog.
+
+## 4. Onboarding, CTAs, conversion
+
+- **Freemium with a genuinely useful free tier:** Essentials is $0 with unlimited properties, bank feeds, dashboards, basic reports, rent collection, and interest-bearing Cash Management. Paid: **Manage ~$12/mo annual ($15 monthly)** — eSignatures, unlimited receipt scans, premium document tools; **Pro ~$28/mo annual ($35 monthly)** — advanced reporting, budgeting/pro-forma comparison, full transaction history, unlimited chart history, custom dashboard date ranges, ownership analytics, accelerated (faster) rent payouts, higher cash APY, live phone support, priority screening.
+- **Upgrade levers are cleverly non-feature-gated too:** higher APY on cash balances (~2.3% free → ~4% Pro at times) monetizes deposits, and history limits (chart history, transaction history) create natural pressure as a portfolio ages.
+- **CTA pattern:** "free" is the headline conversion device — page title is literally "Free Property Management Software for Landlords"; repeated "Stessa is free to get started… upgrade any time to unlock advanced tools." Sign-up requires no credit card.
+- **First-run:** guided sequence — add property → link accounts → (optionally) enter historical data → dashboard populates. The "watch your dashboard come to life" moment is the activation event the whole funnel points at.
+
+## 5. Category-specific tooling
+
+- **Dashboards:** card-based; documented cards include Property Information header (address, acquisition date/price, units, vacancy, document count), Net Cash Flow chart (with a toggleable category legend on the right), Valuation Over Time chart (from purchase date; Pro unlocks custom ranges), Monthly Expenses vs. pro-forma budget (Pro), plus debt/occupancy/value tiles.
+- **Exports:** every report downloadable as **PDF or Excel**, viewable in-browser and on mobile; Tax Package bundles Excel + PDF + receipts ZIP for handoff to a CPA/TurboTax.
+- **Portfolio rollups:** genuine — portfolio-scoped dashboard, portfolio-scoped reports, SREO across the whole portfolio, per-portfolio bank accounts.
+- **Data import:** Plaid/MoneyKit bank+credit-card+mortgage feeds (read-only), receipt OCR, CSV, PM-software connections. **No listing-data import** (no MLS/Zillow listing ingestion for prospective deals) — valuation via Zestimate refresh is the only external property-data hook.
+- **Adjacent moat features:** Stessa Cash Management (banking via Thread Bank, FDIC sweep up to $3M, Visa debit cards with per-property account numbers that auto-assign expenses), online rent collection with automated reminders and late fees, RentPrep tenant screening (from ~$21, tenant-paid option), eSignatures, lease templates.
+
+## 6. Trust patterns
+
+- **Scale stats:** "hundreds of thousands of real estate investors"; PR milestone "**$100 billion in assets tracked**" (2023, at Stessa Pro launch). Parent-company legitimacy via Roofstock (and previously JLL).
+- **Security claims:** 256-bit SSL in transit, AES-256 at rest, MFA, automatic backups; bank connections framed as "one-way streets — no ability to move funds or alter banking settings"; "your credentials are never stored or visible to Stessa"; borrowed trust from Plaid/MoneyKit ("millions of consumers… trust these providers"). Banking trust handled with precise fintech disclosure: "Stessa is a financial technology company and is not an FDIC-insured bank. Banking services provided by Thread Bank, Member FDIC," with the $3M sweep-program coverage spelled out.
+- **Methodology transparency:** Help Center publicly documents metric definitions and formulas (portfolio value composition, cash-on-cash inputs, GRM and cap-rate valuation formulas, master category list) — users can audit how numbers are computed. Founder story ("built by investors who felt the pain") is a core /company/ narrative.
+- **Third-party proof:** Capterra/Software Advice ~4.5★ ease-of-use; App Store rating strong vs. a weaker Google Play 4.1★; Trustpilot is thin (~25 reviews) and mixed — social proof leans on scale stats and app-store ratings rather than testimonial walls.
+- Outcome claims with numbers where possible, e.g., RentPrep screening "shown to reduce tenant default rates by up to 25%."
+
+## 7. Experiential layer
+
+- **First impression / hero:** utility-first, not glossy — headline leads with "free" + job-to-be-done ("automate accounting, tenant screening, and rent collection — all in one place"), a single primary sign-up CTA, and **real product screenshots** (dashboard on desktop + phone) as hero imagery rather than illustration. The screenshot-of-the-dashboard *is* the value proposition.
+- **Design language:** light/white surfaces, restrained fintech-clean aesthetic anchored by Stessa's green brand accent on CTAs and positive metrics; modern geometric sans type; medium density — closer to a consumer finance app (Mint-like) than an accounting tool. Reviewers consistently describe it as "clean," "intuitive," "visually appealing reports."
+- **Dashboard hierarchy:** top row = identity/context strip (property facts), then a column of chart cards — time-series line/area charts (Valuation Over Time), stacked category bar/line combo (Net Cash Flow) with an interactive right-hand legend to toggle series, and stat tiles for debt/occupancy/value. Per-card kebab menus hold configuration (e.g., edit pro-forma budget, change valuation method) — cards look calm, power hidden behind the dots.
+- **Interaction patterns:** portfolio/property scope switcher as global context control; drill-down from portfolio rollup into a property; category toggles on charts as the primary "explore" affordance; Pro-gated custom date ranges (free users get fixed windows — a visible-but-locked upsell inside the chart UI).
+- **Mobile:** full companion app (receipt scan, dashboards, reports on the go) — parity marketed as "accessible on both desktop and mobile," though Android reviews suggest the web app is the flagship experience.
+- **Content design:** the blog is an enormous SEO surface (free templates: rental property analysis spreadsheet, pro-forma template, comparison posts like "Stessa vs. TurboTenant") that functions as top-of-funnel education and quietly concedes that forward-looking analysis lives in spreadsheets, not their product.
+
+---
+
+## Steal-worthy patterns
+
+- **One card system, two altitudes:** identical KPI/chart cards render at portfolio-rollup and single-property scope, with a global scope switcher — makes drill-down feel native and is directly applicable to a multi-property comparison view.
+- **"Watch your dashboard come to life" activation design:** onboarding = add property → connect data → dashboard visibly populates. Engineer the first session around one dramatic data-appearing moment, not a form wizard.
+- **Publicly documented metric formulas:** publish exactly how CAP, NOI, DSCR, IRR, NPV, WACC are computed (help-center style, formula included). Stessa's auditable definitions (portfolio value = market values − loans + cash; valuation = NOI ÷ cap rate) build quant credibility cheaply.
+- **User-selectable valuation method per property** (AVM/Zestimate, GRM-derived, cap-rate-derived, manual) with a "Valuation Over Time" chart — a great pattern for letting users control a key assumption while keeping the chart continuous.
+- **Report parameterization matrix:** scope (all/portfolio/property) × date range × layout (month/property/unit/combined) × detail depth, every report exportable to both PDF and Excel — plus a bundled "package" export (their Tax Package ZIP) for a lender/CPA handoff moment; an "Underwriting Package" analog would be compelling.
+- **In-UI feature gating as upsell:** locked custom date ranges and truncated chart history shown *inside* the free experience — the upgrade prompt lives where the desire occurs, not on a pricing page.
+- **Toggleable series legend on financial charts** (turn expense categories on/off directly on the cash-flow chart) — lightweight sensitivity exploration without a settings panel.
+- **Feature-pillar SEO architecture:** one indexable landing page per capability plus free templates/calculators as top-of-funnel — a proven acquisition engine in this exact audience.
+
+## Weaknesses / gaps (opportunity space)
+
+- **No forward-looking underwriting at all:** no IRR, NPV, DSCR, WACC, or multi-year projection; "pro-forma" is just budget-vs-actual. Prospective-deal analysis is outsourced to their own blog spreadsheets — the exact whitespace a CAP/NOI/DSCR/IRR/NPV + 5-year pro-forma product occupies.
+- **No true side-by-side property comparison view** — portfolio rollup aggregates, but there's no comparative table/scorecard ranking properties on returns.
+- **Metric distortion users complain about:** capex is mixed into cash-flow charts (a roof replacement shows months of "negative cash flow"), and rent payouts can double-count without manual Transfer categorization — accuracy trust erodes at the edges.
+- **Manual-work residue and weak support:** repetitive per-transaction property attribution, non-customizable category tree, chat-bot-heavy support with paid escalation, and flaky bank connections are the loudest recurring complaints (Capterra/Trustpilot).
+- **Monetization coupling:** rent collection forces adoption of Stessa's own Cash Management account, which some landlords resent — a neutral-rails alternative is a differentiator.
+
+**Sources:** [stessa.com](https://www.stessa.com/) · [Pricing – Stessa](https://www.stessa.com/pricing/) · [Stessa overview](https://www.stessa.com/overview/) · [Landlord Banking](https://www.stessa.com/banking/) · [Company](https://www.stessa.com/company/) · [Help: Navigating Your Account](https://support.stessa.com/en/articles/11049493-navigating-your-account) · [Help: Understanding Your Dashboard](https://support.stessa.com/en/articles/2109738-understanding-your-dashboard) · [Help: Valuation Over Time](https://support.stessa.com/en/articles/2423679-valuation-method-select-manage) · [Help: Bank Connections Fact Sheet](https://support.stessa.com/en/articles/3459715-bank-connections-fact-sheet) · [Help: Linking Financial Accounts](https://support.stessa.com/en/articles/11055512-linking-your-financial-accounts) · [Help: Adding Your Properties](https://support.stessa.com/en/articles/11049434-adding-your-properties) · [Help: SREO](https://support.stessa.com/en/articles/4697651-schedule-of-real-estate-owned-sreo) · [Help: Categories Master List](https://support.stessa.com/en/articles/3131090-stessa-categories-master-list) · [Help: Cash Management FAQ](https://support.stessa.com/en/articles/5644781-stessa-cash-management-accounts-faq) · [Help: Stessa Pro FAQs](https://support.stessa.com/en/articles/8923940-stessa-pro-faqs) · [Blog: Tax Package](https://www.stessa.com/blog/tax-package-feature-turbotax-cpa/) · [Blog: Improved Financial Reports](https://www.stessa.com/blog/rental-property-financial-reports-web-mobile/) · [Blog: Joining Roofstock](https://www.stessa.com/blog/stessa-joining-forces-with-roofstock/) · [PR: $100B assets tracked / Stessa Pro launch](https://www.prnewswire.com/news-releases/stessa-surpasses-100-billion-in-assets-tracked-launches-stessa-pro-301768531.html) · [Capterra reviews](https://www.capterra.com/p/181042/Stessa/reviews/) · [GetApp](https://www.getapp.com/real-estate-property-software/a/stessa/) · [Software Advice](https://www.softwareadvice.com/property/stessa-profile/) · [Trustpilot](https://www.trustpilot.com/review/stessa.com) · [RETipster review](https://retipster.com/stessareview/) · [Landlord Gurus](https://landlordgurus.com/landlord-accounting-software-for-your-rental-property-stessa-overview/) · [TurboTenant: Stessa Rent Collection](https://www.turbotenant.com/rent-collection/stessa-rent-collection/) · [Fit Small Business: Stessa Checking](https://fitsmallbusiness.com/stessa-business-checking-review/) · [Google Play listing](https://play.google.com/store/apps/details?id=com.stessa.stessa&hl=en_US) · [App Store listing](https://apps.apple.com/us/app/stessa-smart-rental-manager/id1374556096)
