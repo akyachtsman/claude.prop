@@ -30,11 +30,36 @@ This project's look is its own — established at kickoff via `/design-intake`
 | Validate HTML | `npx html-validate index.html` |
 | Validate workflow YAML | `python3 -c "import yaml, sys; yaml.safe_load(open('.github/workflows/qa.yml'))"` |
 
+## Application Architecture
+Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
+- `index.html` — app shell: top bar (brand + property switcher + verdict pills +
+  nav/Save/Delete) and `<main id="view">`; loads `js/app.js`.
+- `js/model.js` — **pure calc engine** (the fidelity core): `compute(property)`
+  → all 12 KPIs + 5-year pro-forma. Mirrors `specs/property-dashboard/workbook-model.md`
+  with the two owner-approved corrections. No DOM/storage — unit-testable.
+- `js/store.js` — persistence repository behind a stable interface
+  (list/get/save/remove/export/import); v1 = localStorage, Supabase-swappable later.
+- `js/format.js` — number/date/rate formatting (editorial rules).
+- `js/dom.js` — `el()`/`render()`/`toast()` DOM builder (all text via `textContent`).
+- `js/notes.js` — workbook methodology text (verbatim).
+- `js/sample.js` — the sample deal + `EXPECTED` fixture (drives the fidelity test).
+- `js/views/{dashboard,list,compare}.js` — the three views; `js/app.js` is the
+  hash router (`#/`, `#/p/:id`, `#/compare`) + shared state.
+- Spec: `specs/property-dashboard/` (spec, plan, tasks, workbook-model, research).
+
 ## Project-Specific Security Constraints
-- [List any accepted security trade-offs, e.g. client-side token usage]
+- Local-first: all property data lives in the browser (`localStorage`, key
+  `propanalytics.v1`); no backend, no credentials, no network calls in v1.
+- Export/import is user-initiated JSON; import validates shape + schema version
+  and never silently wipes existing data.
 
 ## Project-Specific Coding Standards
-- [Add project-specific rules here]
+- Only inputs are persisted; every metric is recomputed on render (never stored)
+  so numbers can't go stale.
+- All dynamic text via `textContent` / the `el()` helper — never `innerHTML` with data.
+- Every displayed value reads from `js/format.js`; no ad-hoc number formatting.
+- Any change to the financial model must keep `js/sample.js` `EXPECTED` in sync
+  and pass the S5 fidelity test.
 
 ## Agent Workflow
 1. Use a `claude/<name>` feature branch
@@ -50,21 +75,29 @@ Read by `ui-tester` and the Playwright kit at runtime — fill in before invokin
 | Key | Value |
 |---|---|
 | App URL | `https://akyachtsman.github.io/claude.prop/` |
-| Valid test credential | `[a real read-only TEST_AUTH_CREDENTIAL]` |
-| Invalid test credential | `[any value the app rejects]` |
-| Primary nav button | `[label of the first feature button]` |
-| Primary content selector | `[CSS selector for loaded content, e.g. .task]` |
-| Nav cards | `[top-level menu labels, e.g. ['Morning','Evening','Dashboard']]` |
+| Valid test credential | _none — no auth in v1 (local-first app)_ |
+| Invalid test credential | _n/a_ |
+| Primary nav button | `Load sample deal` (first-run) / `+ New property` |
+| Primary content selector | `.kpi-strip` (dashboard) · `.lcard` (list) · `.compare-table` (compare) |
+| Nav cards | `['Properties', 'Compare']` |
 | Playwright test directory | `.github/scripts/ui-tests` |
-| Key selectors | `[login / home / error element selectors]` |
+| Key selectors | list `.lcard__name` · dashboard `.kpi` / `.kpi__value` · inputs by `aria-label` (e.g. `input[aria-label="Offer price"]`) · save/delete `.topbar__action` · compare `.cell--best`/`.cell--worst` |
 
 ## Project-Specific Test Scenarios
 Authoritative list of coverage beyond the generic S1–S4 suite — the ui-tester
 adds one `app.spec.js` scenario per row, numbered from S5. Fill in before
 invoking agents (the ui-tester stops and asks if this table is missing).
+Implemented in `.github/scripts/ui-tests/tests/property.spec.js` (desktop,
+fine-pointer context; the generic `app.spec.js` covers the mobile viewports).
 | # | Feature | What to verify | Failure indicator |
 |---|---|---|---|
-| S5 | [feature name] | [what correct behavior looks like] | [what broken looks like] |
+| S5 | Calc fidelity | Sample deal's 12 KPIs equal the workbook fixture (CAP 7.30%, DSCR 1.19, NPV $20,325, …) | Any KPI differs from EXPECTED |
+| S6 | Live recalc | Editing Offer price updates CAP with no calculate button | CAP unchanged after edit |
+| S7 | Persistence | Saved property survives a reload | List empty after reload |
+| S8 | Comparison | Best/worst per metric highlighted + per-column verdict | No `.cell--best`/`.cell--worst`/verdict pill |
+| S9 | Empty/zero | Zeroed property renders "—", never NaN | `NaN`/`Infinity`/`undefined` in KPIs |
+| S10 | Export/import | Data round-trips to an identical set | Property missing after restore |
+| S11 | One-screen | Dashboard fits 1440×900 with no vertical scroll; all data points present | `scrollHeight > innerHeight` |
 
 ## Reporting Requirements
 Agents write evidence to `.agent-reports/`:

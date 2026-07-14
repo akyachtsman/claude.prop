@@ -18,6 +18,10 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     video: 'off',
     trace: 'on-first-retry',
+    // Local-only escape hatch: point at a preinstalled browser when the runner
+    // can't fetch Playwright's pinned build (offline sandbox). Unset in CI, so
+    // CI uses the browser installed by `npx playwright install`.
+    launchOptions: process.env.PW_EXECUTABLE ? { executablePath: process.env.PW_EXECUTABLE } : undefined,
   },
   outputDir: '../../../.agent-reports/screenshots',
   projects: [
