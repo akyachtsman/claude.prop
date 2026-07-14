@@ -250,12 +250,9 @@ export function renderDashboard(container, ctx) {
   out.totalMortgageCell = el('dd', {});
   out.allInCell = el('dd', {});
   out.allInCells.push(out.allInCell);
+  // Offer / Fees / Improvement now live only in the deal-summary band above;
+  // this card is loan data + derived debt/equity totals.
   const debtCard = card('Offer & Debt Service', 'col-3', [
-    grid2([
-      labeledField('Offer price', offerField('offerPrice', 'Offer price')),
-      labeledField('Fees (closing)', offerField('fees', 'Fees')),
-      labeledField('Improvements', offerField('improvements', 'Improvements')),
-    ]),
     ...loanFields,
     el('dl', { class: 'facts facts--1col' }, [
       el('div', {}, [el('dt', { text: 'Total yearly mortgage' }), out.totalMortgageCell]),
