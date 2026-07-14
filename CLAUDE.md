@@ -1,4 +1,4 @@
-# CLAUDE.md — [Project Name]
+# CLAUDE.md — Property Analytics
 
 ## Imported Directives
 https://raw.githubusercontent.com/akyachtsman/claude.directives/main/directives/global.md
@@ -9,7 +9,7 @@ https://raw.githubusercontent.com/akyachtsman/claude.directives/main/directives/
 ---
 
 ## Project Overview
-- **Project name:** [fill in]
+- **Project name:** Property Analytics
 - **Live URL:** https://akyachtsman.github.io/claude.prop/
 - **Stack:** Static tier — plain HTML + CSS + vanilla JS on GitHub Pages (branch-source, no build). [Add backend/data details if the project needs them]
 - **Branch policy:** Develop on a `claude/<name>` feature branch; PRs target `main`
