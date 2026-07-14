@@ -152,11 +152,13 @@ export function renderDashboard(container, ctx) {
   // & Debt card; All-In Cost derived. Built here, mounted in render() below.
   const allInSummaryCell = el('div', { class: 'deal-cell__val' });
   out.allInCells.push(allInSummaryCell);
-  const dealStrip = el('div', { class: 'deal-strip', 'aria-label': 'Offer summary' }, [
+  const dealStrip = el('div', { class: 'deal-strip', 'aria-label': 'Deal summary' }, [
     dealCell('Offer Price', offerField('offerPrice', 'Offer price')),
     dealCell('All-In Cost', allInSummaryCell, true),
     dealCell('Fees', offerField('fees', 'Fees')),
     dealCell('Improvement', offerField('improvements', 'Improvements')),
+    dealCell('Desired CAP', fieldNum(prop.targets.desiredCap, (v) => { prop.targets.desiredCap = v; onEdit(); }, { label: 'Desired CAP', step: '0.01' })),
+    dealCell('Desired DSCR', fieldNum(prop.targets.desiredDscr, (v) => { prop.targets.desiredDscr = v; onEdit(); }, { label: 'Desired DSCR', step: '0.01' })),
   ]);
   const infoCard = card('Property Info', 'col-3', [
     el('div', { class: 'form-grid form-grid--3' }, infoDefs.map(([label, key, type]) =>
@@ -289,15 +291,13 @@ export function renderDashboard(container, ctx) {
   // Assumptions + methodology --------------------------------------------
   const assumeDefs = [
     ['Min opp. equity', 'minOppCostEquity'], ['Tax (int. ded.)', 'taxRate'],
-    ['Collection loss', 'collectionLoss'], ['CF appr.', 'cashflowAppr'],
-    ['Cap appr.', 'capitalAppr'],
+    ['Collection loss', 'collectionLoss'], ['Cashflow appr. rate', 'cashflowAppr'],
+    ['Capital appr. rate', 'capitalAppr'],
   ];
-  const targetDefs = [['Desired CAP', 'desiredCap'], ['Desired DSCR', 'desiredDscr']];
+  // Desired CAP/DSCR now live in the deal-summary band above the cards.
   const assumeCard = card('Assumptions', '', [
-    grid2([
-      ...assumeDefs.map(([label, key]) => labeledField(label, fieldNum(prop.assumptions[key], (v) => { prop.assumptions[key] = v; onEdit(); }, { label, step: '0.01' }))),
-      ...targetDefs.map(([label, key]) => labeledField(label, fieldNum(prop.targets[key], (v) => { prop.targets[key] = v; onEdit(); }, { label, step: '0.01' }))),
-    ]),
+    grid2(assumeDefs.map(([label, key]) =>
+      labeledField(label, fieldNum(prop.assumptions[key], (v) => { prop.assumptions[key] = v; onEdit(); }, { label, step: '0.01' })))),
   ]);
   const methodCard = el('section', { class: 'card notes', 'aria-label': 'Methodology' }, [
     el('span', { class: 'eyebrow', text: 'Methodology' }),

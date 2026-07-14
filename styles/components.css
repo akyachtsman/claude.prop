@@ -339,13 +339,15 @@ body {
 
 /* deal summary — full-width framed band above the cards (mirrors workbook) */
 .deal-strip {
-  display: grid; grid-template-columns: repeat(4, 1fr);
+  display: grid; grid-template-columns: repeat(6, 1fr);
   background: var(--color-surface); border: 1px solid var(--color-border);
   border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
   overflow: hidden; margin-bottom: 8px;
 }
 .deal-strip .deal-cell { padding: 5px var(--space-3); border-left: 1px solid var(--color-border); }
 .deal-strip .deal-cell:first-child { border-left: none; }
+@media (max-width: 1100px) { .deal-strip { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 760px) { .deal-strip { grid-template-columns: repeat(2, 1fr); } }
 .deal-strip .input { min-height: 28px; padding: 2px var(--space-2); font-size: var(--font-sm); }
 @media (pointer: coarse) { .deal-strip .input { min-height: 44px; font-size: 16px; } }
 .deal-cell { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
