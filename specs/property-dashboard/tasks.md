@@ -69,9 +69,9 @@ traces to FR/SC in `spec.md`.
 ## G. Verify & ship
 - [x] **T22** Local gate: `html-validate index.html`, `node --check` each JS,
   contrast guardrail, security grep, Playwright suite green locally.
-- [ ] **T23** `directives-toolkit:qa-pipeline` (test-verifier → ui-tester → code
+- [x] **T23** `directives-toolkit:qa-pipeline` (test-verifier → ui-tester → code
   review → pr-readiness); fix findings (≤3 attempts/failure per test.md).
-- [ ] **T24** Commit, push, confirm CI green on PR #1; update `tasks.md` checkmarks.
+- [x] **T24** Commit, push, confirm CI green on PR #1; update `tasks.md` checkmarks.
 
 ## Traceability
 FR-1..7 → T2,T8 · FR-8..10 → T2,T8,T13,T14 · FR-11 → T8 · FR-12 → T1,T2,T17 ·
