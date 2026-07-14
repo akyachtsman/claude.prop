@@ -3,241 +3,29 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Property Analytics — 1042 Maple Ave</title>
+<title>Property Analytics</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23132E4E'/%3E%3Cpath d='M8 22V13l8-6 8 6v9' fill='none' stroke='%230E7C6D' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="styles/tokens.css">
 <link rel="stylesheet" href="styles/components.css">
-<style>
-/* page-scoped chart data (bar heights = value / $10,500 × 72px) */
-.h-cf1{height:51px}.h-cf2{height:52px}.h-cf3{height:53px}.h-cf4{height:55px}.h-cf5{height:56px}
-.h-ap1{height:63px}.h-ap2{height:64px}.h-ap3{height:66px}.h-ap4{height:67px}.h-ap5{height:68px}
-</style>
 </head>
 <body>
 
 <header class="topbar">
-  <a class="topbar__brand" href="./">
+  <a class="topbar__brand" href="#/">
     <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#132E4E"/><path d="M8 22V13l8-6 8 6v9" fill="none" stroke="#0E7C6D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
     Property Analytics
   </a>
-  <div class="switcher">
-    <button class="switcher__btn" type="button" aria-label="Previous property">◀</button>
-    <div class="switcher__title">
-      <h1>1042 Maple Ave — Duplex</h1>
-      <span class="sub">Asking $485,000 · Offer $460,000 · 2,400 SF · property 1 of 2</span>
-    </div>
-    <button class="switcher__btn" type="button" aria-label="Next property">▶</button>
-  </div>
-  <div class="topbar__pills">
-    <span class="pill pill--pass">CAP 7.30% ≥ 6.00%</span>
-    <span class="pill pill--fail">DSCR 1.19 &lt; 1.25</span>
-  </div>
+  <div id="topbar-center" class="topbar__center"></div>
   <nav class="topbar__nav" aria-label="Main">
-    <a class="topbar__link topbar__link--active" href="./" aria-current="page">Properties</a>
-    <a class="topbar__link" href="#compare">Compare</a>
+    <a class="topbar__link" id="nav-properties" href="#/">Properties</a>
+    <a class="topbar__link" id="nav-compare" href="#/compare">Compare</a>
+    <button class="topbar__link" id="btn-export" type="button">Export</button>
+    <button class="topbar__link" id="btn-import" type="button">Import</button>
   </nav>
 </header>
 
-<main class="page">
+<main id="view" class="page"></main>
 
-  <!-- KPI strip — all 12 metrics in one band -->
-  <section class="kpi-strip" aria-label="Key metrics">
-    <div class="kpi"><span class="kpi__label">CAP</span><div class="kpi__value kpi__value--pass">7.30%</div><div class="kpi__note">target 6.00%</div></div>
-    <div class="kpi"><span class="kpi__label">DSCR</span><div class="kpi__value kpi__value--fail">1.19</div><div class="kpi__note">target 1.25</div></div>
-    <div class="kpi"><span class="kpi__label">NOI</span><div class="kpi__value">$33,576</div><div class="kpi__note">per year</div></div>
-    <div class="kpi"><span class="kpi__label">NOI − Debt Svc</span><div class="kpi__value">$7,486</div><div class="kpi__note">per year</div></div>
-    <div class="kpi"><span class="kpi__label">NOI − Coll. Loss</span><div class="kpi__value">$31,056</div><div class="kpi__note">5% coll. loss</div></div>
-    <div class="kpi"><span class="kpi__label">Cash on Cash</span><div class="kpi__value">4.75%</div><div class="kpi__note">on $157.6K equity</div></div>
-    <div class="kpi"><span class="kpi__label">Annual IRR</span><div class="kpi__value kpi__value--pass">10.97%</div><div class="kpi__note">beats WACC</div></div>
-    <div class="kpi"><span class="kpi__label">5Y NPV</span><div class="kpi__value kpi__value--pass">$20,325</div><div class="kpi__note">at WACC 7.78%</div></div>
-    <div class="kpi"><span class="kpi__label">5Y Total Return</span><div class="kpi__value">$86,835</div><div class="kpi__note">CF + appreciation</div></div>
-    <div class="kpi"><span class="kpi__label">WACC</span><div class="kpi__value">7.78%</div><div class="kpi__note">hurdle rate</div></div>
-    <div class="kpi"><span class="kpi__label">Return on Cost</span><div class="kpi__value">21.30%</div><div class="kpi__note">NOI / all-in</div></div>
-    <div class="kpi"><span class="kpi__label">1% Rule</span><div class="kpi__value kpi__value--fail">−$400</div><div class="kpi__note">rent vs 1% offer</div></div>
-  </section>
-
-  <div class="grid">
-
-    <!-- Property facts -->
-    <section class="card col-3" aria-labelledby="facts-h">
-      <span class="eyebrow" id="facts-h">Property Info</span>
-      <dl class="facts">
-        <div><dt>Asking</dt><dd>$485,000</dd></div>
-        <div><dt>Appraised</dt><dd>$470,000</dd></div>
-        <div><dt>Rentable SF</dt><dd>2,400</dd></div>
-        <div><dt>Lot</dt><dd>0.21 ac</dd></div>
-        <div><dt>Built</dt><dd>1998</dd></div>
-        <div><dt>Zoning</dt><dd>R-2</dd></div>
-        <div><dt>Beds</dt><dd>2 × 2</dd></div>
-        <div><dt>Baths</dt><dd>2 × 2</dd></div>
-        <div><dt>HVAC</dt><dd>6 yr</dd></div>
-        <div><dt>Roof</dt><dd>9 yr</dd></div>
-        <div><dt>Parking</dt><dd>4 / paved</dd></div>
-        <div><dt>Ceiling</dt><dd>8 ft</dd></div>
-        <div><dt>APN</dt><dd>042-118-77</dd></div>
-        <div><dt>Hold</dt><dd>5 years</dd></div>
-      </dl>
-    </section>
-
-    <!-- Income -->
-    <section class="card col-5" aria-labelledby="income-h">
-      <span class="eyebrow" id="income-h">Income</span>
-      <div class="table-wrap">
-        <table class="data-table">
-          <thead><tr><th scope="col">Tenant</th><th scope="col" class="num">SF</th><th scope="col" class="num">Rent / mo</th><th scope="col" class="num">Rent / SF</th><th scope="col">Lease Expires</th><th scope="col">Lease Options</th></tr></thead>
-          <tbody>
-            <tr><td>Unit A</td><td class="num">1,200</td><td class="num">$2,150</td><td class="num">$1.79</td><td>Mar 2027</td><td>1 × 2 yr</td></tr>
-            <tr><td>Unit B</td><td class="num">1,200</td><td class="num">$2,050</td><td class="num">$1.71</td><td>Nov 2026</td><td>—</td></tr>
-            <tr><td>Tenant 3</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td>—</td><td>—</td></tr>
-            <tr><td>Tenant 4</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td>—</td><td>—</td></tr>
-            <tr class="total"><td>Total rent</td><td class="num">2,400</td><td class="num">$4,200</td><td class="num">$1.75</td><td colspan="2">$50,400 / yr</td></tr>
-            <tr><td>Rent&nbsp;−&nbsp;5%&nbsp;coll.&nbsp;loss</td><td class="num"></td><td class="num"></td><td class="num"></td><td colspan="2">$47,880 / yr</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- Expenses -->
-    <section class="card col-4" aria-labelledby="exp-h">
-      <span class="eyebrow" id="exp-h">Expenses (yr) — included in NOI</span>
-      <div class="check-grid">
-        <div class="check-row">
-          <input type="checkbox" id="exp-ins" checked>
-          <label for="exp-ins">Insurance* <span class="pct">9%</span></label>
-          <span class="amount">$3,000</span>
-        </div>
-        <div class="check-row">
-          <input type="checkbox" id="exp-tax" checked>
-          <label for="exp-tax">Prop. taxes* <span class="pct">16%</span></label>
-          <span class="amount">$5,520</span>
-        </div>
-        <div class="check-row">
-          <input type="checkbox" id="exp-util" checked>
-          <label for="exp-util">Utilities <span class="pct">5%</span></label>
-          <span class="amount">$1,800</span>
-        </div>
-        <div class="check-row">
-          <input type="checkbox" id="exp-mgmt" checked>
-          <label for="exp-mgmt">Management <span class="pct">9%</span></label>
-          <span class="amount">$3,024</span>
-        </div>
-        <div class="check-row">
-          <input type="checkbox" id="exp-maint" checked>
-          <label for="exp-maint">Maintenance <span class="pct">8%</span></label>
-          <span class="amount">$2,520</span>
-        </div>
-        <div class="check-row">
-          <input type="checkbox" id="exp-land" checked>
-          <label for="exp-land">Landscaping <span class="pct">3%</span></label>
-          <span class="amount">$960</span>
-        </div>
-        <div class="check-row check-row--off">
-          <input type="checkbox" id="exp-cam">
-          <label for="exp-cam">CAM</label>
-          <span class="amount">$0</span>
-        </div>
-        <div class="check-row check-row--off">
-          <input type="checkbox" id="exp-hoa">
-          <label for="exp-hoa">HOA</label>
-          <span class="amount">$0</span>
-        </div>
-        <div class="check-row check-row--off">
-          <input type="checkbox" id="exp-clean">
-          <label for="exp-clean">Cleaning</label>
-          <span class="amount">$0</span>
-        </div>
-      </div>
-      <dl class="facts facts--1col">
-        <div><dt>Total incl. (feeds NOI) / all cat.</dt><dd>$16,824 / $16,824</dd></div>
-      </dl>
-      <p class="fineprint">* estimated default · % = share of NOI</p>
-    </section>
-
-    <!-- Offer & debt service -->
-    <section class="card col-3" aria-labelledby="debt-h">
-      <span class="eyebrow" id="debt-h">Offer &amp; Debt Service</span>
-      <dl class="facts facts--1col">
-        <div><dt>Offer price</dt><dd>$460,000</dd></div>
-        <div><dt>Loan 1 · CONV · 70% · 6.5% · 25 yr</dt><dd>$322,000</dd></div>
-        <div><dt>Monthly payment 1</dt><dd>$2,174</dd></div>
-        <div><dt>Loan 2 · IO · 0% · 6.5%</dt><dd>$0</dd></div>
-        <div><dt>Monthly payment 2</dt><dd>$0</dd></div>
-        <div><dt>Total yearly mortgage</dt><dd>$26,090</dd></div>
-        <div><dt>Fees (closing)</dt><dd>$4,600</dd></div>
-        <div><dt>Improvements</dt><dd>$15,000</dd></div>
-        <div><dt>All-in cost (equity)</dt><dd>$157,600</dd></div>
-      </dl>
-    </section>
-
-    <!-- 5-year pro-forma -->
-    <section class="card col-6" aria-labelledby="proforma-h">
-      <span class="eyebrow" id="proforma-h">Five-Year Pro-Forma</span>
-      <div class="chart">
-        <div class="chart__plot" role="img" aria-label="Bar chart: yearly operating cashflow and appreciation, years 1 to 5. Cashflow grows from 7,486 to 8,103 dollars; appreciation grows from 9,200 to 9,958 dollars.">
-          <div class="chart__group"><span class="chart__value">$16.7K</span><div class="chart__bar chart__bar--cf h-cf1" title="YR 1 cashflow $7,486"></div><div class="chart__bar chart__bar--ap h-ap1" title="YR 1 appreciation $9,200"></div></div>
-          <div class="chart__group"><div class="chart__bar chart__bar--cf h-cf2" title="YR 2 cashflow $7,636"></div><div class="chart__bar chart__bar--ap h-ap2" title="YR 2 appreciation $9,384"></div></div>
-          <div class="chart__group"><div class="chart__bar chart__bar--cf h-cf3" title="YR 3 cashflow $7,788"></div><div class="chart__bar chart__bar--ap h-ap3" title="YR 3 appreciation $9,572"></div></div>
-          <div class="chart__group"><div class="chart__bar chart__bar--cf h-cf4" title="YR 4 cashflow $7,944"></div><div class="chart__bar chart__bar--ap h-ap4" title="YR 4 appreciation $9,763"></div></div>
-          <div class="chart__group"><span class="chart__value">$18.1K</span><div class="chart__bar chart__bar--cf h-cf5" title="YR 5 operating cashflow $8,103"></div><div class="chart__bar chart__bar--ap h-ap5" title="YR 5 appreciation $9,958"></div></div>
-        </div>
-        <div class="chart__xlabels"><span>YR 1</span><span>YR 2</span><span>YR 3</span><span>YR 4</span><span>YR 5</span></div>
-        <div class="legend">
-          <span><i class="sw-cf"></i>Operating cashflow</span>
-          <span><i class="sw-ap"></i>Appreciation</span>
-        </div>
-      </div>
-      <div class="table-wrap">
-        <table class="data-table">
-          <thead>
-            <tr><th scope="col">Series</th><th scope="col" class="num">Initial</th><th scope="col" class="num">YR 1</th><th scope="col" class="num">YR 2</th><th scope="col" class="num">YR 3</th><th scope="col" class="num">YR 4</th><th scope="col" class="num">YR 5</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>Cashflow</td><td class="num neg">−$157,600</td><td class="num">$7,486</td><td class="num">$7,636</td><td class="num">$7,788</td><td class="num">$7,944</td><td class="num">$165,703</td></tr>
-            <tr><td>Appreciation</td><td class="num">$0</td><td class="num">$9,200</td><td class="num">$9,384</td><td class="num">$9,572</td><td class="num">$9,763</td><td class="num">$9,958</td></tr>
-            <tr class="total"><td>CF + appreciation</td><td class="num neg">−$157,600</td><td class="num">$16,686</td><td class="num">$17,020</td><td class="num">$17,360</td><td class="num">$17,707</td><td class="num">$175,661</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p class="fineprint">YR 5 includes the $157,600 return of equity (chart shows operating years); this series feeds IRR, NPV, and total return.</p>
-    </section>
-
-    <!-- Assumptions + methodology -->
-    <div class="col-3 stack">
-    <section class="card" aria-labelledby="assume-h">
-      <span class="eyebrow" id="assume-h">Assumptions</span>
-      <dl class="facts">
-        <div><dt>Min opp. equity</dt><dd>15%</dd></div>
-        <div><dt>Tax (int. ded.)</dt><dd>28%</dd></div>
-        <div><dt>Collection loss</dt><dd>5%</dd></div>
-        <div><dt>CF appr.</dt><dd>2% / yr</dd></div>
-        <div><dt>Cap appr.</dt><dd>2% / yr</dd></div>
-        <div><dt>Desired CAP</dt><dd>6.00%</dd></div>
-        <div><dt>Desired DSCR</dt><dd>1.25</dd></div>
-      </dl>
-    </section>
-
-    <section class="card notes" aria-labelledby="notes-h">
-      <span class="eyebrow" id="notes-h">Methodology</span>
-      <details>
-        <summary>Definitions &amp; decision rules</summary>
-        <h3>WACC — the hurdle rate</h3>
-        <p>Equity% × opportunity cost of equity + Debt% × cost of debt × (1 − tax rate). Here: 30% × 15% + 70% × 6.5% × 0.72 = 7.78%.</p>
-        <h3>IRR — internal rate of return</h3>
-        <p>The discount rate at which the NPV of the five-year series equals zero — the deal's expected annualized return. Given a constant CAP rate, IRR holds constant for any combination of NOI and purchase price.</p>
-        <h3>NPV — net present value</h3>
-        <p>NPV = Σ CF<sub>t</sub> / (1 + r)<sup>t</sup> − initial investment, discounted at WACC. A positive NPV means the deal's return exceeds the cost of capital — IRR will be greater than WACC, and the project clears the bar.</p>
-        <h3>NPV = 0 — the break-even cost of capital</h3>
-        <p>When the NPV of all cash flows equals 0, the project's expected cash flows are just enough to cover the cash flows created by the cost of capital (WACC). Setting NPV to 0 lets you evaluate the true rate of return (IRR) against WACC: if IRR exceeds WACC, the project clears the bar.</p>
-        <h3>Why (1 + r)^t</h3>
-        <p>(1 + r)^t accounts for the compounding effect of the discount rate over time — the factor that converts future values to present values. CF<sub>t</sub> is the cash flow in year t, r is the discount rate, t is the year (1 to hold).</p>
-        <h3>Reading this dashboard</h3>
-        <p>Values marked "est" are seeded from square footage and offer price — refine them as real numbers arrive. Green and red values are verdicts against your own targets, set under Assumptions.</p>
-      </details>
-    </section>
-    </div>
-
-  </div>
-</main>
-
+<script type="module" src="js/app.js"></script>
 </body>
 </html>

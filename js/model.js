@@ -113,6 +113,10 @@ export function compute(property) {
     acc += inc;
   }
   const combined = cf.map((c, i) => c + appreciation[i]); // index 0 = initial
+  // operating cashflow YR1..5 WITHOUT the YR5 return-of-equity (for the chart)
+  const operating = [];
+  let ob = totalRent - includedExpense - annualDebt;
+  for (let t = 1; t <= HOLD_YEARS; t++) { operating.push(ob); ob = ob * (1 + cfAppr); }
 
   // IRR / NPV / total return over the combined series
   const irrValue = irr(combined);
@@ -133,7 +137,7 @@ export function compute(property) {
     noi, noiLessCollection, cap, dscr, noiDebtService, cashOnCash, returnOnCost,
     onePctRule, wacc, irr: irrValue, npv, totalReturn,
     // proforma
-    proforma: { cashflow: cf, appreciation, combined, years: HOLD_YEARS },
+    proforma: { cashflow: cf, appreciation, combined, operating, years: HOLD_YEARS },
   };
 }
 

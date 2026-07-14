@@ -85,7 +85,7 @@ body {
   padding: var(--space-3) var(--space-4);
 }
 .card > .eyebrow { display: block; margin-bottom: var(--space-2); }
-.grid { display: grid; gap: 10px; grid-template-columns: repeat(12, 1fr); }
+.grid { display: grid; gap: 8px; grid-template-columns: repeat(12, 1fr); }
 .col-12 { grid-column: span 12; }
 .col-6 { grid-column: span 6; }
 .col-5 { grid-column: span 5; }
@@ -229,7 +229,7 @@ body {
 .facts--1col { grid-template-columns: 1fr; }
 .facts div {
   display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2);
-  border-bottom: 1px solid var(--color-border); padding: 2px 0; min-height: 22px;
+  border-bottom: 1px solid var(--color-border); padding: 1px 0; min-height: 19px;
   min-width: 0;
 }
 .facts dt {
@@ -298,3 +298,92 @@ body {
   .topbar__link { min-height: 36px; }
   .topbar { min-height: 48px; }
 }
+
+/* app views (dashboard editable, list, compare) ------------------------- */
+.topbar__center { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-4); }
+.topbar__viewtitle { font-weight: 800; font-size: var(--font-lg); color: var(--color-on-navy); }
+.topbar__link { background: transparent; border: none; font: inherit; cursor: pointer; }
+
+/* editable field grids inside cards — dense for one-screen fit */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px var(--space-3); }
+.form-grid .field { min-width: 0; }
+.field__label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0; }
+.card { padding: var(--space-2) var(--space-3); }
+.card > .eyebrow { margin-bottom: var(--space-1); }
+.card .input { min-height: 28px; padding: 2px var(--space-2); font-size: var(--font-sm); }
+@media (pointer: coarse) { .card .input { min-height: 44px; font-size: 16px; } }
+.loan-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; }
+.loan-edit { margin-top: var(--space-1); }
+.loan-edit .field__label { display: block; }
+.amount-input { max-width: 84px; text-align: right; }
+.check-row { min-height: 30px; }
+@media (pointer: coarse) { .check-row { min-height: 44px; } }
+.check-row .amount-input { flex: none; }
+
+.dash-actions { display: flex; gap: var(--space-2); margin-top: var(--space-2); }
+
+/* list view */
+.list-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-3); }
+.list-head h1 { margin: 0; font-size: var(--font-2xl); font-weight: 800; color: var(--color-navy); }
+.list-head__actions { display: flex; gap: var(--space-2); }
+.lcard-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--space-3); }
+.lcard {
+  text-align: left; font: inherit; cursor: pointer;
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
+  padding: var(--space-3) var(--space-4); display: flex; flex-direction: column; gap: var(--space-3);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.lcard:hover, .lcard:focus-visible { border-color: var(--color-border-hover); box-shadow: var(--shadow-md); }
+.lcard__head { display: flex; align-items: center; gap: var(--space-3); }
+.lcard__mono {
+  flex: none; width: 40px; height: 40px; border-radius: var(--radius-sm);
+  background: var(--color-navy); color: var(--color-on-navy);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: var(--font-base);
+}
+.lcard__title { min-width: 0; flex: 1; display: flex; flex-direction: column; }
+.lcard__name { font-weight: 700; color: var(--color-navy); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lcard__sub { font-size: var(--font-xs); color: var(--color-text-secondary); }
+.lcard__kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-2); }
+.lcard__kpi { display: flex; flex-direction: column; }
+.lcard__kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary); font-weight: 700; }
+.lcard__kpi-val { font-weight: 800; color: var(--color-navy); }
+
+/* empty state */
+.empty { max-width: 480px; margin: 10vh auto; text-align: center; }
+.empty h2 { color: var(--color-navy); margin: 0 0 var(--space-2); }
+.empty p { color: var(--color-text-secondary); margin: 0 0 var(--space-4); }
+.empty__actions { display: flex; gap: var(--space-2); justify-content: center; flex-wrap: wrap; }
+
+/* compare view */
+.compare-picker { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-2) 0 var(--space-3); }
+.chip {
+  font: inherit; font-weight: 600; cursor: pointer;
+  min-height: 44px; padding: 6px var(--space-3); border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-primary);
+}
+.chip--on { background: var(--color-navy); color: var(--color-on-navy); border-color: var(--color-navy); }
+.compare-table th, .compare-table td { min-width: 120px; }
+.compare-table td:first-child, .compare-table th:first-child { position: sticky; left: 0; background: var(--color-surface); font-weight: 600; }
+.cell--best { color: var(--color-pass-text); font-weight: 800; background: var(--color-pass-bg); }
+.cell--worst { color: var(--color-fail-text); background: var(--color-fail-bg); }
+.compare-verdict td { padding-top: var(--space-2); }
+
+/* toast */
+.toast {
+  position: fixed; top: var(--space-4); left: 50%; transform: translateX(-50%);
+  z-index: 50; padding: 10px var(--space-4); border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md); font-weight: 600; font-size: var(--font-sm);
+  background: var(--color-navy); color: var(--color-on-navy);
+}
+.toast--success { background: var(--color-pass); }
+
+/* top-bar actions (Save/Delete relocated from the dashboard body) */
+.topbar__actions { display: flex; gap: var(--space-1); margin-left: var(--space-2); }
+.topbar__action { background: var(--color-navy-soft); }
+.topbar__action:hover, .topbar__action:focus-visible { background: var(--color-accent); }
+/* final one-screen rhythm trim */
+.card .input { min-height: 26px; }
+@media (pointer: coarse) { .card .input { min-height: 44px; } }
+.form-grid { gap: 1px var(--space-3); }
