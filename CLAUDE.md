@@ -19,7 +19,7 @@ This project's look is its own — established at kickoff via `/design-intake`
 (per `directives/design.md`), not a shared company theme. It lives in:
 - `styles/tokens.css` — brand primitives (color, type, spacing, radius, shadow)
 - `styles/components.css` — reusable components
-- **Reference page:** `index.html` ("Banker Navy", established 2026-07-14 — see `specs/property-dashboard/design.md`; pending owner sign-off)
+- **Reference page:** `index.html` ("Banker Navy", established & owner-approved 2026-07-14 — see `specs/property-dashboard/design.md`)
 
 ## Application Architecture
 - [main source file/folder] — [brief description]

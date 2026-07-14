@@ -34,6 +34,10 @@
   model-seeded defaults), checkbox rows (expense toggles), data tables, facts
   grid, pure-CSS bar chart + legend, methodology `details`, footer.
 
+## Sign-off
+**Owner-approved 2026-07-14** — Banker Navy look and the one-screen landscape
+layout are locked as the contract every downstream page inherits.
+
 ## Reference page (the look-gate)
 - **`index.html`** — the property detail dashboard, rendered with a static
   sample deal ("1042 Maple Ave — Duplex", offer $460K, 70% LTV @ 6.5%/25yr).
