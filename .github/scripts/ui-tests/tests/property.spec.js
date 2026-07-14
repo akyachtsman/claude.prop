@@ -136,6 +136,22 @@ test('S12 deal summary — editable strip syncs with Offer & Debt card and deriv
   await expect(summaryOffer).toHaveValue('500000');
 });
 
+test('S13 KPI formula popup — hovering a metric reveals its formula, clamped to viewport', async ({ page }) => {
+  await loadSample(page);
+  const tip = page.locator('.kpi-tip');
+  await expect(tip).toBeHidden();
+  await page.locator('.kpi--info').first().hover();      // CAP
+  await expect(tip).toBeVisible();
+  await expect(tip).toHaveText('NOI ÷ Offer Price');
+  // right-edge metric: the popup must not overflow the viewport
+  await page.locator('.kpi--info').last().hover();       // 1% Rule
+  await expect(tip).toBeVisible();
+  const box = await tip.boundingBox();
+  const vw = page.viewportSize().width;
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(vw + 1);
+});
+
 test('DELETE dismiss — delete asks for confirmation', async ({ page }) => {
   await loadSample(page);
   let asked = false;
