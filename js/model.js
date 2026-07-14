@@ -5,6 +5,7 @@
 // No DOM, no storage, no globals. compute(property) → metrics.
 
 const HOLD_YEARS = 5;
+const MAX_YEARS = 10;
 
 /** Safe divide: null on divide-by-zero / non-finite (renders as "—"). */
 function div(a, b) {
@@ -100,32 +101,36 @@ export function compute(property) {
   const wacc = loanCalc.reduce((s, l) => s + num(l.ltv) * num(l.rate) * (1 - taxRate), 0)
     + (1 - loanCalc.reduce((s, l) => s + num(l.ltv), 0)) * minOpp;
 
-  // Five-year pro-forma (correction a: YR-1 subtracts BOTH loans via annualDebt)
+  // Pro-forma projections (correction a: YR-1 subtracts BOTH loans via annualDebt).
+  // The 5-year hold is the fidelity baseline (unchanged); the 10-year hold is a
+  // forward projection using the same assumptions, with the return of equity
+  // deferred to the final held year.
   const cfAppr = num(a.cashflowAppr), capAppr = num(a.capitalAppr);
-  const cf = [-allInCost];
-  let base = totalRent - includedExpense - annualDebt;
-  for (let t = 1; t <= HOLD_YEARS; t++) {
-    if (t < HOLD_YEARS) { cf.push(base); base = base * (1 + cfAppr); }
-    else cf.push(base + allInCost); // base already advanced to YR5 operating (= YR4 × (1+appr))
-  }
-  const appreciation = [0];
-  let acc = 0;
-  for (let t = 1; t <= HOLD_YEARS; t++) {
-    const inc = (offerPrice + acc) * capAppr;
-    appreciation.push(inc);
-    acc += inc;
-  }
-  const combined = cf.map((c, i) => c + appreciation[i]); // index 0 = initial
-  // operating cashflow YR1..5 WITHOUT the YR5 return-of-equity (for the chart)
+  // Operating cashflow (no equity return) and appreciation, per year 1..MAX_YEARS.
   const operating = [];
-  let ob = totalRent - includedExpense - annualDebt;
-  for (let t = 1; t <= HOLD_YEARS; t++) { operating.push(ob); ob = ob * (1 + cfAppr); }
+  { let ob = totalRent - includedExpense - annualDebt;
+    for (let t = 1; t <= MAX_YEARS; t++) { operating.push(ob); ob = ob * (1 + cfAppr); } }
+  const apprYear = [];
+  { let acc = 0;
+    for (let t = 1; t <= MAX_YEARS; t++) { const inc = (offerPrice + acc) * capAppr; apprYear.push(inc); acc += inc; } }
 
-  // IRR / NPV / total return over the combined series
-  const irrValue = irr(combined);
-  const npv = -allInCost + combined.slice(1).reduce(
-    (s, c, i) => s + c / Math.pow(1 + wacc, i + 1), 0);
-  const totalReturn = combined.reduce((s, c) => s + c, 0);
+  // One hold scenario for horizon H: series indexed 0..H (index 0 = initial
+  // outflow), equity (all-in cost) returned in the final year H. Correction b:
+  // NPV leaves the initial investment undiscounted.
+  function holdScenario(H) {
+    const cashflow = [-allInCost], appreciation = [0], combined = [-allInCost];
+    for (let t = 1; t <= H; t++) {
+      const cf = operating[t - 1] + (t === H ? allInCost : 0);
+      const ap = apprYear[t - 1];
+      cashflow.push(cf); appreciation.push(ap); combined.push(cf + ap);
+    }
+    const npv = -allInCost + combined.slice(1).reduce((s, c, i) => s + c / Math.pow(1 + wacc, i + 1), 0);
+    return { years: H, cashflow, appreciation, combined, npv,
+      totalReturn: combined.reduce((s, c) => s + c, 0), irr: irr(combined) };
+  }
+  const h5 = holdScenario(HOLD_YEARS), h10 = holdScenario(MAX_YEARS);
+  // Headline stays the 5-year hold (KPI strip, EXPECTED, S5 fidelity).
+  const irrValue = h5.irr, npv = h5.npv, totalReturn = h5.totalReturn;
 
   return {
     // financing
@@ -136,11 +141,14 @@ export function compute(property) {
     tenantRentPerSF,
     // expenses
     includedExpense, allExpense, expensePctOfNoi,
-    // headline
+    // headline (5-year hold)
     noi, noiLessCollection, cap, dscr, noiDebtService, cashOnCash, returnOnCost,
     onePctRule, wacc, irr: irrValue, npv, totalReturn,
-    // proforma
-    proforma: { cashflow: cf, appreciation, combined, operating, years: HOLD_YEARS },
+    // proforma: per-year series + both hold horizons; legacy 5-year aliases kept
+    proforma: {
+      operating, apprYear, maxYears: MAX_YEARS, h5, h10,
+      cashflow: h5.cashflow, appreciation: h5.appreciation, combined: h5.combined, years: HOLD_YEARS,
+    },
   };
 }
 

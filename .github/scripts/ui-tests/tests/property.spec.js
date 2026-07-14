@@ -151,6 +151,35 @@ test('S13 KPI formula popup — hovering a metric reveals its formula, clamped t
   expect(box.x + box.width).toBeLessThanOrEqual(vw + 1);
 });
 
+test('S14 pro-forma horizon — slider extends to 10 years with a boundary and 10-yr stats', async ({ page }) => {
+  await loadSample(page);
+  const bars = page.locator('.card[aria-label="Pro-Forma"] .chart__group');
+  const stats = page.locator('.pf-stat');
+  const setHorizon = (v) => page.locator('.pf-slider').evaluate((el, val) => {
+    el.value = val; el.dispatchEvent(new Event('input', { bubbles: true }));
+  }, v);
+  // default: 5 years, one (5-year) stats block, no 5↔10 boundary
+  await expect(bars).toHaveCount(5);
+  await expect(stats).toHaveCount(1);
+  await expect(stats.first()).toContainText('5-year');
+  await expect(stats.first()).toContainText('$91,523');
+  await expect(page.locator('.chart__group--boundary')).toHaveCount(0);
+  // zoom to 10 → 10 bars, a boundary divider, and a second (10-year) stats block
+  await setHorizon('10');
+  await expect(bars).toHaveCount(10);
+  await expect(page.locator('.chart__group--boundary')).toHaveCount(1);
+  await expect(stats).toHaveCount(2);
+  await expect(stats.nth(1)).toContainText('10-year');
+  await expect(stats.nth(1)).toContainText('$171,200');
+  // headline stays 5-year: top KPI strip 5Y NPV unchanged, and the 5-year block too
+  expect((await kpis(page))['5Y NPV']).toBe('$91,523');
+  await expect(stats.first()).toContainText('$91,523');
+  // zoom back to 5 → boundary and 10-year block gone
+  await setHorizon('5');
+  await expect(bars).toHaveCount(5);
+  await expect(stats).toHaveCount(1);
+});
+
 test('DELETE dismiss — delete asks for confirmation', async ({ page }) => {
   await loadSample(page);
   let asked = false;

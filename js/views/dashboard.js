@@ -261,28 +261,26 @@ export function renderDashboard(container, ctx) {
   ]);
 
   // Pro-forma -------------------------------------------------------------
-  out.pfCells = { cf: [], ap: [], cb: [] };
-  const yrHeads = ['Series', 'Initial', 'YR 1', 'YR 2', 'YR 3', 'YR 4', 'YR 5'];
-  function pfRow(label, key, cls) {
-    const cells = [];
-    for (let i = 0; i < 6; i++) { const c = el('td', { class: 'num' }); cells.push(c); out.pfCells[key].push(c); }
-    return el('tr', { class: cls || '' }, [el('td', { text: label }), ...cells]);
-  }
-  out.pfChart = el('div', { class: 'chart__plot', role: 'img', 'aria-label': 'Five-year operating cashflow and appreciation' });
-  const proformaCard = card('Five-Year Pro-Forma', 'col-6', [
-    el('div', { class: 'chart' }, [
-      out.pfChart,
-      el('div', { class: 'chart__xlabels' }, ['YR 1', 'YR 2', 'YR 3', 'YR 4', 'YR 5'].map((y) => el('span', { text: y }))),
-      el('div', { class: 'legend' }, [
-        el('span', {}, [el('i', { class: 'sw-cf' }), 'Operating cashflow']),
-        el('span', {}, [el('i', { class: 'sw-ap' }), 'Appreciation']),
-      ]),
+  // Horizon is user-selectable (5 default, 10). drawProforma() rebuilds the
+  // chart/table/stats into pfBody on each recompute and on slider change; the
+  // slider itself stays mounted so it keeps focus/position across edits.
+  let horizon = 5;
+  let lastM = null;
+  const pfBody = el('div', {});
+  const horizonSlider = el('input', {
+    type: 'range', min: '5', max: '10', step: '5', value: '5',
+    class: 'pf-slider', 'aria-label': 'Pro-forma horizon (years)',
+  });
+  horizonSlider.addEventListener('input', () => {
+    horizon = parseInt(horizonSlider.value, 10) || 5;
+    if (lastM) drawProforma(lastM);
+  });
+  const proformaCard = card('Pro-Forma', 'col-6', [
+    el('div', { class: 'pf-head' }, [
+      el('span', { class: 'pf-head__lbl', text: '5 yr' }), horizonSlider,
+      el('span', { class: 'pf-head__lbl', text: '10 yr' }),
     ]),
-    tableWrap(el('table', { class: 'data-table' }, [
-      el('thead', {}, el('tr', {}, yrHeads.map((h, i) => el('th', { scope: 'col', class: i ? 'num' : '', text: h })))),
-      el('tbody', {}, [pfRow('Cashflow', 'cf'), pfRow('Appreciation', 'ap'), pfRow('CF + appreciation', 'cb', 'total')]),
-    ])),
-    el('p', { class: 'fineprint', text: 'YR 5 includes the return of equity (chart shows operating years); this series feeds IRR, NPV, and total return.' }),
+    pfBody,
   ]);
 
   // Assumptions + methodology --------------------------------------------
@@ -340,35 +338,66 @@ export function renderDashboard(container, ctx) {
     });
     out.totalMortgageCell.textContent = fmt.money(m.annualDebt);
     out.allInCells.forEach((n) => { n.textContent = fmt.money(m.allInCost); });
-    // pro-forma table
-    const pf = m.proforma;
-    for (let i = 0; i < 6; i++) {
-      setCell(out.pfCells.cf[i], pf.cashflow[i]);
-      setCell(out.pfCells.ap[i], pf.appreciation[i]);
-      setCell(out.pfCells.cb[i], pf.combined[i]);
-    }
-    paintChart(m);
+    drawProforma(m);
   }
   function setCell(cell, v) {
     cell.textContent = fmt.money(v);
     cell.classList.toggle('neg', typeof v === 'number' && v < 0);
-  }
-  function paintChart(m) {
-    const cf = m.proforma.operating;               // YR1..5 operating (no equity return)
-    const ap = m.proforma.appreciation.slice(1);
-    const maxV = Math.max(1, ...cf.map(Math.abs), ...ap.map(Math.abs));
-    const H = 72;
-    render(out.pfChart, cf.map((c, i) => el('div', { class: 'chart__group' }, [
-      i === 0 || i === 4 ? el('span', { class: 'chart__value', text: fmt.moneyCompact(cf[i] + ap[i]) }) : null,
-      barEl('cf', c, maxV, H, `YR ${i + 1} cashflow ${fmt.money(c)}`),
-      barEl('ap', ap[i], maxV, H, `YR ${i + 1} appreciation ${fmt.money(ap[i])}`),
-    ])));
   }
   function barEl(kind, v, maxV, H, title) {
     const h = Math.max(2, Math.round((Math.abs(v) / maxV) * H));
     const b = el('div', { class: `chart__bar chart__bar--${kind}`, title });
     b.style.height = h + 'px';
     return b;
+  }
+  function statRow(label, h, boundary) {
+    return el('div', { class: 'pf-stat' + (boundary ? ' pf-stat--boundary' : '') }, [
+      el('span', { class: 'pf-stat__label', text: label }),
+      el('span', {}, [el('b', { text: fmt.money(h.npv) }), ' NPV']),
+      el('span', {}, [el('b', { text: fmt.money(h.totalReturn) }), ' Total return']),
+      el('span', {}, [el('b', { text: fmt.percent2(h.irr) }), ' IRR']),
+    ]);
+  }
+  // Rebuild the pro-forma chart/table/stats for the selected horizon (5 or 10).
+  function drawProforma(m) {
+    lastM = m;
+    const H = horizon;
+    const pf = m.proforma;
+    const hs = H === 10 ? pf.h10 : pf.h5;      // hold-series for the table (equity returned in YR H)
+    const boundary = H === 10;                 // show the 5↔10 divider only when zoomed out
+    // chart — operating cashflow + appreciation bars, years 1..H
+    const op = pf.operating.slice(0, H), ap = pf.apprYear.slice(0, H);
+    const maxV = Math.max(1, ...op.map(Math.abs), ...ap.map(Math.abs));
+    const chartPlot = el('div', { class: 'chart__plot', role: 'img', 'aria-label': `${H}-year operating cashflow and appreciation` },
+      op.map((c, i) => el('div', { class: 'chart__group' + (boundary && i === 4 ? ' chart__group--boundary' : '') }, [
+        (i === 0 || i === H - 1) ? el('span', { class: 'chart__value', text: fmt.moneyCompact(op[i] + ap[i]) }) : null,
+        barEl('cf', c, maxV, 72, `YR ${i + 1} cashflow ${fmt.money(c)}`),
+        barEl('ap', ap[i], maxV, 72, `YR ${i + 1} appreciation ${fmt.money(ap[i])}`),
+      ])));
+    const chart = el('div', { class: 'chart' }, [
+      chartPlot,
+      el('div', { class: 'chart__xlabels' }, op.map((_, i) => el('span', { class: boundary && i === 4 ? 'x--boundary' : '', text: `YR ${i + 1}` }))),
+      el('div', { class: 'legend' }, [
+        el('span', {}, [el('i', { class: 'sw-cf' }), 'Operating cashflow']),
+        el('span', {}, [el('i', { class: 'sw-ap' }), 'Appreciation']),
+      ]),
+    ]);
+    // table — Initial + YR1..YRH; boundary border on the YR5 column when zoomed
+    const heads = ['Series', 'Initial', ...Array.from({ length: H }, (_, i) => `YR ${i + 1}`)];
+    const bCol = (i) => boundary && i === 6 ? ' cell--boundary' : '';   // header YR5 = index 6
+    const row = (label, arr, cls) => el('tr', { class: cls || '' }, [el('td', { text: label }),
+      ...arr.map((v, i) => { const c = el('td', { class: 'num' + (boundary && i === 5 ? ' cell--boundary' : '') }); setCell(c, v); return c; })]);
+    const table = tableWrap(el('table', { class: 'data-table' }, [
+      el('thead', {}, el('tr', {}, heads.map((h, i) => el('th', { scope: 'col', class: (i ? 'num' : '') + bCol(i), text: h })))),
+      el('tbody', {}, [row('Cashflow', hs.cashflow), row('Appreciation', hs.appreciation), row('CF + appreciation', hs.combined, 'total')]),
+    ]));
+    // stats — 5-year always; 10-year (after the boundary) only when zoomed out
+    const stats = el('div', { class: 'pf-stats' }, [
+      statRow('5-year', pf.h5),
+      boundary ? statRow('10-year', pf.h10, true) : null,
+    ]);
+    const note = el('p', { class: 'fineprint', text: `YR ${H} includes the return of equity (chart shows operating years); this series feeds IRR, NPV, and total return.` });
+    render(pfBody, [chart, table, stats, note]);
   }
 
   refresh(); // initial paint

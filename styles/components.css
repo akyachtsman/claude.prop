@@ -285,6 +285,26 @@ body {
 .legend .sw-ap { background: var(--chart-2); }
 .fineprint { color: var(--color-text-secondary); font-size: 10px; margin: var(--space-1) 0 0; }
 
+/* pro-forma horizon control + 5↔10 boundary + per-horizon stat rows */
+.pf-head { display: flex; align-items: center; gap: var(--space-2); justify-content: flex-end; margin: -2px 0 var(--space-1); }
+.pf-head__lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-secondary); }
+.pf-slider { width: 96px; accent-color: var(--color-accent); cursor: pointer; }
+.chart__group--boundary { border-right: 2px dashed var(--color-border); margin-right: var(--space-2); padding-right: var(--space-2); }
+.chart__xlabels .x--boundary { position: relative; }
+.data-table th.cell--boundary, .data-table td.cell--boundary { border-right: 2px solid var(--color-border-hover); }
+.pf-stats { margin-top: var(--space-1); }
+.pf-stat { display: flex; flex-wrap: wrap; gap: 2px var(--space-3); align-items: baseline; font-size: 11px; color: var(--color-text-secondary); padding: 2px 0; }
+.pf-stat--boundary { border-top: 2px dashed var(--color-border); margin-top: 2px; padding-top: var(--space-1); }
+.pf-stat__label { font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-navy); min-width: 52px; }
+.pf-stat b { color: var(--color-navy); font-weight: 800; }
+/* narrow viewports: compact the bars/gaps so a 10-year chart fits without
+   pushing the page wide (the table already scrolls inside .table-wrap) */
+@media (max-width: 760px) {
+  .chart__plot, .chart__xlabels { gap: 6px; }
+  .chart__bar { width: 9px; }
+  .chart__group--boundary { margin-right: 4px; padding-right: 4px; }
+}
+
 /* methodology / notes -------------------------------------------------------------- */
 .notes details {
   border: 1px solid var(--color-border); border-radius: var(--radius-sm);
