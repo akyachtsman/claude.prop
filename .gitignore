@@ -1,5 +1,6 @@
 node_modules/
 .claude/mcp.json
+.claude/settings.local.json
 .env
 .env.*
 .agent-reports/
