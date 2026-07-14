@@ -252,3 +252,10 @@ body {
   color: var(--color-text-secondary); font-size: var(--font-sm);
   text-align: center; padding: var(--space-8) var(--space-4);
 }
+
+/* per-category share of NOI (expenses card) */
+.pct { font-size: var(--font-xs); color: var(--color-text-secondary); font-weight: 600; margin-left: var(--space-1); }
+
+/* dense table variant (many-column cards, e.g. tenant income) */
+.data-table--dense th, .data-table--dense td { padding: var(--space-2); font-size: var(--font-sm); }
+.data-table--dense td { white-space: nowrap; }

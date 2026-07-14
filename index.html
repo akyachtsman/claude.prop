@@ -71,6 +71,7 @@
         <div><dt>HVAC Age</dt><dd>6 yr</dd></div>
         <div><dt>Roof Age</dt><dd>9 yr</dd></div>
         <div><dt>Parking</dt><dd>4 / paved</dd></div>
+        <div><dt>Ceiling Height</dt><dd>8 ft</dd></div>
         <div><dt>APN</dt><dd>042-118-77</dd></div>
       </dl>
     </section>
@@ -80,12 +81,14 @@
       <span class="eyebrow" id="debt-h">Offer &amp; Debt Service</span>
       <div class="table-wrap">
         <table class="data-table">
-          <thead><tr><th>Item</th><th class="num">Amount</th><th>Terms</th></tr></thead>
+          <thead><tr><th scope="col">Item</th><th scope="col" class="num">Amount</th><th scope="col">Terms</th></tr></thead>
           <tbody>
             <tr><td>Offer price</td><td class="num">$460,000</td><td>vs $485,000 asking</td></tr>
             <tr><td>Loan 1 — CONV</td><td class="num">$322,000</td><td>70% LTV · 6.50% · 25 yr</td></tr>
             <tr><td>Monthly payment 1</td><td class="num">$2,174</td><td>$26,090 / yr</td></tr>
-            <tr><td>Loan 2</td><td class="num">—</td><td>not used</td></tr>
+            <tr><td>Loan 2 — IO</td><td class="num">$0</td><td>0% LTV · 6.50%</td></tr>
+            <tr><td>Monthly payment 2</td><td class="num">$0</td><td>$0 / yr</td></tr>
+            <tr><td>Total yearly mortgage</td><td class="num">$26,090</td><td>both loans</td></tr>
             <tr><td>Fees</td><td class="num">$4,600</td><td>closing</td></tr>
             <tr><td>Improvements</td><td class="num">$15,000</td><td>make-ready</td></tr>
             <tr class="total"><td>All-in cost (equity)</td><td class="num">$157,600</td><td>initial investment</td></tr>
@@ -95,16 +98,18 @@
     </section>
 
     <!-- Income -->
-    <section class="card col-6" aria-labelledby="income-h">
+    <section class="card col-12" aria-labelledby="income-h">
       <span class="eyebrow" id="income-h">Income</span>
       <div class="table-wrap">
-        <table class="data-table">
-          <thead><tr><th>Tenant</th><th class="num">SF</th><th class="num">Rent / mo</th><th class="num">Rent / SF</th><th>Lease Expires</th></tr></thead>
+        <table class="data-table data-table--dense">
+          <thead><tr><th scope="col">Tenant</th><th scope="col" class="num">SF</th><th scope="col" class="num">Rent / mo</th><th scope="col" class="num">Rent / SF</th><th scope="col">Lease Expires</th><th scope="col">Lease Options</th></tr></thead>
           <tbody>
-            <tr><td>Unit A</td><td class="num">1,200</td><td class="num">$2,150</td><td class="num">$1.79</td><td>Mar 2027</td></tr>
-            <tr><td>Unit B</td><td class="num">1,200</td><td class="num">$2,050</td><td class="num">$1.71</td><td>Nov 2026</td></tr>
-            <tr class="total"><td>Total rent</td><td class="num">2,400</td><td class="num">$4,200</td><td class="num">$1.75</td><td>$50,400 / yr</td></tr>
-            <tr><td>Rent − 5% collection loss</td><td class="num"></td><td class="num"></td><td class="num"></td><td>$47,880 / yr</td></tr>
+            <tr><td>Unit A</td><td class="num">1,200</td><td class="num">$2,150</td><td class="num">$1.79</td><td>Mar 2027</td><td>1 × 2 yr</td></tr>
+            <tr><td>Unit B</td><td class="num">1,200</td><td class="num">$2,050</td><td class="num">$1.71</td><td>Nov 2026</td><td>—</td></tr>
+            <tr><td>Tenant 3</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td>—</td><td>—</td></tr>
+            <tr><td>Tenant 4</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td>—</td><td>—</td></tr>
+            <tr class="total"><td>Total rent</td><td class="num">2,400</td><td class="num">$4,200</td><td class="num">$1.75</td><td colspan="2">$50,400 / yr</td></tr>
+            <tr><td>Rent − 5% collection loss</td><td class="num"></td><td class="num"></td><td class="num"></td><td colspan="2">$47,880 / yr</td></tr>
           </tbody>
         </table>
       </div>
@@ -115,32 +120,32 @@
       <span class="eyebrow" id="exp-h">Expenses (yr) — included in NOI</span>
       <div class="check-row">
         <input type="checkbox" id="exp-ins" checked>
-        <label for="exp-ins">Insurance <span class="pill">estimated</span></label>
+        <label for="exp-ins">Insurance <span class="pill">estimated</span> <span class="pct">9% of NOI</span></label>
         <span class="amount">$3,000</span>
       </div>
       <div class="check-row">
         <input type="checkbox" id="exp-tax" checked>
-        <label for="exp-tax">Property taxes <span class="pill">estimated</span></label>
+        <label for="exp-tax">Property taxes <span class="pill">estimated</span> <span class="pct">16% of NOI</span></label>
         <span class="amount">$5,520</span>
       </div>
       <div class="check-row">
         <input type="checkbox" id="exp-util" checked>
-        <label for="exp-util">Utilities</label>
+        <label for="exp-util">Utilities <span class="pct">5% of NOI</span></label>
         <span class="amount">$1,800</span>
       </div>
       <div class="check-row">
         <input type="checkbox" id="exp-mgmt" checked>
-        <label for="exp-mgmt">Management</label>
+        <label for="exp-mgmt">Management <span class="pct">9% of NOI</span></label>
         <span class="amount">$3,024</span>
       </div>
       <div class="check-row">
         <input type="checkbox" id="exp-maint" checked>
-        <label for="exp-maint">Maintenance</label>
+        <label for="exp-maint">Maintenance <span class="pct">8% of NOI</span></label>
         <span class="amount">$2,520</span>
       </div>
       <div class="check-row">
         <input type="checkbox" id="exp-land" checked>
-        <label for="exp-land">Landscaping</label>
+        <label for="exp-land">Landscaping <span class="pct">3% of NOI</span></label>
         <span class="amount">$960</span>
       </div>
       <div class="check-row check-row--off">
@@ -161,10 +166,26 @@
       <div class="table-wrap">
         <table class="data-table">
           <tbody>
-            <tr class="total"><td>Total included</td><td class="num">$16,824</td></tr>
+            <tr class="total"><td>Total included (feeds NOI)</td><td class="num">$16,824</td></tr>
+            <tr><td>Total expense — all categories</td><td class="num">$16,824</td></tr>
           </tbody>
         </table>
       </div>
+    </section>
+
+    <!-- Assumptions -->
+    <section class="card col-6" aria-labelledby="assume-h">
+      <span class="eyebrow" id="assume-h">Assumptions</span>
+      <dl class="facts">
+        <div><dt>Min. opportunity cost of equity</dt><dd>15%</dd></div>
+        <div><dt>Tax rate (interest deduction)</dt><dd>28%</dd></div>
+        <div><dt>Collection loss</dt><dd>5%</dd></div>
+        <div><dt>Cashflow appreciation</dt><dd>2% / yr</dd></div>
+        <div><dt>Capital appreciation</dt><dd>2% / yr</dd></div>
+        <div><dt>Desired CAP</dt><dd>6.00%</dd></div>
+        <div><dt>Desired DSCR</dt><dd>1.25</dd></div>
+        <div><dt>Hold period</dt><dd>5 years</dd></div>
+      </dl>
     </section>
 
     <!-- 5-year pro-forma -->
@@ -190,7 +211,7 @@
       <div class="table-wrap mt-5">
         <table class="data-table">
           <thead>
-            <tr><th>Series</th><th class="num">Initial</th><th class="num">YR 1</th><th class="num">YR 2</th><th class="num">YR 3</th><th class="num">YR 4</th><th class="num">YR 5</th></tr>
+            <tr><th scope="col">Series</th><th scope="col" class="num">Initial</th><th scope="col" class="num">YR 1</th><th scope="col" class="num">YR 2</th><th scope="col" class="num">YR 3</th><th scope="col" class="num">YR 4</th><th scope="col" class="num">YR 5</th></tr>
           </thead>
           <tbody>
             <tr><td>Cashflow</td><td class="num neg">−$157,600</td><td class="num">$7,486</td><td class="num">$7,636</td><td class="num">$7,788</td><td class="num">$7,944</td><td class="num">$165,703</td></tr>
@@ -202,23 +223,8 @@
       <p class="fineprint">YR 5 cashflow includes the $157,600 return of equity. This combined series feeds IRR, 5Y NPV, and 5Y total return.</p>
     </section>
 
-    <!-- Assumptions -->
-    <section class="card col-6" aria-labelledby="assume-h">
-      <span class="eyebrow" id="assume-h">Assumptions</span>
-      <dl class="facts">
-        <div><dt>Min. opportunity cost of equity</dt><dd>15%</dd></div>
-        <div><dt>Tax rate (interest deduction)</dt><dd>28%</dd></div>
-        <div><dt>Collection loss</dt><dd>5%</dd></div>
-        <div><dt>Cashflow appreciation</dt><dd>2% / yr</dd></div>
-        <div><dt>Capital appreciation</dt><dd>2% / yr</dd></div>
-        <div><dt>Desired CAP</dt><dd>6.00%</dd></div>
-        <div><dt>Desired DSCR</dt><dd>1.25</dd></div>
-        <div><dt>Hold period</dt><dd>5 years</dd></div>
-      </dl>
-    </section>
-
     <!-- Methodology -->
-    <section class="card col-6 notes" aria-labelledby="notes-h">
+    <section class="card col-12 notes" aria-labelledby="notes-h">
       <span class="eyebrow" id="notes-h">Methodology</span>
       <details>
         <summary>WACC — the hurdle rate</summary>
@@ -231,6 +237,14 @@
       <details>
         <summary>NPV — net present value</summary>
         <p>NPV = Σ CF<sub>t</sub> / (1 + r)<sup>t</sup> − initial investment, discounted at WACC. A positive NPV means the deal's return exceeds the cost of capital — IRR will be greater than WACC, and the project clears the bar.</p>
+      </details>
+      <details>
+        <summary>NPV = 0 — the break-even cost of capital</summary>
+        <p>When the NPV of all cash flows equals 0, the project's expected cash flows are just enough to cover the cash flows created by the cost of capital (WACC) — the break-even cost of capital. Setting NPV to 0 lets you evaluate the project's true rate of return (IRR) against WACC: if IRR exceeds WACC, the project's profitability exceeds the cost of capital and clears the bar.</p>
+      </details>
+      <details>
+        <summary>Why (1 + r)^t</summary>
+        <p>(1 + r)^t accounts for the compounding effect of the discount rate over time — the factor that converts future values to present values, effectively bringing future cash flows to the present. CF<sub>t</sub> is the cash flow in year t, r is the discount rate, t is the year (1 to hold).</p>
       </details>
       <details>
         <summary>Reading this dashboard</summary>
