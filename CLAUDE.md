@@ -98,7 +98,7 @@ fine-pointer context; the generic `app.spec.js` covers the mobile viewports).
 | S9 | Empty/zero | Zeroed property renders "—", never NaN | `NaN`/`Infinity`/`undefined` in KPIs |
 | S10 | Export/import | Data round-trips to an identical set | Property missing after restore |
 | S11 | One-screen | Dashboard fits 1440×900 with no vertical scroll; all data points present | `scrollHeight > innerHeight` |
-| S12 | Deal summary | Editable Offer/Fees/Improvement strip atop Property Info syncs with the Offer & Debt card; All-In Cost derived in both | Strip out of sync, or All-In not `$244,335` |
+| S12 | Deal summary | Editable Offer/Fees/Improvement band above the cards syncs with the Offer & Debt card; All-In Cost derived in both | Strip out of sync, or All-In not `$244,335` |
 | S13 | Formula popup | Hovering/focusing a KPI reveals its calculation in a popup, clamped within the viewport | No `.kpi-tip`, wrong formula text, or popup overflows viewport |
 
 ## Reporting Requirements

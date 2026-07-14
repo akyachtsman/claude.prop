@@ -147,18 +147,18 @@ export function renderDashboard(container, ctx) {
     ['Parking', 'parking', 'text'], ['Ceiling', 'ceilingHeight', 'text'],
     ['APN', 'apn', 'text'],
   ];
-  // Deal summary strip — mirrors the workbook's Offer/All-In/Fees/Improvement
-  // header row; editable, synced with the Offer & Debt card below.
+  // Deal summary — full-width band ABOVE the cards, mirroring the workbook's
+  // Offer/All-In/Fees/Improvement header row. Editable, synced with the Offer
+  // & Debt card; All-In Cost derived. Built here, mounted in render() below.
   const allInSummaryCell = el('div', { class: 'deal-cell__val' });
   out.allInCells.push(allInSummaryCell);
-  const dealSummary = el('div', { class: 'deal-summary' }, [
+  const dealStrip = el('div', { class: 'deal-strip', 'aria-label': 'Offer summary' }, [
     dealCell('Offer Price', offerField('offerPrice', 'Offer price')),
     dealCell('All-In Cost', allInSummaryCell, true),
     dealCell('Fees', offerField('fees', 'Fees')),
     dealCell('Improvement', offerField('improvements', 'Improvements')),
   ]);
   const infoCard = card('Property Info', 'col-3', [
-    dealSummary,
     el('div', { class: 'form-grid form-grid--3' }, infoDefs.map(([label, key, type]) =>
       labeledField(label, type === 'num'
         ? fieldNum(prop.info[key], (v) => { prop.info[key] = v; onEdit(); }, { label })
@@ -318,6 +318,7 @@ export function renderDashboard(container, ctx) {
 
   render(container, [
     kpiStrip,
+    dealStrip,
     el('div', { class: 'grid' }, [infoCard, incomeCard, expenseCard, debtCard, proformaCard, rightStack]),
     kpiTip,
   ]);
