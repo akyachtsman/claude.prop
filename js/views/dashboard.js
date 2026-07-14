@@ -292,7 +292,7 @@ export function renderDashboard(container, ctx) {
   const assumeDefs = [
     ['Min opp. equity', 'minOppCostEquity'], ['Tax (int. ded.)', 'taxRate'],
     ['Collection loss', 'collectionLoss'], ['Cashflow appr. rate', 'cashflowAppr'],
-    ['Capital appr. rate', 'capitalAppr'],
+    ['Property appr. rate', 'capitalAppr'],
   ];
   // Desired CAP/DSCR now live in the deal-summary band above the cards.
   const assumeCard = card('Assumptions', '', [
