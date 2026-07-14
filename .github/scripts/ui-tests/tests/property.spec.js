@@ -121,19 +121,18 @@ test('S11 one-screen — dashboard fits 1440×900 with no vertical scroll', asyn
   }
 });
 
-test('S12 deal summary — editable strip syncs with Offer & Debt card and derives All-In', async ({ page }) => {
+test('S12 deal summary — the band is the single editable source; All-In derives', async ({ page }) => {
   await loadSample(page);
   const summaryOffer = page.locator('.deal-strip input[aria-label="Offer price"]');
-  const debtOffer = page.locator('.card[aria-label="Offer & Debt Service"] input[aria-label="Offer price"]');
   const allIn = page.locator('.deal-cell--accent .deal-cell__val');
-  await expect(allIn).toHaveText('$244,335');           // derived, painted into the strip
-  // edit in the summary strip → Offer & Debt input syncs + All-In recomputes
+  await expect(allIn).toHaveText('$244,335');           // derived, painted into the band
+  // Offer price now lives only in the band — not duplicated in the Offer & Debt card
+  await expect(page.locator('input[aria-label="Offer price"]')).toHaveCount(1);
+  await expect(page.locator('.card[aria-label="Offer & Debt Service"] input[aria-label="Offer price"]')).toHaveCount(0);
+  // editing it recomputes the derived All-In (300000 × (1 − 0.727)) and the card's copy
   await summaryOffer.fill('300000');
-  await expect(debtOffer).toHaveValue('300000');
-  await expect(allIn).toHaveText('$81,900');            // 300000 × (1 − 0.727)
-  // edit in the Offer & Debt card → summary strip input syncs back
-  await debtOffer.fill('500000');
-  await expect(summaryOffer).toHaveValue('500000');
+  await expect(allIn).toHaveText('$81,900');
+  await expect(page.locator('.card[aria-label="Offer & Debt Service"] .facts dd').last()).toHaveText('$81,900');
 });
 
 test('S13 KPI formula popup — hovering a metric reveals its formula, clamped to viewport', async ({ page }) => {
