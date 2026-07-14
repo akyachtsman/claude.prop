@@ -276,11 +276,11 @@ export function renderDashboard(container, ctx) {
     if (lastM) drawProforma(lastM);
   });
   const proformaCard = card('Pro-Forma', 'col-6', [
+    pfBody,
     el('div', { class: 'pf-head' }, [
       el('span', { class: 'pf-head__lbl', text: '5 yr' }), horizonSlider,
       el('span', { class: 'pf-head__lbl', text: '10 yr' }),
     ]),
-    pfBody,
   ]);
 
   // Assumptions + methodology --------------------------------------------
