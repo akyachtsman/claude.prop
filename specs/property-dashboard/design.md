@@ -10,7 +10,17 @@
   eyebrows as section labels (ledger heritage).
 - **Signature element:** the **KPI strip** — all twelve underwriting metrics in
   one framed, hairline-divided band (echoes the workbook's merged metric row).
-  6 × 2 on desktop, 3 × 4 on iPad.
+  12 × 1 on laptop landscape, 6 × 2 below 1100px, 3 × 4 on phone.
+- **One-screen landscape density (owner ruling, 2026-07-14):** the property
+  dashboard fits a laptop landscape screen with NO vertical scroll at
+  1440 × 900 and larger (verified 1440 / 1680; 1280 × 800 scrolls ~50px).
+  Structure: 52px top bar (brand · property switcher ◀ ▶ · verdict pills ·
+  nav) + KPI strip + exactly two card rows
+  (info 3 / income 5 / expenses 4, then debt 3 / pro-forma 6 / stacked
+  assumptions + methodology 3). Methodology is collapsed by default. Touch
+  targets stay 44px on touch devices; `@media (pointer: fine)` tightens rows
+  on mouse-driven screens. Estimated defaults use the workbook's own `*`
+  convention with a fineprint key.
 - Generated direction (no external reference image); informed by
   `research.md`'s polish bar (DealCheck clarity, Stessa card aesthetic).
 
