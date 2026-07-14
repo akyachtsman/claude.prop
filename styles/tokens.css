@@ -1,32 +1,57 @@
 /* ── tokens.css — this project's brand primitives ───────────────────────────
-   STARTER values (a calm neutral/blue default). Replace at /design-intake with
-   your project's actual look. Everything downstream references var(--…) from
-   here, so re-theming happens by editing this one file. Keep WCAG AA (the CI
-   contrast guardrail checks these against each other). */
+   Look: "banker navy" — deep navy structure, paper-white surfaces, teal accent,
+   geometric sans with tabular numerals. Established at /design-intake
+   2026-07-14; reference page: index.html. Everything downstream references
+   var(--…) from here — re-theme by editing this one file. The CI contrast
+   guardrail (check-contrast.js) checks the core pairs; keep WCAG AA. */
 :root {
-  /* color */
-  --color-bg:             #F5F7FA;
+  /* color — core (names consumed by check-contrast.js; do not rename) */
+  --color-bg:             #F2F5F9;
   --color-surface:        #FFFFFF;
-  --color-border:         #DAE2EE;
-  --color-border-hover:   #BFCBDF;
-  --color-text-primary:   #181B22;
-  --color-text-secondary: #5F6573;
-  --color-accent:         #1565C0;
-  --color-accent-hover:   #114F98;
-  --color-accent-light:   #E5EEF8;
-  --color-danger:         #C0392B;
+  --color-border:         #D9E1EB;
+  --color-border-hover:   #B9C6D6;
+  --color-text-primary:   #16273C;
+  --color-text-secondary: #51647C;
+  --color-accent:         #0E7C6D;
+  --color-accent-hover:   #0B6357;
+  --color-accent-light:   #DFF0EC;
+  --color-danger:         #B3372A;
 
-  /* type */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-sm: 13px; --font-base: 15px; --font-lg: 17px; --font-xl: 20px; --font-2xl: 24px;
+  /* color — brand structure */
+  --color-navy:           #132E4E;   /* top bar, display headings */
+  --color-navy-soft:      #1D3E66;   /* hover on navy */
+  --color-on-navy:        #FFFFFF;
+  --color-on-navy-muted:  #A9BCD4;   /* secondary text on navy (large/labels only) */
+
+  /* color — semantic verdicts (pill text on pill bg meets AA) */
+  --color-pass:           #1B7A44;
+  --color-pass-bg:        #E0F1E6;
+  --color-pass-text:      #135C33;
+  --color-fail:           #B3372A;
+  --color-fail-bg:        #FAE7E3;
+  --color-fail-text:      #92261B;
+  --color-neutral-bg:     #E8EDF4;
+  --color-neutral-text:   #44566E;
+
+  /* color — data marks (validated: CVD + contrast, light & dark surface) */
+  --chart-1:              #3E6FAE;   /* cashflow */
+  --chart-2:              #159E86;   /* appreciation */
+  --chart-grid:           #E3E9F1;
+
+  /* type — clean geometric sans; all figures tabular */
+  --font-sans: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-xs: 12px; --font-sm: 13px; --font-base: 15px; --font-lg: 17px;
+  --font-xl: 20px; --font-2xl: 26px; --font-3xl: 34px;
+  --tracking-wide: 0.08em;           /* uppercase eyebrows / section labels */
 
   /* space */
-  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-6: 24px; --space-8: 32px;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px;
 
   /* radius */
-  --radius-sm: 6px; --radius-md: 10px; --radius-lg: 14px;
+  --radius-sm: 6px; --radius-md: 10px; --radius-lg: 14px; --radius-pill: 999px;
 
   /* shadow */
-  --shadow-sm: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
-  --shadow-md: 0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.05);
+  --shadow-sm: 0 1px 3px rgba(19,46,78,.08), 0 1px 2px rgba(19,46,78,.05);
+  --shadow-md: 0 6px 16px rgba(19,46,78,.09), 0 2px 5px rgba(19,46,78,.06);
 }
