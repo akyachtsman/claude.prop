@@ -322,6 +322,31 @@ body {
 
 .dash-actions { display: flex; gap: var(--space-2); margin-top: var(--space-2); }
 
+/* deal summary strip — Offer / All-In / Fees / Improvement (mirrors workbook) */
+.deal-summary {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px var(--space-2);
+  margin-bottom: var(--space-1); padding-bottom: var(--space-1);
+  border-bottom: 1px solid var(--color-border);
+}
+.deal-cell { display: flex; flex-direction: column; gap: 0; min-width: 0; }
+.deal-cell__label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.04em; color: var(--color-text-secondary);
+}
+.deal-cell__val {
+  font-weight: 800; color: var(--color-navy); font-size: var(--font-sm);
+  min-height: 26px; display: flex; align-items: center; padding: 2px var(--space-2);
+  border: 1px solid transparent; border-radius: var(--radius-md);
+}
+.deal-cell--accent .deal-cell__val { background: var(--color-accent-light); }
+@media (pointer: coarse) { .deal-cell__val { min-height: 44px; } }
+
+/* denser 3-up info grid — reclaims the vertical the deal strip adds so the
+   dashboard stays one-screen (S11). Collapses to 2-up / 1-up on narrow. */
+.form-grid--3 { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 1100px) { .form-grid--3 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 760px) { .form-grid--3 { grid-template-columns: 1fr; } }
+
 /* list view */
 .list-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-3); }
 .list-head h1 { margin: 0; font-size: var(--font-2xl); font-weight: 800; color: var(--color-navy); }
