@@ -34,10 +34,13 @@ export function loanPayment({ amount, rate, termYears, type }) {
 /** Internal rate of return via bisection on the full series [initial, CF1..CFn].
  *  Returns null when the series never crosses zero (no real IRR). */
 export function irr(series) {
+  // IRR is undefined without an initial outflow and at least one inflow.
+  if (!(series[0] < 0)) return null;
+  if (!series.slice(1).some((c) => c > 0)) return null;
   const npvAt = (rate) => series.reduce((s, cf, i) => s + cf / Math.pow(1 + rate, i), 0);
   const lo0 = -0.9999, hi0 = 10;
   const fLo = npvAt(lo0), fHi = npvAt(hi0);
-  if (!Number.isFinite(fLo) || !Number.isFinite(fHi) || fLo * fHi > 0) return null;
+  if (!Number.isFinite(fLo) || !Number.isFinite(fHi) || fLo === 0 || fHi === 0 || fLo * fHi > 0) return null;
   let lo = lo0, hi = hi0;
   for (let i = 0; i < 200; i++) {
     const mid = (lo + hi) / 2, f = npvAt(mid);

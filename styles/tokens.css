@@ -15,6 +15,7 @@
   --color-accent:         #0E7C6D;
   --color-accent-hover:   #0B6357;
   --color-accent-light:   #DFF0EC;
+  --color-on-accent:      #FFFFFF;   /* text/icon on an accent fill (WCAG AA) */
   --color-danger:         #B3372A;
 
   /* color — brand structure */

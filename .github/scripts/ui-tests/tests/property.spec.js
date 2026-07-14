@@ -95,7 +95,8 @@ test('S9 empty/zero — a zeroed property renders "—", never NaN', async ({ pa
   const bodyText = await page.textContent('.kpi-strip');
   expect(bodyText).not.toMatch(/NaN|Infinity|undefined/);
   const k = await kpis(page);
-  expect(k['DSCR']).toBe('—'); // zero debt → no-data
+  expect(k['DSCR']).toBe('—');       // zero debt → no-data
+  expect(k['Annual IRR']).toBe('—'); // no initial outflow → no real IRR (regression guard for C1)
 });
 
 test('S10 export/import round-trip — data restores identically', async ({ page }) => {

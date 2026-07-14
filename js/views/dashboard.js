@@ -124,8 +124,8 @@ export function renderDashboard(container, ctx) {
         ...incomeRows,
         // Total rent: Tenant | SF | Rent/mo | Rent/SF | (Total /yr over lease cols)
         el('tr', { class: 'total' }, [el('td', { text: 'Total rent' }), out.totalSFCell, out.totalMoRentCell, out.avgRentCell, out.totalRentCell]),
-        // Rent − collection loss: label | (blanks) | value over lease cols
-        el('tr', {}, [el('td', { text: 'Rent − 5% coll. loss' }), el('td', { class: 'num' }, []), el('td', { class: 'num' }, []), el('td', { class: 'num' }, []), out.rentLessCell]),
+        // Rent − collection loss: label reflects the live assumption | value over lease cols
+        el('tr', {}, [out.rentLessLabel = el('td', {}), el('td', { class: 'num' }, []), el('td', { class: 'num' }, []), el('td', { class: 'num' }, []), out.rentLessCell]),
       ]),
     ])),
   ]);
@@ -260,6 +260,7 @@ export function renderDashboard(container, ctx) {
     out.totalMoRentCell.textContent = fmt.money(m.totalMonthlyRent);
     out.avgRentCell.textContent = fmt.moneyCents(m.avgRentPerSF);
     out.totalRentCell.textContent = fmt.money(m.totalRent) + ' / yr';
+    out.rentLessLabel.textContent = `Rent − ${fmt.percent(prop.assumptions.collectionLoss)} coll. loss`;
     out.rentLessCell.textContent = fmt.money(m.rentLessCollection) + ' / yr';
     // expenses
     expPctNodes.forEach(({ pct, i }) => { pct.textContent = fmt.percent(m.expensePctOfNoi[i]); });

@@ -123,7 +123,12 @@ function showDashboard(id) {
     actionsHost,
     setHeaderVerdicts: (m, p) => paintPills(pills, m, p),
     markDirty: () => { dirty = true; },
-    save: (p) => { store.save(p); dirty = false; toast('Saved.', 'success'); showList.cameFrom = null; router(); navigate('#/p/' + encodeURIComponent(p.id)); },
+    save: (p) => {
+      store.save(p);
+      if (store.isStorageOK()) { dirty = false; toast('Saved.', 'success'); }
+      else { toast("Couldn't save — storage is full or private mode. Export to keep your data.", 'info'); }
+      router(); navigate('#/p/' + encodeURIComponent(p.id));
+    },
     remove: (p) => confirmDelete(p),
   });
 }
@@ -191,6 +196,6 @@ function importData() {
 // ── boot ──────────────────────────────────────────────────────────────
 document.getElementById('btn-export').addEventListener('click', exportData);
 document.getElementById('btn-import').addEventListener('click', importData);
-if (!store.isStorageOK()) toast('Saving is off — private mode or storage full. Export to keep your data.', 'info');
+if (!store.probe()) toast('Saving is off — private mode or storage full. Export to keep your data.', 'info');
 window.addEventListener('hashchange', router);
 router();

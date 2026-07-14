@@ -9,6 +9,7 @@ let memory = [];        // in-memory mirror / fallback
 let storageOK = true;   // false when localStorage can't be used
 
 function read() {
+  if (!storageOK) return memory;   // once writes fail, trust the in-memory set
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return [];
@@ -19,6 +20,20 @@ function read() {
     storageOK = false;
     return memory;
   }
+}
+
+/** Probe storage at boot so isStorageOK() is meaningful before the first save
+ *  (catches private-mode/quota where getItem works but setItem throws). */
+export function probe() {
+  try {
+    const k = '__probe__';
+    localStorage.setItem(k, '1');
+    localStorage.removeItem(k);
+    storageOK = true;
+  } catch (e) {
+    storageOK = false;
+  }
+  return storageOK;
 }
 
 function write(list) {
