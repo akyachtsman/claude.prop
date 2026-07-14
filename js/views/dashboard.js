@@ -67,29 +67,65 @@ export function renderDashboard(container, ctx) {
     ]);
   }
 
-  // KPI strip -------------------------------------------------------------
+  // KPI strip — def = [label, valueFn, valueClassFn, noteFn, formula].
+  // `formula` drives the hover/focus popup (mirrors workbook-model.md / model.js).
   const KPI_DEFS = [
-    ['CAP', (m) => fmt.percent2(m.cap), (m) => verdictClass(capVerdict(m.cap, prop.targets.desiredCap)), () => `target ${fmt.percent2(prop.targets.desiredCap)}`],
-    ['DSCR', (m) => fmt.ratio(m.dscr), (m) => verdictClass(dscrVerdict(m.dscr, prop.targets.desiredDscr)), () => `target ${fmt.ratio(prop.targets.desiredDscr)}`],
-    ['NOI', (m) => fmt.money(m.noi), null, () => 'per year'],
-    ['NOI − Debt Svc', (m) => fmt.money(m.noiDebtService), null, () => 'per year'],
-    ['NOI − Coll. Loss', (m) => fmt.money(m.noiLessCollection), null, () => 'less collection'],
-    ['Cash on Cash', (m) => fmt.percent2(m.cashOnCash), null, () => 'on equity'],
-    ['Annual IRR', (m) => fmt.percent2(m.irr), (m) => m.irr !== null && m.irr >= m.wacc ? 'kpi__value--pass' : '', () => 'vs WACC'],
-    ['5Y NPV', (m) => fmt.money(m.npv), (m) => m.npv > 0 ? 'kpi__value--pass' : (m.npv < 0 ? 'kpi__value--fail' : ''), () => 'at WACC'],
-    ['5Y Total Return', (m) => fmt.money(m.totalReturn), null, () => 'CF + appreciation'],
-    ['WACC', (m) => fmt.percent2(m.wacc), null, () => 'hurdle rate'],
-    ['Return on Cost', (m) => fmt.percent2(m.returnOnCost), null, () => 'NOI / all-in'],
-    ['1% Rule', (m) => fmt.money(m.onePctRule), (m) => verdictClass(onePctVerdict(m.onePctRule)), () => 'rent vs 1% offer'],
+    ['CAP', (m) => fmt.percent2(m.cap), (m) => verdictClass(capVerdict(m.cap, prop.targets.desiredCap)), () => `target ${fmt.percent2(prop.targets.desiredCap)}`,
+      'NOI ÷ Offer Price'],
+    ['DSCR', (m) => fmt.ratio(m.dscr), (m) => verdictClass(dscrVerdict(m.dscr, prop.targets.desiredDscr)), () => `target ${fmt.ratio(prop.targets.desiredDscr)}`,
+      '(Rent − collection loss − included expenses) ÷ annual debt service'],
+    ['NOI', (m) => fmt.money(m.noi), null, () => 'per year',
+      'Total rent − included expenses'],
+    ['NOI − Debt Svc', (m) => fmt.money(m.noiDebtService), null, () => 'per year',
+      'NOI − annual debt service'],
+    ['NOI − Coll. Loss', (m) => fmt.money(m.noiLessCollection), null, () => 'less collection',
+      '(Rent − collection loss) − included expenses'],
+    ['Cash on Cash', (m) => fmt.percent2(m.cashOnCash), null, () => 'on equity',
+      '(NOI − annual debt service) ÷ all-in cost'],
+    ['Annual IRR', (m) => fmt.percent2(m.irr), (m) => m.irr !== null && m.irr >= m.wacc ? 'kpi__value--pass' : '', () => 'vs WACC',
+      'Rate where NPV of [−all-in cost, yr 1…5 cashflows] = 0'],
+    ['5Y NPV', (m) => fmt.money(m.npv), (m) => m.npv > 0 ? 'kpi__value--pass' : (m.npv < 0 ? 'kpi__value--fail' : ''), () => 'at WACC',
+      '−All-in cost + Σ (yearₜ cashflow ÷ (1 + WACC)ᵗ), t = 1…5'],
+    ['5Y Total Return', (m) => fmt.money(m.totalReturn), null, () => 'CF + appreciation',
+      'Sum of the 5-year cashflow + appreciation series (incl. −all-in)'],
+    ['WACC', (m) => fmt.percent2(m.wacc), null, () => 'hurdle rate',
+      'Σ(LTV × rate × (1 − tax)) + (1 − ΣLTV) × min. opportunity cost of equity'],
+    ['Return on Cost', (m) => fmt.percent2(m.returnOnCost), null, () => 'NOI / all-in',
+      'NOI ÷ all-in cost'],
+    ['1% Rule', (m) => fmt.money(m.onePctRule), (m) => verdictClass(onePctVerdict(m.onePctRule)), () => 'rent vs 1% offer',
+      'Monthly rent − 1% of offer price'],
   ];
+  // Shared formula popup — position:fixed so it escapes the strip's overflow:hidden
+  // and can be clamped to the viewport. Included in render() so it's cleaned up.
+  const kpiTip = el('div', { class: 'kpi-tip', role: 'tooltip' });
+  function showTip(anchor, text) {
+    kpiTip.textContent = text;
+    kpiTip.classList.add('kpi-tip--on');
+    kpiTip.style.left = '0px'; kpiTip.style.top = '0px';   // measure at origin
+    const a = anchor.getBoundingClientRect(), t = kpiTip.getBoundingClientRect();
+    const left = Math.max(8, Math.min(a.left + a.width / 2 - t.width / 2, window.innerWidth - t.width - 8));
+    let top = a.top - t.height - 6;
+    if (top < 4) top = a.bottom + 6;                        // flip below if it would leave the viewport
+    kpiTip.style.left = left + 'px'; kpiTip.style.top = top + 'px';
+  }
+  function hideTip() { kpiTip.classList.remove('kpi-tip--on'); }
   const kpiStrip = el('section', { class: 'kpi-strip', 'aria-label': 'Key metrics' },
     KPI_DEFS.map((def, i) => {
       const valNode = el('div', { class: 'kpi__value' });
       const noteNode = el('div', { class: 'kpi__note' });
       out['kpi' + i] = { valNode, noteNode, def };
-      return el('div', { class: 'kpi' }, [
-        el('span', { class: 'kpi__label', text: def[0] }), valNode, noteNode,
+      const formula = def[4];
+      const srDesc = formula ? el('span', { class: 'sr-only', id: 'kpi-f' + i, text: 'Formula: ' + formula }) : null;
+      const cell = el('div', formula ? { class: 'kpi kpi--info', tabindex: '0', 'aria-describedby': 'kpi-f' + i } : { class: 'kpi' }, [
+        el('span', { class: 'kpi__label', text: def[0] }), valNode, noteNode, srDesc,
       ]);
+      if (formula) {
+        cell.addEventListener('mouseenter', () => showTip(cell, formula));
+        cell.addEventListener('mouseleave', hideTip);
+        cell.addEventListener('focus', () => showTip(cell, formula));
+        cell.addEventListener('blur', hideTip);
+      }
+      return cell;
     }));
 
   function paintKPIs(m) {
@@ -283,6 +319,7 @@ export function renderDashboard(container, ctx) {
   render(container, [
     kpiStrip,
     el('div', { class: 'grid' }, [infoCard, incomeCard, expenseCard, debtCard, proformaCard, rightStack]),
+    kpiTip,
   ]);
 
   // ── output painting ────────────────────────────────────────────────
