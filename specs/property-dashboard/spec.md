@@ -174,3 +174,24 @@ read-only, later phase.
   offer a "load sample" button?
 - **[NEEDS CLARIFICATION: IRR no-solution]** When cashflows never cross zero
   (no real IRR), what shows — "—", "n/a", or a nearest-estimate note?
+
+## Clarifications
+Resolved 2026-07-14 (phase 2). All open questions closed; ready for plan.
+
+1. **Workbook quirks → CORRECT BOTH** (owner decision, supersedes
+   `workbook-model.md` Fidelity note 3): (a) year-1 pro-forma cashflow
+   subtracts **both** loans' payments, `(pmt1 + pmt2) × 12`, consistent with
+   NOI−Debt Service; (b) 5Y NPV discounts years 1–5 only and subtracts the
+   initial investment **undiscounted**: `NPV = −AllInCost + Σ(t=1..5)
+   CFₜ/(1+WACC)ᵗ`. This is a deliberate deviation from the Excel file's math.
+   IRR and Total Return are unaffected. **FR-8/FR-10 and SC-1's fixture use the
+   corrected formulas.** (Sample deal NPV moves $18,859 → $20,325.)
+2. **First run → load-sample button.** Empty state with an app explainer and a
+   "Load sample deal" button that inserts 1042 Maple Ave; user can clear it.
+   (Refines FR-14 empty state.)
+3. **Comparison capacity → 4 columns** on laptop; 2–3 on iPad with the rest
+   horizontal-scrolling within the comparison table. (Refines FR-18.)
+4. **Property photos → placeholder.** List cards use a colored monogram
+   (property initials); no photo field in v1. (Refines FR-14.)
+5. **IRR no-solution → "—"** with an explanatory tooltip when cashflows never
+   cross zero. (Refines FR-8/FR-12.)

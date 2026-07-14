@@ -150,12 +150,16 @@ Educational text to display in the dashboard (an info/methodology panel):
    exactly like loan 1 from its own amount/rate/term/type.
 2. **Collection loss made live.** `×0.95` hardcodes assumption P6; app uses
    `×(1 − collectionLoss)` so editing the assumption works.
-3. **Preserved as-is:** YR-1 cashflow (N16) subtracts only loan 1's payments
-   (`L8×12`, not `(L8+Q8)×12`) while "NOI Debt Service" (D6) subtracts both.
-   5Y NPV (H6) discounts the whole M18:R18 range, so YR0 (the initial
-   investment) is discounted one period — Excel's NPV() semantics. Both
-   replicated to match the workbook; flag for the owner in `clarify` whether
-   to also correct these two.
+3. **CORRECTED (owner decision at `clarify`, 2026-07-14 — supersedes the
+   original "preserved as-is"):** two workbook quirks are now fixed, a
+   deliberate deviation from the Excel file:
+   - **YR-1 cashflow** subtracts **both** loans: `TotalRent − TotalExpIncl −
+     (pmt1 + pmt2)×12` (was `L8×12` only), consistent with NOI−Debt Service.
+   - **5Y NPV** discounts years 1–5 only and subtracts the initial investment
+     undiscounted: `NPV = −AllInCost + Σ(t=1..5) CFₜ/(1+WACC)ᵗ` (Excel's
+     `NPV(rate, M18:R18)` discounted the initial investment one period).
+   IRR and 5Y Total Return are unaffected. Sample deal NPV moves
+   $18,859 → $20,325. See `spec.md` → Clarifications item 1.
 
 ## Workbook visual language (reference only — design is modernized)
 
