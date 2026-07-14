@@ -46,6 +46,27 @@ export function renderDashboard(container, ctx) {
   }
   function onEdit() { clearTimeout(timer); timer = setTimeout(refresh, DEBOUNCE); }
 
+  // Offer inputs appear twice (the deal-summary strip atop Property Info and
+  // the Offer & Debt card); offerField keeps every input bound to the same
+  // field in sync so editing either one updates the other live. All-In Cost
+  // is derived and painted into every registered cell (out.allInCells).
+  const offerInputs = { offerPrice: [], fees: [], improvements: [] };
+  out.allInCells = [];
+  function offerField(key, label) {
+    const input = fieldNum(prop.offer[key], (v) => {
+      prop.offer[key] = v;
+      offerInputs[key].forEach((n) => { if (n !== input) n.value = input.value; });
+      onEdit();
+    }, { label });
+    offerInputs[key].push(input);
+    return input;
+  }
+  function dealCell(label, control, accent) {
+    return el('div', { class: 'deal-cell' + (accent ? ' deal-cell--accent' : '') }, [
+      el('span', { class: 'deal-cell__label', text: label }), control,
+    ]);
+  }
+
   // KPI strip -------------------------------------------------------------
   const KPI_DEFS = [
     ['CAP', (m) => fmt.percent2(m.cap), (m) => verdictClass(capVerdict(m.cap, prop.targets.desiredCap)), () => `target ${fmt.percent2(prop.targets.desiredCap)}`],
@@ -90,8 +111,19 @@ export function renderDashboard(container, ctx) {
     ['Parking', 'parking', 'text'], ['Ceiling', 'ceilingHeight', 'text'],
     ['APN', 'apn', 'text'],
   ];
+  // Deal summary strip — mirrors the workbook's Offer/All-In/Fees/Improvement
+  // header row; editable, synced with the Offer & Debt card below.
+  const allInSummaryCell = el('div', { class: 'deal-cell__val' });
+  out.allInCells.push(allInSummaryCell);
+  const dealSummary = el('div', { class: 'deal-summary' }, [
+    dealCell('Offer Price', offerField('offerPrice', 'Offer price')),
+    dealCell('All-In Cost', allInSummaryCell, true),
+    dealCell('Fees', offerField('fees', 'Fees')),
+    dealCell('Improvement', offerField('improvements', 'Improvements')),
+  ]);
   const infoCard = card('Property Info', 'col-3', [
-    grid2(infoDefs.map(([label, key, type]) =>
+    dealSummary,
+    el('div', { class: 'form-grid form-grid--3' }, infoDefs.map(([label, key, type]) =>
       labeledField(label, type === 'num'
         ? fieldNum(prop.info[key], (v) => { prop.info[key] = v; onEdit(); }, { label })
         : fieldText(prop.info[key], (v) => { prop.info[key] = v; onEdit(); }, { label })))),
@@ -179,11 +211,12 @@ export function renderDashboard(container, ctx) {
   });
   out.totalMortgageCell = el('dd', {});
   out.allInCell = el('dd', {});
+  out.allInCells.push(out.allInCell);
   const debtCard = card('Offer & Debt Service', 'col-3', [
     grid2([
-      labeledField('Offer price', fieldNum(prop.offer.offerPrice, (v) => { prop.offer.offerPrice = v; onEdit(); }, { label: 'Offer price' })),
-      labeledField('Fees (closing)', fieldNum(prop.offer.fees, (v) => { prop.offer.fees = v; onEdit(); }, { label: 'Fees' })),
-      labeledField('Improvements', fieldNum(prop.offer.improvements, (v) => { prop.offer.improvements = v; onEdit(); }, { label: 'Improvements' })),
+      labeledField('Offer price', offerField('offerPrice', 'Offer price')),
+      labeledField('Fees (closing)', offerField('fees', 'Fees')),
+      labeledField('Improvements', offerField('improvements', 'Improvements')),
     ]),
     ...loanFields,
     el('dl', { class: 'facts facts--1col' }, [
@@ -271,7 +304,7 @@ export function renderDashboard(container, ctx) {
       out.debtNodes['pay' + i].textContent = l.payment === null ? 'Invalid type' : fmt.money(l.payment);
     });
     out.totalMortgageCell.textContent = fmt.money(m.annualDebt);
-    out.allInCell.textContent = fmt.money(m.allInCost);
+    out.allInCells.forEach((n) => { n.textContent = fmt.money(m.allInCost); });
     // pro-forma table
     const pf = m.proforma;
     for (let i = 0; i < 6; i++) {

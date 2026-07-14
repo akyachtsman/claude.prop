@@ -121,6 +121,21 @@ test('S11 one-screen — dashboard fits 1440×900 with no vertical scroll', asyn
   }
 });
 
+test('S12 deal summary — editable strip syncs with Offer & Debt card and derives All-In', async ({ page }) => {
+  await loadSample(page);
+  const summaryOffer = page.locator('.deal-summary input[aria-label="Offer price"]');
+  const debtOffer = page.locator('.card[aria-label="Offer & Debt Service"] input[aria-label="Offer price"]');
+  const allIn = page.locator('.deal-cell--accent .deal-cell__val');
+  await expect(allIn).toHaveText('$244,335');           // derived, painted into the strip
+  // edit in the summary strip → Offer & Debt input syncs + All-In recomputes
+  await summaryOffer.fill('300000');
+  await expect(debtOffer).toHaveValue('300000');
+  await expect(allIn).toHaveText('$81,900');            // 300000 × (1 − 0.727)
+  // edit in the Offer & Debt card → summary strip input syncs back
+  await debtOffer.fill('500000');
+  await expect(summaryOffer).toHaveValue('500000');
+});
+
 test('DELETE dismiss — delete asks for confirmation', async ({ page }) => {
   await loadSample(page);
   let asked = false;
