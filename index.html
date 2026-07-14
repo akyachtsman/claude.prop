@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Property Analytics</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23132E4E'/%3E%3Cpath d='M8 22V13l8-6 8 6v9' fill='none' stroke='%230E7C6D' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles/tokens.css">
+<link rel="stylesheet" href="styles/components.css">
+</head>
+<body>
+
+<header class="topbar">
+  <a class="topbar__brand" href="#/">
+    <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#132E4E"/><path d="M8 22V13l8-6 8 6v9" fill="none" stroke="#0E7C6D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Property Analytics
+  </a>
+  <div id="topbar-center" class="topbar__center"></div>
+  <nav class="topbar__nav" aria-label="Main">
+    <a class="topbar__link" id="nav-properties" href="#/">Properties</a>
+    <a class="topbar__link" id="nav-compare" href="#/compare">Compare</a>
+    <button class="topbar__link" id="btn-export" type="button">Export</button>
+    <button class="topbar__link" id="btn-import" type="button">Import</button>
+  </nav>
+</header>
+
+<main id="view" class="page"></main>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
