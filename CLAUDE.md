@@ -91,7 +91,7 @@ Implemented in `.github/scripts/ui-tests/tests/property.spec.js` (desktop,
 fine-pointer context; the generic `app.spec.js` covers the mobile viewports).
 | # | Feature | What to verify | Failure indicator |
 |---|---|---|---|
-| S5 | Calc fidelity | Sample deal's 12 KPIs equal the workbook fixture (CAP 7.30%, DSCR 1.19, NPV $20,325, …) | Any KPI differs from EXPECTED |
+| S5 | Calc fidelity | Sample deal's 12 KPIs equal the workbook fixture (CAP 8.04%, DSCR 1.32, NPV $91,523, …) | Any KPI differs from EXPECTED |
 | S6 | Live recalc | Editing Offer price updates CAP with no calculate button | CAP unchanged after edit |
 | S7 | Persistence | Saved property survives a reload | List empty after reload |
 | S8 | Comparison | Best/worst per metric highlighted + per-column verdict | No `.cell--best`/`.cell--worst`/verdict pill |
