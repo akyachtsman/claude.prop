@@ -16,12 +16,15 @@ function fieldNum(value, onChange, opts = {}) {
     type: 'number', step: opts.step || 'any', inputmode: 'decimal',
     value: value ?? '', 'aria-label': opts.label || '',
   });
-  input.addEventListener('input', () => onChange(input.value === '' ? 0 : parseFloat(input.value)));
+  // Commit on `change` (fires on Enter or blur), not on every keystroke, so the
+  // dashboard recomputes once the field is finished — and each edit is one
+  // atomic, undoable step.
+  input.addEventListener('change', () => onChange(input.value === '' ? 0 : parseFloat(input.value)));
   return input;
 }
 function fieldText(value, onChange, opts = {}) {
   const input = el('input', { class: 'input', type: 'text', value: value ?? '', 'aria-label': opts.label || '' });
-  input.addEventListener('input', () => onChange(input.value));
+  input.addEventListener('change', () => onChange(input.value));
   return input;
 }
 // Percentage entry: the model stores a decimal (0.09) but the user types/reads
@@ -36,12 +39,12 @@ function fieldPercent(value, onChange, opts = {}) {
     el('span', { class: 'input-pct__sign', text: '%' }),
   ]);
   const input = wrap.firstChild;
-  input.addEventListener('input', () => onChange(input.value === '' ? 0 : parseFloat(input.value) / 100));
+  input.addEventListener('change', () => onChange(input.value === '' ? 0 : parseFloat(input.value) / 100));
   return wrap;
 }
 function fieldDate(value, onChange, opts = {}) {
   const input = el('input', { class: 'input', type: 'date', value: value ?? '', 'aria-label': opts.label || '' });
-  input.addEventListener('input', () => onChange(input.value));
+  input.addEventListener('change', () => onChange(input.value));
   return input;
 }
 function fieldSelect(value, options, onChange, label) {
@@ -85,7 +88,10 @@ export function renderDashboard(container, ctx) {
     paintKPIs(m);
     paintDerived(m);
   }
-  function onEdit() { clearTimeout(timer); timer = setTimeout(refresh, DEBOUNCE); }
+  function onEdit() {
+    if (ctx.onCommit) ctx.onCommit();   // snapshot the pre-edit state for undo (one call per committed edit)
+    clearTimeout(timer); timer = setTimeout(refresh, DEBOUNCE);
+  }
 
   // Offer inputs appear twice (the deal-summary strip atop Property Info and
   // the Offer & Debt card); offerField keeps every input bound to the same
@@ -381,6 +387,7 @@ export function renderDashboard(container, ctx) {
   // Actions — rendered into the top bar (keeps the dashboard one-screen) ----
   if (ctx.actionsHost) {
     render(ctx.actionsHost, [
+      ...(ctx.undoButton ? [ctx.undoButton] : []),
       el('button', { class: 'topbar__link topbar__action', type: 'button', onclick: () => ctx.save(prop), text: 'Save' }),
       el('button', { class: 'topbar__link topbar__action', type: 'button', onclick: () => ctx.remove(prop), text: 'Delete' }),
     ]);
