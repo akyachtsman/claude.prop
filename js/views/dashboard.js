@@ -423,10 +423,11 @@ export function renderDashboard(container, ctx) {
     cell.textContent = fmt.money(v);
     cell.classList.toggle('neg', typeof v === 'number' && v < 0);
   }
-  function barEl(kind, v, maxV, H, title) {
-    const h = Math.max(2, Math.round((Math.abs(v) / maxV) * H));
-    // Bar length is magnitude; a negative value (e.g. a value-add deal that
-    // loses money early) is tinted red so it never reads as a gain at a glance.
+  function barEl(kind, v, pxPerUnit, title) {
+    const h = Math.max(2, Math.round(Math.abs(v) * pxPerUnit));
+    // Bar length is magnitude; positive bars sit in the up-lane and negative
+    // ones (e.g. a value-add deal that loses money early) drop into the
+    // down-lane below the zero line, tinted red so a loss never reads as a gain.
     const b = el('div', { class: `chart__bar chart__bar--${kind}` + (v < 0 ? ' chart__bar--neg' : ''), title });
     b.style.height = h + 'px';
     return b;
@@ -446,15 +447,33 @@ export function renderDashboard(container, ctx) {
     const pf = m.proforma;
     const hs = H === 10 ? pf.h10 : pf.h5;      // hold-series for the table (equity returned in YR H)
     const boundary = H === 10;                 // show the 5↔10 divider only when zoomed out
-    // chart — operating cashflow + appreciation bars, years 1..H
+    // chart — operating cashflow + appreciation bars, years 1..H, on a shared
+    // zero baseline: positives rise above the line, negatives drop below it.
     const op = pf.operating.slice(0, H), ap = pf.apprYear.slice(0, H);
-    const maxV = Math.max(1, ...op.map(Math.abs), ...ap.map(Math.abs));
-    const chartPlot = el('div', { class: 'chart__plot', role: 'img', 'aria-label': `${H}-year operating cashflow and appreciation` },
-      op.map((c, i) => el('div', { class: 'chart__group' + (boundary && i === 4 ? ' chart__group--boundary' : '') }, [
+    const H_PX = 70;   // keep in sync with .chart__plot height
+    const vals = [...op, ...ap];
+    const maxPos = Math.max(1, ...vals.filter((v) => v > 0));
+    const maxNeg = Math.max(0, ...vals.filter((v) => v < 0).map((v) => -v));
+    const span = maxPos + maxNeg;                       // one px-per-dollar scale, both directions
+    const pxPerUnit = H_PX / span;
+    const topPx = Math.round((maxPos / span) * H_PX);   // plot height above the zero line
+    const botPx = H_PX - topPx;                         // …and below it
+    const group = (c, apv, i) => {
+      const cfBar = barEl('cf', c, pxPerUnit, `YR ${i + 1} cashflow ${fmt.money(c)}`);
+      const apBar = barEl('ap', apv, pxPerUnit, `YR ${i + 1} appreciation ${fmt.money(apv)}`);
+      const up = [], down = [];
+      (c >= 0 ? up : down).push(cfBar);
+      (apv >= 0 ? up : down).push(apBar);
+      return el('div', { class: 'chart__group' + (boundary && i === 4 ? ' chart__group--boundary' : '') }, [
         (i === 0 || i === H - 1) ? el('span', { class: 'chart__value', text: fmt.moneyCompact(op[i] + ap[i]) }) : null,
-        barEl('cf', c, maxV, 72, `YR ${i + 1} cashflow ${fmt.money(c)}`),
-        barEl('ap', ap[i], maxV, 72, `YR ${i + 1} appreciation ${fmt.money(ap[i])}`),
-      ])));
+        el('div', { class: 'chart__lane chart__lane--up' }, up),
+        el('div', { class: 'chart__lane chart__lane--down' }, down),
+      ]);
+    };
+    const chartPlot = el('div', { class: 'chart__plot', role: 'img', 'aria-label': `${H}-year operating cashflow and appreciation` },
+      op.map((c, i) => group(c, ap[i], i)));
+    chartPlot.style.setProperty('--pf-top', topPx + 'px');
+    chartPlot.style.setProperty('--pf-bot', botPx + 'px');
     const chart = el('div', { class: 'chart' }, [
       chartPlot,
       el('div', { class: 'chart__xlabels' }, op.map((_, i) => el('span', { class: boundary && i === 4 ? 'x--boundary' : '', text: `YR ${i + 1}` }))),
