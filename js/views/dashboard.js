@@ -24,6 +24,21 @@ function fieldText(value, onChange, opts = {}) {
   input.addEventListener('input', () => onChange(input.value));
   return input;
 }
+// Percentage entry: the model stores a decimal (0.09) but the user types/reads
+// percent (9). onChange still receives the decimal.
+function fieldPercent(value, onChange, opts = {}) {
+  const shown = (value === '' || value == null) ? '' : String(parseFloat((value * 100).toFixed(6)));
+  const wrap = el('span', { class: 'input-pct' }, [
+    el('input', {
+      class: 'input', type: 'number', step: opts.step || '0.1', inputmode: 'decimal',
+      value: shown, 'aria-label': opts.label || '',
+    }),
+    el('span', { class: 'input-pct__sign', text: '%' }),
+  ]);
+  const input = wrap.firstChild;
+  input.addEventListener('input', () => onChange(input.value === '' ? 0 : parseFloat(input.value) / 100));
+  return wrap;
+}
 function fieldSelect(value, options, onChange, label) {
   const sel = el('select', { class: 'input', 'aria-label': label || '' },
     options.map((o) => el('option', { value: o, selected: o === value ? true : null, text: o })));
@@ -206,7 +221,7 @@ export function renderDashboard(container, ctx) {
     dealCell('All-In Cost', allInSummaryCell, true),
     dealCell('Fees', offerField('fees', 'Fees')),
     dealCell('Improvement', offerField('improvements', 'Improvements')),
-    dealCell('Desired CAP', fieldNum(prop.targets.desiredCap, (v) => { prop.targets.desiredCap = v; goalSeekOffer('cap', v); onEdit(); }, { label: 'Desired CAP', step: '0.01' })),
+    dealCell('Desired CAP', fieldPercent(prop.targets.desiredCap, (v) => { prop.targets.desiredCap = v; goalSeekOffer('cap', v); onEdit(); }, { label: 'Desired CAP' })),
     dealCell('Desired DSCR', fieldNum(prop.targets.desiredDscr, (v) => { prop.targets.desiredDscr = v; goalSeekOffer('dscr', v); onEdit(); }, { label: 'Desired DSCR', step: '0.01' })),
   ]);
   const infoCard = card('Property Info', 'col-3', [

@@ -385,6 +385,10 @@ body {
 }
 .deal-cell--accent .deal-cell__val { background: var(--color-accent-light); }
 @media (pointer: coarse) { .deal-cell__val { min-height: 44px; } }
+/* percentage entry — number input with a trailing % sign */
+.input-pct { display: flex; align-items: center; gap: 4px; width: 100%; }
+.input-pct .input { flex: 1; min-width: 0; }
+.input-pct__sign { flex: none; font-weight: 700; font-size: var(--font-sm); color: var(--color-text-secondary); }
 
 /* denser 3-up info grid — reclaims the vertical the deal strip adds so the
    dashboard stays one-screen (S11). Collapses to 2-up / 1-up on narrow. */
