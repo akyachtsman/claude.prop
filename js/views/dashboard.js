@@ -39,6 +39,11 @@ function fieldPercent(value, onChange, opts = {}) {
   input.addEventListener('input', () => onChange(input.value === '' ? 0 : parseFloat(input.value) / 100));
   return wrap;
 }
+function fieldDate(value, onChange, opts = {}) {
+  const input = el('input', { class: 'input', type: 'date', value: value ?? '', 'aria-label': opts.label || '' });
+  input.addEventListener('input', () => onChange(input.value));
+  return input;
+}
 function fieldSelect(value, options, onChange, label) {
   const sel = el('select', { class: 'input', 'aria-label': label || '' },
     options.map((o) => el('option', { value: o, selected: o === value ? true : null, text: o })));
@@ -241,7 +246,7 @@ export function renderDashboard(container, ctx) {
       el('td', { class: 'num' }, [fieldNum(t.sf, (v) => { t.sf = v; onEdit(); }, { label: 'SF' })]),
       el('td', { class: 'num' }, [fieldNum(t.monthlyIncome, (v) => { t.monthlyIncome = v; onEdit(); }, { label: 'Rent/mo' })]),
       rps,
-      el('td', {}, [fieldText(t.leaseExpires, (v) => { t.leaseExpires = v; onEdit(); }, { label: 'Lease expires' })]),
+      el('td', {}, [fieldDate(t.leaseExpires, (v) => { t.leaseExpires = v; onEdit(); }, { label: 'Lease expires' })]),
       el('td', {}, [fieldText(t.leaseOptions, (v) => { t.leaseOptions = v; onEdit(); }, { label: 'Lease options' })]),
     ]);
   });
@@ -300,8 +305,8 @@ export function renderDashboard(container, ctx) {
     return el('div', { class: 'loan-edit' }, [
       el('div', { class: 'field' }, [el('span', { class: 'field__label', text: `Loan ${i + 1} — LTV / rate / term / type` }),
         el('div', { class: 'loan-grid' }, [
-          fieldNum(ln.ltv, (v) => { ln.ltv = v; onEdit(); }, { label: `Loan ${i + 1} LTV`, step: '0.01' }),
-          fieldNum(ln.rate, (v) => { ln.rate = v; onEdit(); }, { label: `Loan ${i + 1} rate`, step: '0.001' }),
+          fieldPercent(ln.ltv, (v) => { ln.ltv = v; onEdit(); }, { label: `Loan ${i + 1} LTV`, step: '0.1' }),
+          fieldPercent(ln.rate, (v) => { ln.rate = v; onEdit(); }, { label: `Loan ${i + 1} rate`, step: '0.1' }),
           fieldNum(ln.termYears, (v) => { ln.termYears = v; onEdit(); }, { label: `Loan ${i + 1} term` }),
           fieldSelect(ln.type, ['CONV', 'IO'], (v) => { ln.type = v; onEdit(); }, `Loan ${i + 1} type`),
         ])]),

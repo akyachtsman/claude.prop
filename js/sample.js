@@ -26,10 +26,10 @@ export function sampleProperty() {
       { ltv: 0, rate: 0.065, termYears: 25, type: 'IO' },
     ],
     tenants: [
-      { name: 'smoke shop', sf: 2679, monthlyIncome: 2500, leaseExpires: 'Jan 2030', leaseOptions: '—' },
-      { name: 'perfection', sf: 3290, monthlyIncome: 2500, leaseExpires: 'May 2028', leaseOptions: '—' },
-      { name: 'perfection', sf: 2914, monthlyIncome: 2500, leaseExpires: 'May 2028', leaseOptions: '—' },
-      { name: 'side space', sf: 2679, monthlyIncome: 0, leaseExpires: 'May 2030', leaseOptions: '—' },
+      { name: 'smoke shop', sf: 2679, monthlyIncome: 2500, leaseExpires: '2030-01-31', leaseOptions: '—' },
+      { name: 'perfection', sf: 3290, monthlyIncome: 2500, leaseExpires: '2028-05-01', leaseOptions: '—' },
+      { name: 'perfection', sf: 2914, monthlyIncome: 2500, leaseExpires: '2028-05-01', leaseOptions: '—' },
+      { name: 'side space', sf: 2679, monthlyIncome: 0, leaseExpires: '2030-05-31', leaseOptions: '—' },
     ],
     expenses: [
       { key: 'insurance', label: 'Insurance', amount: 7300, included: true, estimated: true },
