@@ -36,6 +36,22 @@ export function renderDashboard(container, ctx) {
   const prop = ctx.property;               // working copy (mutable)
   const out = {};                          // output nodes we refresh
   let timer = null;
+  let firstPaint = true;                   // suppress change-flash on initial render
+
+  // Soft "this value just changed" cue: set text and, if it differs from the
+  // current text (and it isn't the first render), play a faint fading overlay.
+  function flash(node) {
+    if (!node) return;
+    node.classList.remove('flash');
+    void node.offsetWidth;                 // restart the animation
+    node.classList.add('flash');
+  }
+  function setText(node, value) {
+    const s = String(value);
+    if (node.textContent === s) return;
+    node.textContent = s;
+    if (!firstPaint) flash(node);
+  }
 
   function refresh() {
     const m = compute(prop);
@@ -141,12 +157,12 @@ export function renderDashboard(container, ctx) {
     KPI_DEFS.map((def, i) => {
       const valNode = el('div', { class: 'kpi__value' });
       const noteNode = el('div', { class: 'kpi__note' });
-      out['kpi' + i] = { valNode, noteNode, def };
       const formula = def[4];
       const srDesc = formula ? el('span', { class: 'sr-only', id: 'kpi-f' + i, text: 'Formula: ' + formula }) : null;
       const cell = el('div', formula ? { class: 'kpi kpi--info', tabindex: '0', 'aria-describedby': 'kpi-f' + i } : { class: 'kpi' }, [
         el('span', { class: 'kpi__label', text: def[0] }), valNode, noteNode, srDesc,
       ]);
+      out['kpi' + i] = { valNode, noteNode, def, cell };
       if (formula) {
         cell.addEventListener('mouseenter', () => showTip(cell, formula));
         cell.addEventListener('mouseleave', hideTip);
@@ -158,8 +174,10 @@ export function renderDashboard(container, ctx) {
 
   function paintKPIs(m) {
     KPI_DEFS.forEach((def, i) => {
-      const { valNode, noteNode } = out['kpi' + i];
-      valNode.textContent = def[1](m);
+      const { valNode, noteNode, cell } = out['kpi' + i];
+      const nv = def[1](m);
+      if (valNode.textContent !== nv && !firstPaint) flash(cell);   // flash the cell (valNode's class is reset below)
+      valNode.textContent = nv;
       valNode.className = 'kpi__value ' + (def[2] ? def[2](m) : '');
       noteNode.textContent = def[3](m);
     });
@@ -349,23 +367,23 @@ export function renderDashboard(container, ctx) {
   // ── output painting ────────────────────────────────────────────────
   function paintDerived(m) {
     // income
-    prop.tenants.forEach((t, i) => { rentPerSFNodes[i].textContent = fmt.moneyCents(m.tenantRentPerSF[i]); });
-    out.totalSFCell.textContent = fmt.integer(m.totalTenantSF);
-    out.totalMoRentCell.textContent = fmt.money(m.totalMonthlyRent);
-    out.avgRentCell.textContent = fmt.moneyCents(m.avgRentPerSF);
-    out.totalRentCell.textContent = fmt.money(m.totalRent) + ' / yr';
+    prop.tenants.forEach((t, i) => { setText(rentPerSFNodes[i], fmt.moneyCents(m.tenantRentPerSF[i])); });
+    setText(out.totalSFCell, fmt.integer(m.totalTenantSF));
+    setText(out.totalMoRentCell, fmt.money(m.totalMonthlyRent));
+    setText(out.avgRentCell, fmt.moneyCents(m.avgRentPerSF));
+    setText(out.totalRentCell, fmt.money(m.totalRent) + ' / yr');
     out.rentLessLabel.textContent = `Rent − ${fmt.percent(prop.assumptions.collectionLoss)} coll. loss`;
-    out.rentLessCell.textContent = fmt.money(m.rentLessCollection) + ' / yr';
+    setText(out.rentLessCell, fmt.money(m.rentLessCollection) + ' / yr');
     // expenses
-    expPctNodes.forEach(({ pct, i }) => { pct.textContent = fmt.percent(m.expensePctOfNoi[i]); });
-    out.totalInclCell.textContent = `${fmt.money(m.includedExpense)} / ${fmt.money(m.allExpense)}`;
+    expPctNodes.forEach(({ pct, i }) => { setText(pct, fmt.percent(m.expensePctOfNoi[i])); });
+    setText(out.totalInclCell, `${fmt.money(m.includedExpense)} / ${fmt.money(m.allExpense)}`);
     // debt
     m.loans.forEach((l, i) => {
-      out.debtNodes['loanAmt' + i].textContent = fmt.money(l.amount);
-      out.debtNodes['pay' + i].textContent = l.payment === null ? 'Invalid type' : fmt.money(l.payment);
+      setText(out.debtNodes['loanAmt' + i], fmt.money(l.amount));
+      setText(out.debtNodes['pay' + i], l.payment === null ? 'Invalid type' : fmt.money(l.payment));
     });
-    out.totalMortgageCell.textContent = fmt.money(m.annualDebt);
-    out.allInCells.forEach((n) => { n.textContent = fmt.money(m.allInCost); });
+    setText(out.totalMortgageCell, fmt.money(m.annualDebt));
+    out.allInCells.forEach((n) => { setText(n, fmt.money(m.allInCost)); });
     drawProforma(m);
   }
   function setCell(cell, v) {
@@ -428,7 +446,8 @@ export function renderDashboard(container, ctx) {
     render(pfBody, [chart, table, stats, note]);
   }
 
-  refresh(); // initial paint
+  refresh();          // initial paint
+  firstPaint = false; // subsequent edits flash the values that change
 }
 
 // ── helpers ───────────────────────────────────────────────────────────

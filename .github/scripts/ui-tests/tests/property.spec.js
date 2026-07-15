@@ -193,6 +193,19 @@ test('S15 desired CAP/DSCR goal-seek — typing a target back-solves the offer p
   await expect.poll(async () => (await kpis(page))['DSCR']).toBe('1.40');
 });
 
+test('S16 change flash — affected values flash softly on edit, not on load or inert edits', async ({ page }) => {
+  await loadSample(page);
+  const flashes = page.locator('.flash');
+  await expect(flashes).toHaveCount(0);                     // nothing flashes on initial render
+  await page.fill('input[aria-label="APN"]', 'XYZ-123');    // pure text field, no computed effect
+  await page.waitForTimeout(200);
+  await expect(flashes).toHaveCount(0);
+  const capCell = page.locator('.kpi', { has: page.locator('.kpi__label', { hasText: /^CAP$/ }) });
+  await page.fill('.deal-strip input[aria-label="Offer price"]', '300000');   // ripples into CAP, All-In, …
+  await expect(capCell).toHaveClass(/flash/);
+  await expect(flashes.first()).toBeVisible();
+});
+
 test('DELETE dismiss — delete asks for confirmation', async ({ page }) => {
   await loadSample(page);
   let asked = false;
