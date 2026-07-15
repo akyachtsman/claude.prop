@@ -14,7 +14,7 @@ const center = document.getElementById('topbar-center');
 const navProps = document.getElementById('nav-properties');
 const navCompare = document.getElementById('nav-compare');
 
-let dirty = false;
+let flushSave = null;   // flush the active dashboard's pending auto-save (set in showDashboard)
 
 // ── blank property factory (for "+ New") ────────────────────────────────
 function blankProperty() {
@@ -62,6 +62,7 @@ function setActiveNav(route) {
 }
 
 function router() {
+  if (flushSave) flushSave();          // commit any pending edit before switching views
   const r = parseHash();
   setActiveNav(r.route);
   if (r.route === 'dashboard') return showDashboard(r.id);
@@ -97,7 +98,11 @@ function showDashboard(id) {
   const props = store.list();
   const idx = props.findIndex((p) => p.id === id);
   const working = deepCopy(saved);
-  dirty = false;
+  // Auto-save: edits persist automatically (debounced), so nothing is lost and
+  // navigating never has to prompt. flushSave() commits a pending save now.
+  let saveTimer = null;
+  const autosave = () => { clearTimeout(saveTimer); saveTimer = null; store.save(working); };
+  flushSave = () => { if (saveTimer) autosave(); };
 
   // topbar center: switcher (prev/next + title) + verdict pills
   clear(center);
@@ -122,10 +127,10 @@ function showDashboard(id) {
     property: working,
     actionsHost,
     setHeaderVerdicts: (m, p) => paintPills(pills, m, p),
-    markDirty: () => { dirty = true; },
+    markDirty: () => { clearTimeout(saveTimer); saveTimer = setTimeout(autosave, 400); },
     save: (p) => {
       store.save(p);
-      if (store.isStorageOK()) { dirty = false; toast('Saved.', 'success'); }
+      if (store.isStorageOK()) { toast('Saved.', 'success'); }
       else { toast("Couldn't save — storage is full or private mode. Export to keep your data.", 'info'); }
       router(); navigate('#/p/' + encodeURIComponent(p.id));
     },
@@ -152,10 +157,7 @@ function paintPills(host, m, p) {
 }
 
 // ── actions ────────────────────────────────────────────────────────────
-function guardNav(hash) {
-  if (dirty && !confirm('You have unsaved changes. Leave without saving?')) return;
-  navigate(hash);
-}
+function guardNav(hash) { navigate(hash); }   // edits auto-save; router() flushes any pending save
 function createNew() {
   const p = store.save(blankProperty());
   navigate('#/p/' + encodeURIComponent(p.id));
@@ -198,4 +200,5 @@ document.getElementById('btn-export').addEventListener('click', exportData);
 document.getElementById('btn-import').addEventListener('click', importData);
 if (!store.probe()) toast('Saving is off — private mode or storage full. Export to keep your data.', 'info');
 window.addEventListener('hashchange', router);
+window.addEventListener('beforeunload', () => { if (flushSave) flushSave(); });   // don't lose an in-flight edit on close
 router();
