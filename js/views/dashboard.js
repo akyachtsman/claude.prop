@@ -66,6 +66,34 @@ export function renderDashboard(container, ctx) {
       el('span', { class: 'deal-cell__label', text: label }), control,
     ]);
   }
+  // Goal-seek: typing a Desired CAP or DSCR back-solves the Offer Price that
+  // achieves it (mirrors the workbook's Apps Script) and updates the offer
+  // input in place; the verdict pills still compare actual ≥ desired. Flooring
+  // keeps the resulting metric at/above target so the pill reads as met.
+  // Desired ≤ 0 (or cleared) leaves the offer untouched.
+  function pvAnnuity(rate, nper, pmt) {   // present value of a level payment stream
+    if (rate === 0) return -(pmt * nper);
+    return -(pmt * (1 - Math.pow(1 + rate, -nper)) / rate);
+  }
+  function goalSeekOffer(kind, target) {
+    const m = compute(prop);
+    let offer = null;
+    if (kind === 'cap') {
+      if (target > 0 && m.noi > 0) offer = m.noi / target;              // CAP = NOI ÷ offer
+    } else {
+      const ln = prop.loans[0] || {};
+      const rate = Number(ln.rate) || 0, term = Number(ln.termYears) || 0, ltv = Number(ln.ltv) || 0;
+      if (target > 0 && term > 0 && ltv > 0 && Number.isFinite(m.noiLessCollection)) {
+        const loan = pvAnnuity(rate / 12, term * 12, -(m.noiLessCollection / (target * 12)));
+        offer = loan / ltv;                                             // gross the supported loan up by LTV
+      }
+    }
+    if (Number.isFinite(offer) && offer > 0) {
+      const v = Math.floor(offer);
+      prop.offer.offerPrice = v;
+      offerInputs.offerPrice.forEach((n) => { n.value = String(v); });
+    }
+  }
 
   // KPI strip — def = [label, valueFn, valueClassFn, noteFn, formula].
   // `formula` drives the hover/focus popup (mirrors workbook-model.md / model.js).
@@ -157,8 +185,8 @@ export function renderDashboard(container, ctx) {
     dealCell('All-In Cost', allInSummaryCell, true),
     dealCell('Fees', offerField('fees', 'Fees')),
     dealCell('Improvement', offerField('improvements', 'Improvements')),
-    dealCell('Desired CAP', fieldNum(prop.targets.desiredCap, (v) => { prop.targets.desiredCap = v; onEdit(); }, { label: 'Desired CAP', step: '0.01' })),
-    dealCell('Desired DSCR', fieldNum(prop.targets.desiredDscr, (v) => { prop.targets.desiredDscr = v; onEdit(); }, { label: 'Desired DSCR', step: '0.01' })),
+    dealCell('Desired CAP', fieldNum(prop.targets.desiredCap, (v) => { prop.targets.desiredCap = v; goalSeekOffer('cap', v); onEdit(); }, { label: 'Desired CAP', step: '0.01' })),
+    dealCell('Desired DSCR', fieldNum(prop.targets.desiredDscr, (v) => { prop.targets.desiredDscr = v; goalSeekOffer('dscr', v); onEdit(); }, { label: 'Desired DSCR', step: '0.01' })),
   ]);
   const infoCard = card('Property Info', 'col-3', [
     el('div', { class: 'form-grid form-grid--3' }, infoDefs.map(([label, key, type]) =>
