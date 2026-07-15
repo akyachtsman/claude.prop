@@ -40,22 +40,25 @@ async function loadSample(page) {
 // clear is needed — and clearing via addInitScript would wipe the store on the
 // reloads that S7/S10 depend on.
 
-test('S5 calc fidelity — sample deal KPIs match the workbook fixture', async ({ page }) => {
+test('S5 calc fidelity — sample deal KPIs match the actual-close fixture', async ({ page }) => {
   const errors = watchErrors(page);
   await loadSample(page);
   const k = await kpis(page);
-  expect(k['CAP']).toBe('8.04%');
-  expect(k['DSCR']).toBe('1.32');
-  expect(k['NOI']).toBe('$71,960');
-  expect(k['NOI − Debt Svc']).toBe('$20,694');
-  expect(k['NOI − Coll. Loss']).toBe('$67,460');
-  expect(k['Cash on Cash']).toBe('8.47%');
-  expect(k['Annual IRR']).toBe('16.49%');
-  expect(k['5Y NPV']).toBe('$91,523'); // app-corrected NPV (workbook shows $85,264)
-  expect(k['5Y Total Return']).toBe('$203,021');
+  // 715 Plumas at the price actually paid ($1.3M / $945K loan): a value-add
+  // deal that does not yet cash-flow, so several metrics are legitimately
+  // negative. Values mirror js/sample.js EXPECTED (computed by js/model.js).
+  expect(k['CAP']).toBe('5.13%');
+  expect(k['DSCR']).toBe('0.84');
+  expect(k['NOI']).toBe('$66,627');
+  expect(k['NOI − Debt Svc']).toBe('-$7,757');
+  expect(k['NOI − Coll. Loss']).toBe('$62,127');
+  expect(k['Cash on Cash']).toBe('-2.18%');
+  expect(k['Annual IRR']).toBe('5.29%');
+  expect(k['5Y NPV']).toBe('-$29,512'); // negative at the price paid (app-corrected NPV)
+  expect(k['5Y Total Return']).toBe('$94,121');
   expect(k['WACC']).toBe('7.34%');
-  expect(k['Return on Cost']).toBe('29.45%');
-  expect(k['1% Rule']).toBe('-$1,450');
+  expect(k['Return on Cost']).toBe('18.77%');
+  expect(k['1% Rule']).toBe('-$5,500');
   expect(errors).toEqual([]);
 });
 
@@ -64,7 +67,7 @@ test('S6 live recalc — editing an input updates KPIs with no calculate button'
   const before = (await kpis(page))['CAP'];
   await page.fill('input[aria-label="Offer price"]', '300000');
   await expect.poll(async () => (await kpis(page))['CAP']).not.toBe(before);
-  expect((await kpis(page))['CAP']).toBe('23.99%');
+  expect((await kpis(page))['CAP']).toBe('22.21%');   // NOI $66,627 ÷ 300,000
 });
 
 test('S7 persistence — a saved property survives a reload', async ({ page }) => {
@@ -125,14 +128,14 @@ test('S12 deal summary — the band is the single editable source; All-In derive
   await loadSample(page);
   const summaryOffer = page.locator('.deal-strip input[aria-label="Offer price"]');
   const allIn = page.locator('.deal-cell--accent .deal-cell__val');
-  await expect(allIn).toHaveText('$244,335');           // derived, painted into the band
+  await expect(allIn).toHaveText('$355,030');           // derived, painted into the band
   // Offer price now lives only in the band — not duplicated in the Offer & Debt card
   await expect(page.locator('input[aria-label="Offer price"]')).toHaveCount(1);
   await expect(page.locator('.card[aria-label="Offer & Debt Service"] input[aria-label="Offer price"]')).toHaveCount(0);
-  // editing it recomputes the derived All-In (300000 × (1 − 0.727)) and the card's copy
+  // editing it recomputes the derived All-In (300000 × (1 − 0.7269)) and the card's copy
   await summaryOffer.fill('300000');
-  await expect(allIn).toHaveText('$81,900');
-  await expect(page.locator('.card[aria-label="Offer & Debt Service"] .facts dd').last()).toHaveText('$81,900');
+  await expect(allIn).toHaveText('$81,930');
+  await expect(page.locator('.card[aria-label="Offer & Debt Service"] .facts dd').last()).toHaveText('$81,930');
 });
 
 test('S13 KPI formula popup — hovering a metric reveals its formula, clamped to viewport', async ({ page }) => {
@@ -162,7 +165,7 @@ test('S14 pro-forma horizon — slider extends to 10 years with a boundary and 1
   await expect(bars).toHaveCount(5);
   await expect(stats).toHaveCount(1);
   await expect(stats.first()).toContainText('5-year');
-  await expect(stats.first()).toContainText('$91,523');
+  await expect(stats.first()).toContainText('-$29,512');
   await expect(page.locator('.chart__group--boundary')).toHaveCount(0);
   // zoom to 10 → 10 bars, a boundary divider, and a second (10-year) stats block
   await setHorizon('10');
@@ -170,10 +173,10 @@ test('S14 pro-forma horizon — slider extends to 10 years with a boundary and 1
   await expect(page.locator('.chart__group--boundary')).toHaveCount(1);
   await expect(stats).toHaveCount(2);
   await expect(stats.nth(1)).toContainText('10-year');
-  await expect(stats.nth(1)).toContainText('$171,200');
+  await expect(stats.nth(1)).toContainText('-$45,941');
   // headline stays 5-year: top KPI strip 5Y NPV unchanged, and the 5-year block too
-  expect((await kpis(page))['5Y NPV']).toBe('$91,523');
-  await expect(stats.first()).toContainText('$91,523');
+  expect((await kpis(page))['5Y NPV']).toBe('-$29,512');
+  await expect(stats.first()).toContainText('-$29,512');
   // zoom back to 5 → boundary and 10-year block gone
   await setHorizon('5');
   await expect(bars).toHaveCount(5);
@@ -183,13 +186,13 @@ test('S14 pro-forma horizon — slider extends to 10 years with a boundary and 1
 test('S15 desired CAP/DSCR goal-seek — typing a target back-solves the offer price', async ({ page }) => {
   await loadSample(page);
   const offer = page.locator('.deal-strip input[aria-label="Offer price"]');
-  // Desired CAP entered as a percent (8 = 8%) → offer = NOI ÷ 0.08 = 899,500; CAP reads 8.00%
+  // Desired CAP entered as a percent (8 = 8%) → offer = NOI ÷ 0.08 = 832,837; CAP reads 8.00%
   await page.fill('.deal-strip input[aria-label="Desired CAP"]', '8');
-  await expect(offer).toHaveValue('899500');
+  await expect(offer).toHaveValue('832837');
   await expect.poll(async () => (await kpis(page))['CAP']).toBe('8.00%');
-  // Desired DSCR 1.4 → offer back-solves through the loan (PV ÷ LTV) to 841,227; DSCR reads 1.40
+  // Desired DSCR 1.4 → offer back-solves through the loan (PV ÷ LTV) to 775,560; DSCR reads 1.40
   await page.fill('.deal-strip input[aria-label="Desired DSCR"]', '1.4');
-  await expect(offer).toHaveValue('841227');
+  await expect(offer).toHaveValue('775560');
   await expect.poll(async () => (await kpis(page))['DSCR']).toBe('1.40');
 });
 

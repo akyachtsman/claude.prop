@@ -91,7 +91,7 @@ Implemented in `.github/scripts/ui-tests/tests/property.spec.js` (desktop,
 fine-pointer context; the generic `app.spec.js` covers the mobile viewports).
 | # | Feature | What to verify | Failure indicator |
 |---|---|---|---|
-| S5 | Calc fidelity | Sample deal's 12 KPIs equal the workbook fixture (CAP 8.04%, DSCR 1.32, NPV $91,523, …) | Any KPI differs from EXPECTED |
+| S5 | Calc fidelity | Sample deal's 12 KPIs equal the actual-close fixture (CAP 5.13%, DSCR 0.84, NPV -$29,512, …) | Any KPI differs from EXPECTED |
 | S6 | Live recalc | Editing Offer price updates CAP with no calculate button | CAP unchanged after edit |
 | S7 | Persistence | Saved property survives a reload | List empty after reload |
 | S8 | Comparison | Best/worst per metric highlighted + per-column verdict | No `.cell--best`/`.cell--worst`/verdict pill |
@@ -100,7 +100,7 @@ fine-pointer context; the generic `app.spec.js` covers the mobile viewports).
 | S11 | One-screen | Dashboard fits 1440×900 with no vertical scroll; all data points present | `scrollHeight > innerHeight` |
 | S12 | Deal summary | Editable Offer/Fees/Improvement band above the cards is the single source (removed from Offer & Debt card); All-In Cost derived | Duplicate Offer input remains, or All-In not `$244,335` |
 | S13 | Formula popup | Hovering/focusing a KPI reveals its calculation in a popup, clamped within the viewport | No `.kpi-tip`, wrong formula text, or popup overflows viewport |
-| S14 | Pro-forma horizon | Slider (default 5 yr) extends the pro-forma to 10 yr with a 5↔10 boundary and a second 10-year NPV/Return/IRR block; 5-year headline unchanged | Slider doesn't extend, no boundary/10-yr block, or 5Y NPV ≠ `$91,523` |
+| S14 | Pro-forma horizon | Slider (default 5 yr) extends the pro-forma to 10 yr with a 5↔10 boundary and a second 10-year NPV/Return/IRR block; 5-year headline unchanged | Slider doesn't extend, no boundary/10-yr block, or 5Y NPV ≠ `-$29,512` |
 | S15 | Desired CAP/DSCR goal-seek | Typing Desired CAP (`NOI÷cap`) or Desired DSCR (`PV(loan)÷LTV`) back-solves and sets Offer price; verdict pills still compare actual ≥ desired | Offer unchanged after editing a desired field, or resulting CAP/DSCR ≠ target |
 | S16 | Change marker | After an edit, output values that changed get a corner-fold `.flash` marker that persists until the next edit; none on initial load or on edits with no computed effect | Marker on load, none on a rippling edit, or one on an inert edit |
 | S17 | Generated shade | Computed fields (KPI cells, All-In, fact values) share the `--gen-shade` fill so generated values read distinct from inputs | A generated field lacks the shade |
