@@ -302,17 +302,21 @@ export function renderDashboard(container, ctx) {
     out.debtNodes['loanAmt' + i] = amt;
     const pay = el('dd', {});
     out.debtNodes['pay' + i] = pay;
+    const balloon = el('dd', {});
+    out.debtNodes['balloon' + i] = balloon;
     return el('div', { class: 'loan-edit' }, [
       el('span', { class: 'loan-edit__title', text: `Loan ${i + 1}` }),
-      el('div', { class: 'loan-grid' }, [
+      el('div', { class: 'loan-grid loan-grid--5' }, [
         labeledField('LTV', fieldPercent(ln.ltv, (v) => { ln.ltv = v; onEdit(); }, { label: `Loan ${i + 1} LTV`, step: '0.1' })),
         labeledField('Rate', fieldPercent(ln.rate, (v) => { ln.rate = v; onEdit(); }, { label: `Loan ${i + 1} rate`, step: '0.1' })),
-        labeledField('Term', fieldNum(ln.termYears, (v) => { ln.termYears = v; onEdit(); }, { label: `Loan ${i + 1} term` })),
+        labeledField('Amort', fieldNum(ln.termYears, (v) => { ln.termYears = v; onEdit(); }, { label: `Loan ${i + 1} amortization years` })),
+        labeledField('Maturity', fieldNum(ln.maturityYears ?? 0, (v) => { ln.maturityYears = v; onEdit(); }, { label: `Loan ${i + 1} maturity years` })),
         labeledField('Type', fieldSelect(ln.type, ['CONV', 'IO'], (v) => { ln.type = v; onEdit(); }, `Loan ${i + 1} type`)),
       ]),
       el('dl', { class: 'facts facts--1col' }, [
         el('div', {}, [el('dt', { text: `Loan ${i + 1} amount / mo. payment` }),
           el('dd', {}, [amt, document.createTextNode(' · '), pay])]),
+        el('div', {}, [el('dt', { text: 'Balloon due' }), balloon]),
       ]),
     ]);
   });
@@ -404,6 +408,12 @@ export function renderDashboard(container, ctx) {
     m.loans.forEach((l, i) => {
       setText(out.debtNodes['loanAmt' + i], fmt.money(l.amount));
       setText(out.debtNodes['pay' + i], l.payment === null ? 'Invalid type' : fmt.money(l.payment));
+      const balloonNode = out.debtNodes['balloon' + i];
+      if (balloonNode) {
+        setText(balloonNode, l.hasBalloon
+          ? `${fmt.money(l.balloon)} · yr ${l.maturityYears}`
+          : '—');
+      }
     });
     setText(out.totalMortgageCell, fmt.money(m.annualDebt));
     out.allInCells.forEach((n) => { setText(n, fmt.money(m.allInCost)); });

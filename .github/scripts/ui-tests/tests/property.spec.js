@@ -237,6 +237,22 @@ test('S18 auto-save — edits persist without Save, and switching never prompts'
   expect(asked).toBe(false);
 });
 
+test('S19 amortization vs. maturity — a balloon is reported without changing DSCR', async ({ page }) => {
+  await loadSample(page);
+  const card = page.locator('.card[aria-label="Offer & Debt Service"]');
+  // sample loan: 25-yr amortization, 10-yr maturity → balloon due at yr 10
+  await expect(card).toContainText('Balloon due');
+  await expect(card).toContainText('$725,708 · yr 10');
+  // the maturity does NOT change the payment/DSCR (payment is sized off the
+  // amortization term; a refinance at maturity is cash-neutral)
+  const dscrBefore = (await kpis(page))['DSCR'];
+  expect(dscrBefore).toBe('0.84');
+  // clearing the maturity removes the balloon and leaves DSCR untouched
+  await page.fill('input[aria-label="Loan 1 maturity years"]', '0');
+  await expect(card).not.toContainText('$725,708');
+  expect((await kpis(page))['DSCR']).toBe(dscrBefore);
+});
+
 test('DELETE dismiss — delete asks for confirmation', async ({ page }) => {
   await loadSample(page);
   let asked = false;

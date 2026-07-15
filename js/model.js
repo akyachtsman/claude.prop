@@ -32,6 +32,25 @@ export function loanPayment({ amount, rate, termYears, type }) {
   return null; // invalid type
 }
 
+/** Outstanding principal after `monthsPaid` payments on an amortizing loan —
+ *  i.e. the balloon that comes due if the note matures before it fully
+ *  amortizes. Payment is unaffected (it is sized off the amortization term);
+ *  this only reports what is still owed at maturity. IO loans never amortize,
+ *  so the whole principal balloons. Returns 0 once fully amortized. */
+export function remainingBalance({ amount, rate, termYears, type }, monthsPaid) {
+  const p = num(amount), r = num(rate) / 12, n = num(termYears) * 12, k = num(monthsPaid);
+  if (p <= 0) return 0;
+  if (k <= 0) return p;
+  if (type === 'IO') return p;            // interest-only: principal never reduces
+  if (type !== 'CONV') return p;          // unknown type: assume no amortization
+  if (k >= n) return 0;                   // fully paid off by maturity
+  if (r === 0) return p * (1 - k / n);    // zero-interest: linear paydown
+  // Balance_k = P(1+r)^k − PMT · ((1+r)^k − 1)/r
+  const pmt = loanPayment({ amount: p, rate, termYears, type });
+  const g = Math.pow(1 + r, k);
+  return Math.max(0, p * g - pmt * (g - 1) / r);
+}
+
 /** Internal rate of return via bisection on the full series [initial, CF1..CFn].
  *  Returns null when the series never crosses zero (no real IRR). */
 export function irr(series) {
@@ -66,7 +85,14 @@ export function compute(property) {
   const loanCalc = loans.map((ln) => {
     const amount = offerPrice * num(ln.ltv);
     const payment = loanPayment({ ...ln, amount });
-    return { ...ln, amount, payment };
+    // A commercial note often matures (comes due) before its amortization term
+    // ends, leaving a balloon that must be refinanced or paid. This is
+    // reported for context only — it does not change the payment, DSCR, or NPV
+    // (a refinance is cash-neutral at maturity).
+    const maturityYears = num(ln.maturityYears);
+    const hasBalloon = amount > 0 && maturityYears > 0 && maturityYears < num(ln.termYears);
+    const balloon = hasBalloon ? remainingBalance({ ...ln, amount }, maturityYears * 12) : null;
+    return { ...ln, amount, payment, maturityYears, hasBalloon, balloon };
   });
   const pmt1 = loanCalc[0] ? loanCalc[0].payment : 0;
   const pmt2 = loanCalc[1] ? loanCalc[1].payment : 0;

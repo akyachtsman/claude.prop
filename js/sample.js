@@ -29,7 +29,9 @@ export function sampleProperty() {
     offer: { offerPrice: 1300000, fees: 0, improvements: 0 },
     loans: [
       // 72.69% LTV → ~$944,970 on the $1.3M price (documented loan $945,000).
-      { ltv: 0.7269, rate: 0.0619, termYears: 25, type: 'CONV' },
+      // 25-yr amortization, 10-yr maturity → a balloon comes due at yr 10
+      // (must be refinanced; origination 2025-09-08 → matures 2035-09-08).
+      { ltv: 0.7269, rate: 0.0619, termYears: 25, maturityYears: 10, type: 'CONV' },
     ],
     tenants: [
       { name: 'smoke shop', sf: 2679, monthlyIncome: 2500, leaseExpires: '2030-01-31', leaseOptions: '—' },
