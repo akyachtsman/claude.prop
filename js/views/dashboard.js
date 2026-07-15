@@ -68,11 +68,13 @@ export function renderDashboard(container, ctx) {
     node.classList.add('flash');
     flashed.push(node);
   }
-  function setText(node, value) {
+  function setText(node, value, noFlash) {
     const s = String(value);
     if (node.textContent === s) return;
     node.textContent = s;
-    if (!firstPaint) flash(node);
+    // noFlash: skip the corner-fold change marker for tiny inline annotations
+    // (e.g. the "% share of NOI" labels), where the 12px fold overlaps the text.
+    if (!firstPaint && !noFlash) flash(node);
   }
 
   function refresh() {
@@ -402,7 +404,7 @@ export function renderDashboard(container, ctx) {
     out.rentLessLabel.textContent = `Rent − ${fmt.percent(prop.assumptions.collectionLoss)} coll. loss`;
     setText(out.rentLessCell, fmt.money(m.rentLessCollection) + ' / yr');
     // expenses
-    expPctNodes.forEach(({ pct, i }) => { setText(pct, fmt.percent(m.expensePctOfNoi[i])); });
+    expPctNodes.forEach(({ pct, i }) => { setText(pct, fmt.percent(m.expensePctOfNoi[i]), true); });
     setText(out.totalInclCell, `${fmt.money(m.includedExpense)} / ${fmt.money(m.allExpense)}`);
     // debt
     m.loans.forEach((l, i) => {
