@@ -361,7 +361,7 @@ export function renderDashboard(container, ctx) {
   // Desired CAP/DSCR now live in the deal-summary band above the cards.
   const assumeCard = card('Assumptions', '', [
     grid2(assumeDefs.map(([label, key]) =>
-      labeledField(label, fieldNum(prop.assumptions[key], (v) => { prop.assumptions[key] = v; onEdit(); }, { label, step: '0.01' })))),
+      labeledField(label, fieldPercent(prop.assumptions[key], (v) => { prop.assumptions[key] = v; onEdit(); }, { label, step: '0.1' })))),
   ]);
   const methodCard = el('section', { class: 'card notes', 'aria-label': 'Methodology' }, [
     el('span', { class: 'eyebrow', text: 'Methodology' }),
