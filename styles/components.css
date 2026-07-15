@@ -247,6 +247,10 @@ body {
 .data-table .num, .data-table th.num { text-align: right; white-space: nowrap; }
 .data-table .total td { font-weight: 700; border-top: 2px solid var(--color-border); }
 .neg { color: var(--color-fail); }
+/* generated shade on computed table cells (income/pro-forma) — numeric cells
+   that hold a value, not an input, a label, or a blank placeholder. Compare
+   view keeps its own best/worst fills. */
+.data-table:not(.compare-table) td.num:not(:has(input)):not(:empty) { background: var(--gen-shade); }
 
 /* one-line fact rows (label left, value right) ---------------------------------- */
 .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 2px var(--space-4); margin: 0; }
