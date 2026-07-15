@@ -68,4 +68,8 @@ export const EXPECTED = {
   npv: 91523,         // app-corrected (workbook shows $85,264)
   totalReturn: 203021,
   irr: 0.1649,        // ~16.49%
+  // 10-year hold projection (forward projection beyond the workbook)
+  npv10: 171200,
+  totalReturn10: 433236,
+  irr10: 0.1718,      // ~17.18%
 };
