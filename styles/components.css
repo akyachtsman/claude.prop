@@ -245,6 +245,11 @@ body {
 }
 .data-table tr:last-child td { border-bottom: none; }
 .data-table .num, .data-table th.num { text-align: right; white-space: nowrap; }
+.data-table td.num .input { text-align: right; }   /* numeric inputs line up with the column's totals */
+/* Numeric inputs inset their text by border+padding; shift the right-aligned
+   display cells (headers, totals) in the income table to match, so each numeric
+   column reads as one straight right edge. */
+.data-table--dense th.num, .data-table--dense td.num:not(:has(input)) { padding-right: calc(2 * var(--space-2) + 1px); }
 .data-table .income-yr { text-align: left; padding-left: var(--space-3); }   /* keep the /yr total near its row, not the far edge */
 .data-table .total td { font-weight: 700; border-top: 2px solid var(--color-border); }
 .neg { color: var(--color-fail); }
