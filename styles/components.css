@@ -361,9 +361,10 @@ body {
 .card > .eyebrow { margin-bottom: var(--space-1); }
 .card .input { min-height: 28px; padding: 2px var(--space-2); font-size: var(--font-sm); }
 @media (pointer: coarse) { .card .input { min-height: 44px; font-size: 16px; } }
-.loan-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; }
+.loan-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; align-items: end; }
 .loan-edit { margin-top: var(--space-1); }
 .loan-edit .field__label { display: block; }
+.loan-edit__title { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; color: var(--color-text-secondary); margin-bottom: 2px; }
 .amount-input { max-width: 84px; text-align: right; }
 .check-row { min-height: 30px; }
 @media (pointer: coarse) { .check-row { min-height: 44px; } }
