@@ -193,23 +193,32 @@ test('S15 desired CAP/DSCR goal-seek — typing a target back-solves the offer p
   await expect.poll(async () => (await kpis(page))['DSCR']).toBe('1.40');
 });
 
-test('S16 change flash — affected values flash softly on edit, not on load or inert edits', async ({ page }) => {
+test('S16 change marker — affected values get a corner marker on edit, not on load or inert edits', async ({ page }) => {
   await loadSample(page);
-  const flashes = page.locator('.flash');
-  await expect(flashes).toHaveCount(0);                     // nothing flashes on initial render
+  const marked = page.locator('.flash');                   // .flash renders the corner-fold marker
+  await expect(marked).toHaveCount(0);                     // nothing marked on initial render
   await page.fill('input[aria-label="APN"]', 'XYZ-123');    // pure text field, no computed effect
   await page.waitForTimeout(200);
-  await expect(flashes).toHaveCount(0);
+  await expect(marked).toHaveCount(0);
   const capCell = page.locator('.kpi', { has: page.locator('.kpi__label', { hasText: /^CAP$/ }) });
   await page.fill('.deal-strip input[aria-label="Offer price"]', '300000');   // ripples into CAP, All-In, …
   await expect(capCell).toHaveClass(/flash/);
-  await expect(flashes.first()).toBeVisible();
-  // the highlight persists (no fade) and the next edit clears + re-marks — never accumulates
-  const n = await flashes.count();
+  await expect(marked.first()).toBeVisible();
+  // the marker persists and the next edit clears + re-marks — never accumulates
+  const n = await marked.count();
   await page.waitForTimeout(400);
-  await expect(flashes).toHaveCount(n);                     // still highlighted after a beat
+  await expect(marked).toHaveCount(n);                     // still marked after a beat
   await page.fill('.deal-strip input[aria-label="Offer price"]', '400000');   // next change
-  await expect.poll(async () => flashes.count()).toBe(n);  // prior highlights cleared, new ones marked
+  await expect.poll(async () => marked.count()).toBe(n);   // prior markers cleared, new ones set
+});
+
+test('S17 generated shade — computed fields share the generated-shade fill', async ({ page }) => {
+  await loadSample(page);
+  const shade = 'rgb(226, 233, 242)';   // --gen-shade #E2E9F2
+  const kpiBg = await page.locator('.kpi').first().evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(kpiBg).toBe(shade);
+  const allInBg = await page.locator('.deal-cell--accent .deal-cell__val').evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(allInBg).toBe(shade);
 });
 
 test('DELETE dismiss — delete asks for confirmation', async ({ page }) => {

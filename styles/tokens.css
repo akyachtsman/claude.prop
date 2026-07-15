@@ -33,6 +33,7 @@
   --color-fail-text:      #92261B;
   --color-neutral-bg:     #E8EDF4;
   --color-neutral-text:   #44566E;
+  --gen-shade:            #E2E9F2;   /* consistent fill marking a generated (computed) field */
 
   /* color — data marks (validated: CVD + contrast, light & dark surface) */
   --chart-1:              #3E6FAE;   /* cashflow */
