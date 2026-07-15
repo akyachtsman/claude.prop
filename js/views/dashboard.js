@@ -415,7 +415,9 @@ export function renderDashboard(container, ctx) {
   }
   function barEl(kind, v, maxV, H, title) {
     const h = Math.max(2, Math.round((Math.abs(v) / maxV) * H));
-    const b = el('div', { class: `chart__bar chart__bar--${kind}`, title });
+    // Bar length is magnitude; a negative value (e.g. a value-add deal that
+    // loses money early) is tinted red so it never reads as a gain at a glance.
+    const b = el('div', { class: `chart__bar chart__bar--${kind}` + (v < 0 ? ' chart__bar--neg' : ''), title });
     b.style.height = h + 'px';
     return b;
   }

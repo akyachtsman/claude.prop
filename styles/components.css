@@ -282,6 +282,7 @@ body {
 .chart__bar { width: 16px; border-radius: 3px 3px 0 0; min-height: 2px; }
 .chart__bar--cf { background: var(--chart-1); }
 .chart__bar--ap { background: var(--chart-2); }
+.chart__bar--neg { background: var(--color-fail); }   /* negative cashflow reads as a loss, not a gain */
 .chart__xlabels {
   display: grid; grid-auto-flow: column; gap: var(--space-4);
   padding: 3px var(--space-2) 0; text-align: center;
