@@ -204,6 +204,12 @@ test('S16 change flash — affected values flash softly on edit, not on load or 
   await page.fill('.deal-strip input[aria-label="Offer price"]', '300000');   // ripples into CAP, All-In, …
   await expect(capCell).toHaveClass(/flash/);
   await expect(flashes.first()).toBeVisible();
+  // the highlight persists (no fade) and the next edit clears + re-marks — never accumulates
+  const n = await flashes.count();
+  await page.waitForTimeout(400);
+  await expect(flashes).toHaveCount(n);                     // still highlighted after a beat
+  await page.fill('.deal-strip input[aria-label="Offer price"]', '400000');   // next change
+  await expect.poll(async () => flashes.count()).toBe(n);  // prior highlights cleared, new ones marked
 });
 
 test('DELETE dismiss — delete asks for confirmation', async ({ page }) => {

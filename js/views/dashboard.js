@@ -38,13 +38,15 @@ export function renderDashboard(container, ctx) {
   let timer = null;
   let firstPaint = true;                   // suppress change-flash on initial render
 
-  // Soft "this value just changed" cue: set text and, if it differs from the
-  // current text (and it isn't the first render), play a faint fading overlay.
+  // Soft "this value just changed" cue: the values changed by the latest edit
+  // keep a faint highlight until the next edit, which clears them and marks the
+  // newly-changed ones. Suppressed on the initial render.
+  const flashed = [];
+  function clearFlashes() { flashed.forEach((n) => n.classList.remove('flash')); flashed.length = 0; }
   function flash(node) {
     if (!node) return;
-    node.classList.remove('flash');
-    void node.offsetWidth;                 // restart the animation
     node.classList.add('flash');
+    flashed.push(node);
   }
   function setText(node, value) {
     const s = String(value);
@@ -57,6 +59,7 @@ export function renderDashboard(container, ctx) {
     const m = compute(prop);
     ctx.setHeaderVerdicts(m, prop);        // topbar pills
     ctx.markDirty();                       // unsaved indicator
+    if (!firstPaint) clearFlashes();       // drop the prior edit's highlights before marking new ones
     paintKPIs(m);
     paintDerived(m);
   }
