@@ -213,6 +213,12 @@ test('S16 change marker — affected values get a corner marker on edit, not on 
   await expect(marked).toHaveCount(n);                     // still marked after a beat
   await page.fill('.deal-strip input[aria-label="Offer price"]', '400000');   // next change
   await expect.poll(async () => marked.count()).toBe(n);   // prior markers cleared, new ones set
+  // the tiny inline "% share of NOI" labels must never carry the corner-fold
+  // marker — the 12px fold overlaps their 10px text. Editing an expense amount
+  // recomputes every share, yet no .pct gets flashed.
+  await page.fill('input[aria-label="Insurance amount"]', '20000');
+  await page.waitForTimeout(200);
+  await expect(page.locator('.pct.flash')).toHaveCount(0);
 });
 
 test('S17 generated shade — computed fields share the generated-shade fill', async ({ page }) => {
