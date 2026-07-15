@@ -264,7 +264,8 @@ export function renderDashboard(container, ctx) {
   // Left-aligned so the "/ yr" figure sits next to the row's data instead of
   // drifting to the far-right table edge, away from its label.
   out.totalRentCell = el('td', { class: 'num income-yr', colspan: '2' });   // over lease cols
-  out.rentLessCell = el('td', { class: 'num income-yr', colspan: '2' });    // over lease cols
+  out.rentLossCell = el('td', { class: 'num' });                            // the −collection-loss amount
+  out.rentLessCell = el('td', { class: 'num income-yr', colspan: '2' });    // effective rent, over lease cols
   const incomeCard = card('Income', 'col-5', [
     tableWrap(el('table', { class: 'data-table data-table--dense' }, [
       el('thead', {}, el('tr', {}, ['Tenant', 'SF', 'Rent / mo', 'Rent / SF', 'Lease Expires', 'Lease Options']
@@ -274,7 +275,7 @@ export function renderDashboard(container, ctx) {
         // Totals footer: gross rent, then the collection-loss deduction to the
         // effective rent that feeds NOI — a single shaded band (see .rent-totals).
         el('tr', { class: 'total rent-totals' }, [el('td', { text: 'Total rent' }), out.totalSFCell, out.totalMoRentCell, out.avgRentCell, out.totalRentCell]),
-        el('tr', { class: 'rent-totals rent-totals--sub' }, [out.rentLessLabel = el('td', { colspan: '4' }), out.rentLessCell]),
+        el('tr', { class: 'rent-totals rent-totals--sub' }, [out.rentLessLabel = el('td', { colspan: '3' }), out.rentLossCell, out.rentLessCell]),
       ]),
     ])),
   ]);
@@ -412,7 +413,8 @@ export function renderDashboard(container, ctx) {
     setText(out.avgRentCell, fmt.moneyCents(m.avgRentPerSF));
     setText(out.totalRentCell, fmt.money(m.totalRent) + ' / yr');
     out.rentLessLabel.textContent = `Less ${fmt.percent(prop.assumptions.collectionLoss)} collection loss`;
-    setText(out.rentLessCell, fmt.money(m.rentLessCollection) + ' / yr');
+    setText(out.rentLossCell, fmt.money(m.rentLessCollection - m.totalRent));   // the deduction, e.g. −$4,500
+    setText(out.rentLessCell, fmt.money(m.rentLessCollection) + ' / yr');       // effective rent collected
     // expenses
     expPctNodes.forEach(({ pct, i }) => { setText(pct, fmt.percent(m.expensePctOfNoi[i]), true); });
     setText(out.totalInclCell, `${fmt.money(m.includedExpense)} / ${fmt.money(m.allExpense)}`);
