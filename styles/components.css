@@ -271,15 +271,26 @@ body {
 /* bar chart (pure CSS, values from tokens) --------------------------------------- */
 .chart { margin-top: var(--space-2); }
 .chart__plot {
-  display: grid; grid-auto-flow: column; align-items: end;
-  gap: var(--space-4); height: 72px;
-  border-bottom: 1px solid var(--color-border);
+  display: grid; grid-auto-flow: column;
+  gap: var(--space-4); height: 70px;   /* keep in sync with H_PX in dashboard.js */
   padding: 0 var(--space-2);
-  background: repeating-linear-gradient(
-    to top, transparent 0 17px, var(--chart-grid) 17px 18px);
+  position: relative;
 }
-.chart__group { display: flex; align-items: flex-end; gap: 2px; position: relative; justify-content: center; }
+/* continuous zero baseline at the pos/neg split */
+.chart__plot::before {
+  content: ''; position: absolute; left: var(--space-2); right: var(--space-2);
+  top: var(--pf-top, 100%); border-top: 1px solid var(--color-border);
+}
+.chart__group {
+  position: relative; display: grid;
+  grid-template-rows: var(--pf-top, 60px) var(--pf-bot, 12px);
+  justify-items: center;
+}
+.chart__lane { display: flex; gap: 2px; justify-content: center; width: 100%; }
+.chart__lane--up { align-items: flex-end; }      /* bars grow up to the zero line */
+.chart__lane--down { align-items: flex-start; }  /* bars hang down from the zero line */
 .chart__bar { width: 16px; border-radius: 3px 3px 0 0; min-height: 2px; }
+.chart__lane--down .chart__bar { border-radius: 0 0 3px 3px; }
 .chart__bar--cf { background: var(--chart-1); }
 .chart__bar--ap { background: var(--chart-2); }
 .chart__bar--neg { background: var(--color-fail); }   /* negative cashflow reads as a loss, not a gain */
