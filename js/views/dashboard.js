@@ -39,6 +39,11 @@ function fieldPercent(value, onChange, opts = {}) {
   input.addEventListener('input', () => onChange(input.value === '' ? 0 : parseFloat(input.value) / 100));
   return wrap;
 }
+function fieldDate(value, onChange, opts = {}) {
+  const input = el('input', { class: 'input', type: 'date', value: value ?? '', 'aria-label': opts.label || '' });
+  input.addEventListener('input', () => onChange(input.value));
+  return input;
+}
 function fieldSelect(value, options, onChange, label) {
   const sel = el('select', { class: 'input', 'aria-label': label || '' },
     options.map((o) => el('option', { value: o, selected: o === value ? true : null, text: o })));
@@ -241,7 +246,7 @@ export function renderDashboard(container, ctx) {
       el('td', { class: 'num' }, [fieldNum(t.sf, (v) => { t.sf = v; onEdit(); }, { label: 'SF' })]),
       el('td', { class: 'num' }, [fieldNum(t.monthlyIncome, (v) => { t.monthlyIncome = v; onEdit(); }, { label: 'Rent/mo' })]),
       rps,
-      el('td', {}, [fieldText(t.leaseExpires, (v) => { t.leaseExpires = v; onEdit(); }, { label: 'Lease expires' })]),
+      el('td', {}, [fieldDate(t.leaseExpires, (v) => { t.leaseExpires = v; onEdit(); }, { label: 'Lease expires' })]),
       el('td', {}, [fieldText(t.leaseOptions, (v) => { t.leaseOptions = v; onEdit(); }, { label: 'Lease options' })]),
     ]);
   });
