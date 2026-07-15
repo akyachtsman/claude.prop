@@ -464,8 +464,12 @@ export function renderDashboard(container, ctx) {
       const up = [], down = [];
       (c >= 0 ? up : down).push(cfBar);
       (apv >= 0 ? up : down).push(apBar);
+      // No floating per-year total over the bars — it read as a value for the
+      // (taller, adjacent) green appreciation bar. Each bar carries its own
+      // value in its tooltip, and the table below lists cashflow, appreciation,
+      // and their sum per year, so the legend stays unambiguous: blue = operating
+      // cashflow, green = appreciation (never the combined total).
       return el('div', { class: 'chart__group' + (boundary && i === 4 ? ' chart__group--boundary' : '') }, [
-        (i === 0 || i === H - 1) ? el('span', { class: 'chart__value', text: fmt.moneyCompact(op[i] + ap[i]) }) : null,
         el('div', { class: 'chart__lane chart__lane--up' }, up),
         el('div', { class: 'chart__lane chart__lane--down' }, down),
       ]);
