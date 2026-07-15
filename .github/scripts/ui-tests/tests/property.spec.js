@@ -183,8 +183,8 @@ test('S14 pro-forma horizon — slider extends to 10 years with a boundary and 1
 test('S15 desired CAP/DSCR goal-seek — typing a target back-solves the offer price', async ({ page }) => {
   await loadSample(page);
   const offer = page.locator('.deal-strip input[aria-label="Offer price"]');
-  // Desired CAP 8% → offer = NOI ÷ 0.08 = 899,500; CAP reads 8.00% and passes
-  await page.fill('.deal-strip input[aria-label="Desired CAP"]', '0.08');
+  // Desired CAP entered as a percent (8 = 8%) → offer = NOI ÷ 0.08 = 899,500; CAP reads 8.00%
+  await page.fill('.deal-strip input[aria-label="Desired CAP"]', '8');
   await expect(offer).toHaveValue('899500');
   await expect.poll(async () => (await kpis(page))['CAP']).toBe('8.00%');
   // Desired DSCR 1.4 → offer back-solves through the loan (PV ÷ LTV) to 841,227; DSCR reads 1.40
@@ -204,6 +204,12 @@ test('S16 change flash — affected values flash softly on edit, not on load or 
   await page.fill('.deal-strip input[aria-label="Offer price"]', '300000');   // ripples into CAP, All-In, …
   await expect(capCell).toHaveClass(/flash/);
   await expect(flashes.first()).toBeVisible();
+  // the highlight persists (no fade) and the next edit clears + re-marks — never accumulates
+  const n = await flashes.count();
+  await page.waitForTimeout(400);
+  await expect(flashes).toHaveCount(n);                     // still highlighted after a beat
+  await page.fill('.deal-strip input[aria-label="Offer price"]', '400000');   // next change
+  await expect.poll(async () => flashes.count()).toBe(n);  // prior highlights cleared, new ones marked
 });
 
 test('DELETE dismiss — delete asks for confirmation', async ({ page }) => {

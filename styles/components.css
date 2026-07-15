@@ -145,14 +145,9 @@ body {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
-/* soft "just changed" cue — a faint teal overlay that fades out. Uses an inset
-   box-shadow (not background) so cells with their own fill keep it. */
-@keyframes soft-flash {
-  from { box-shadow: inset 0 0 0 100px rgba(14, 124, 109, 0.14); }
-  to   { box-shadow: inset 0 0 0 100px rgba(14, 124, 109, 0); }
-}
-.flash { animation: soft-flash 0.9s ease-out; }
-@media (prefers-reduced-motion: reduce) { .flash { animation: none; } }
+/* soft "just changed" cue — a faint teal overlay that persists until the next
+   edit. Inset box-shadow (not background) so cells with their own fill keep it. */
+.flash { box-shadow: inset 0 0 0 100px rgba(14, 124, 109, 0.07); }
 @media (max-width: 1100px) {
   .kpi-strip { grid-template-columns: repeat(6, 1fr); }
   .kpi:nth-child(-n+12) { border-top: 1px solid var(--color-border); }
@@ -390,6 +385,10 @@ body {
 }
 .deal-cell--accent .deal-cell__val { background: var(--color-accent-light); }
 @media (pointer: coarse) { .deal-cell__val { min-height: 44px; } }
+/* percentage entry — number input with a trailing % sign */
+.input-pct { display: flex; align-items: center; gap: 4px; width: 100%; }
+.input-pct .input { flex: 1; min-width: 0; }
+.input-pct__sign { flex: none; font-weight: 700; font-size: var(--font-sm); color: var(--color-text-secondary); }
 
 /* denser 3-up info grid — reclaims the vertical the deal strip adds so the
    dashboard stays one-screen (S11). Collapses to 2-up / 1-up on narrow. */

@@ -24,6 +24,21 @@ function fieldText(value, onChange, opts = {}) {
   input.addEventListener('input', () => onChange(input.value));
   return input;
 }
+// Percentage entry: the model stores a decimal (0.09) but the user types/reads
+// percent (9). onChange still receives the decimal.
+function fieldPercent(value, onChange, opts = {}) {
+  const shown = (value === '' || value == null) ? '' : String(parseFloat((value * 100).toFixed(6)));
+  const wrap = el('span', { class: 'input-pct' }, [
+    el('input', {
+      class: 'input', type: 'number', step: opts.step || '0.1', inputmode: 'decimal',
+      value: shown, 'aria-label': opts.label || '',
+    }),
+    el('span', { class: 'input-pct__sign', text: '%' }),
+  ]);
+  const input = wrap.firstChild;
+  input.addEventListener('input', () => onChange(input.value === '' ? 0 : parseFloat(input.value) / 100));
+  return wrap;
+}
 function fieldSelect(value, options, onChange, label) {
   const sel = el('select', { class: 'input', 'aria-label': label || '' },
     options.map((o) => el('option', { value: o, selected: o === value ? true : null, text: o })));
@@ -38,13 +53,15 @@ export function renderDashboard(container, ctx) {
   let timer = null;
   let firstPaint = true;                   // suppress change-flash on initial render
 
-  // Soft "this value just changed" cue: set text and, if it differs from the
-  // current text (and it isn't the first render), play a faint fading overlay.
+  // Soft "this value just changed" cue: the values changed by the latest edit
+  // keep a faint highlight until the next edit, which clears them and marks the
+  // newly-changed ones. Suppressed on the initial render.
+  const flashed = [];
+  function clearFlashes() { flashed.forEach((n) => n.classList.remove('flash')); flashed.length = 0; }
   function flash(node) {
     if (!node) return;
-    node.classList.remove('flash');
-    void node.offsetWidth;                 // restart the animation
     node.classList.add('flash');
+    flashed.push(node);
   }
   function setText(node, value) {
     const s = String(value);
@@ -57,6 +74,7 @@ export function renderDashboard(container, ctx) {
     const m = compute(prop);
     ctx.setHeaderVerdicts(m, prop);        // topbar pills
     ctx.markDirty();                       // unsaved indicator
+    if (!firstPaint) clearFlashes();       // drop the prior edit's highlights before marking new ones
     paintKPIs(m);
     paintDerived(m);
   }
@@ -203,7 +221,7 @@ export function renderDashboard(container, ctx) {
     dealCell('All-In Cost', allInSummaryCell, true),
     dealCell('Fees', offerField('fees', 'Fees')),
     dealCell('Improvement', offerField('improvements', 'Improvements')),
-    dealCell('Desired CAP', fieldNum(prop.targets.desiredCap, (v) => { prop.targets.desiredCap = v; goalSeekOffer('cap', v); onEdit(); }, { label: 'Desired CAP', step: '0.01' })),
+    dealCell('Desired CAP', fieldPercent(prop.targets.desiredCap, (v) => { prop.targets.desiredCap = v; goalSeekOffer('cap', v); onEdit(); }, { label: 'Desired CAP' })),
     dealCell('Desired DSCR', fieldNum(prop.targets.desiredDscr, (v) => { prop.targets.desiredDscr = v; goalSeekOffer('dscr', v); onEdit(); }, { label: 'Desired DSCR', step: '0.01' })),
   ]);
   const infoCard = card('Property Info', 'col-3', [
