@@ -94,7 +94,7 @@ fine-pointer context; the generic `app.spec.js` covers the mobile viewports).
 | S5 | Calc fidelity | Sample deal's 12 KPIs equal the actual-close fixture (CAP 5.13%, DSCR 0.84, NPV -$29,512, …) | Any KPI differs from EXPECTED |
 | S6 | Commit recalc | Editing Offer price updates CAP on field commit (Enter/blur), not mid-type; no calculate button | Recompute fires mid-type, or no recompute on commit |
 | S7 | Persistence | Saved property survives a reload | List empty after reload |
-| S8 | Comparison | Best/worst per metric highlighted + per-column verdict | No `.cell--best`/`.cell--worst`/verdict pill |
+| S8 | Comparison | Two layouts (default `.compare-table--rows` spreadsheet table + `Side by side` toggle); best/worst per metric highlighted + verdict pill | No `.cell--best`/`.cell--worst`/verdict pill, or toggle doesn't switch layouts |
 | S9 | Empty/zero | Zeroed property renders "—", never NaN | `NaN`/`Infinity`/`undefined` in KPIs |
 | S10 | Export/import | Data round-trips to an identical set | Property missing after restore |
 | S11 | One-screen | Dashboard fits 1440×900 with no vertical scroll; all data points present | `scrollHeight > innerHeight` |

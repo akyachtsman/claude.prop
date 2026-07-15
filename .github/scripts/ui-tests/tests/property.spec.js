@@ -96,9 +96,16 @@ test('S8 compare — best/worst highlight and per-column verdict', async ({ page
   await setField(page, 'input[aria-label="Offer price"]', '250000');   // auto-saved on commit
   await page.click('#nav-compare');
   await page.waitForSelector('.compare-table');
+  // default layout is the spreadsheet-style table: one row per property
+  await expect(page.locator('.compare-table--rows')).toBeVisible();
   await expect(page.locator('.cell--best').first()).toBeVisible();
   await expect(page.locator('.cell--worst').first()).toBeVisible();
   await expect(page.locator('.compare-verdict .pill').first()).toBeVisible();
+  // toggle to the side-by-side layout (metrics as rows, properties as columns)
+  await page.click('.seg__btn:has-text("Side by side")');
+  await expect(page.locator('.compare-table:not(.compare-table--rows)')).toBeVisible();
+  await expect(page.locator('.compare-table--rows')).toHaveCount(0);
+  await expect(page.locator('.cell--best').first()).toBeVisible();
 });
 
 test('S9 empty/zero — a zeroed property renders "—", never NaN', async ({ page }) => {

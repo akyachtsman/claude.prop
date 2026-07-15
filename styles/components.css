@@ -503,6 +503,17 @@ body {
 .cell--best { color: var(--color-pass-text); font-weight: 800; background: var(--color-pass-bg); }
 .cell--worst { color: var(--color-fail-text); background: var(--color-fail-bg); }
 .compare-verdict td { padding-top: var(--space-2); }
+/* layout toggle (Table / Side by side) */
+.compare-controls { margin: var(--space-2) 0; }
+.seg { display: inline-flex; border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; }
+.seg__btn { font: inherit; font-size: var(--font-sm); font-weight: 600; min-height: 40px; padding: 6px var(--space-3); background: var(--color-surface); border: none; cursor: pointer; color: var(--color-text-secondary); }
+.seg__btn + .seg__btn { border-left: 1px solid var(--color-border); }
+.seg__btn--on { background: var(--color-navy); color: var(--color-on-navy); }
+/* rows table: one property per row, many metric columns — narrower cells */
+.compare-table--rows th, .compare-table--rows td { min-width: 82px; }
+.compare-table--rows th:first-child, .compare-table--rows td:first-child { min-width: 190px; }
+.compare-name { display: block; font-weight: 700; color: var(--color-navy); }
+.compare-table--rows .compare-verdict { display: inline-block; margin-top: 3px; }
 
 /* toast */
 .toast {
