@@ -221,6 +221,19 @@ test('S17 generated shade — computed fields share the generated-shade fill', a
   expect(allInBg).toBe(shade);
 });
 
+test('S18 auto-save — edits persist without Save, and switching never prompts', async ({ page }) => {
+  let asked = false;
+  page.on('dialog', (d) => { asked = true; d.dismiss(); });
+  await loadSample(page);
+  await page.fill('.deal-strip input[aria-label="Offer price"]', '777000');
+  await page.waitForTimeout(600);                          // let the auto-save debounce fire
+  await page.click('button[aria-label="Next property"]');  // must NOT show an unsaved-changes prompt
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForSelector('.kpi-strip');
+  await expect(page.locator('.deal-strip input[aria-label="Offer price"]')).toHaveValue('777000');
+  expect(asked).toBe(false);
+});
+
 test('DELETE dismiss — delete asks for confirmation', async ({ page }) => {
   await loadSample(page);
   let asked = false;

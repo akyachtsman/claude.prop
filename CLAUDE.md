@@ -104,6 +104,7 @@ fine-pointer context; the generic `app.spec.js` covers the mobile viewports).
 | S15 | Desired CAP/DSCR goal-seek | Typing Desired CAP (`NOI÷cap`) or Desired DSCR (`PV(loan)÷LTV`) back-solves and sets Offer price; verdict pills still compare actual ≥ desired | Offer unchanged after editing a desired field, or resulting CAP/DSCR ≠ target |
 | S16 | Change marker | After an edit, output values that changed get a corner-fold `.flash` marker that persists until the next edit; none on initial load or on edits with no computed effect | Marker on load, none on a rippling edit, or one on an inert edit |
 | S17 | Generated shade | Computed fields (KPI cells, All-In, fact values) share the `--gen-shade` fill so generated values read distinct from inputs | A generated field lacks the shade |
+| S18 | Auto-save | Edits persist automatically (debounced); switching properties never prompts to save; a reload keeps the edit | Edit lost after reload, or a switch shows an unsaved-changes prompt |
 
 ## Reporting Requirements
 Agents write evidence to `.agent-reports/`:
