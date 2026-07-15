@@ -57,6 +57,9 @@ export function renderList(container, ctx) {
           kpi('NOI', fmt.moneyCompact(m.noi)), kpi('CoC', fmt.percent2(m.cashOnCash)),
         ]),
       ]),
+      // Decorative "opens" cue — pointer-events:none so clicks fall through to
+      // the open button beneath it.
+      el('span', { class: 'lcard__go', 'aria-hidden': 'true', text: '›' }),
       el('button', { class: 'lcard__del', type: 'button', 'aria-label': `Delete ${prop.name || 'property'}`, title: 'Delete', onclick: () => ctx.remove(prop), text: '×' }),
     ]);
   });
