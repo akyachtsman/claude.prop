@@ -195,10 +195,24 @@ function importData() {
   input.click();
 }
 
+// Refresh a stale built-in sample: if a returning visitor has an older copy
+// of the demo saved in localStorage (its sampleRev predates the current one),
+// replace it with the corrected figures so they don't have to delete + reload.
+// Scoped to the canonical sample id only — never touches a user's own deals.
+function refreshBuiltinSample() {
+  const fresh = sampleProperty();
+  const stored = store.get(fresh.id);
+  if (stored && stored.sampleRev !== fresh.sampleRev) {
+    store.save(fresh);
+    toast('Updated the built-in 715 Plumas sample to the latest figures.', 'info');
+  }
+}
+
 // ── boot ──────────────────────────────────────────────────────────────
 document.getElementById('btn-export').addEventListener('click', exportData);
 document.getElementById('btn-import').addEventListener('click', importData);
 if (!store.probe()) toast('Saving is off — private mode or storage full. Export to keep your data.', 'info');
+refreshBuiltinSample();
 window.addEventListener('hashchange', router);
 window.addEventListener('beforeunload', () => { if (flushSave) flushSave(); });   // don't lose an in-flight edit on close
 router();
