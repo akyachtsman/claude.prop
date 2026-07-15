@@ -40,19 +40,24 @@ export function renderList(container, ctx) {
       el('span', { class: 'lcard__kpi-label', text: label }),
       el('span', { class: 'lcard__kpi-val', text: val }),
     ]);
-    return el('button', { class: 'lcard', type: 'button', onclick: () => ctx.open(prop.id) }, [
-      el('div', { class: 'lcard__head' }, [
-        el('span', { class: 'lcard__mono', text: monogram(prop.name) }),
-        el('div', { class: 'lcard__title' }, [
-          el('span', { class: 'lcard__name', text: prop.name || 'Untitled property' }),
-          el('span', { class: 'lcard__sub', text: `Offer ${fmt.money(prop.offer.offerPrice)} · ${fmt.integer(prop.info.rentableSF)} SF` }),
+    // The card is a container: a full-area "open" button (a button can't nest a
+    // button, so Delete is a sibling) plus a corner Delete control.
+    return el('div', { class: 'lcard' }, [
+      el('button', { class: 'lcard__open', type: 'button', 'aria-label': `Open ${prop.name || 'property'}`, onclick: () => ctx.open(prop.id) }, [
+        el('div', { class: 'lcard__head' }, [
+          el('span', { class: 'lcard__mono', text: monogram(prop.name) }),
+          el('div', { class: 'lcard__title' }, [
+            el('span', { class: 'lcard__name', text: prop.name || 'Untitled property' }),
+            el('span', { class: 'lcard__sub', text: `Offer ${fmt.money(prop.offer.offerPrice)} · ${fmt.integer(prop.info.rentableSF)} SF` }),
+          ]),
+          badge(prop, m),
         ]),
-        badge(prop, m),
+        el('div', { class: 'lcard__kpis' }, [
+          kpi('CAP', fmt.percent2(m.cap)), kpi('DSCR', fmt.ratio(m.dscr)),
+          kpi('NOI', fmt.moneyCompact(m.noi)), kpi('CoC', fmt.percent2(m.cashOnCash)),
+        ]),
       ]),
-      el('div', { class: 'lcard__kpis' }, [
-        kpi('CAP', fmt.percent2(m.cap)), kpi('DSCR', fmt.ratio(m.dscr)),
-        kpi('NOI', fmt.moneyCompact(m.noi)), kpi('CoC', fmt.percent2(m.cashOnCash)),
-      ]),
+      el('button', { class: 'lcard__del', type: 'button', 'aria-label': `Delete ${prop.name || 'property'}`, title: 'Delete', onclick: () => ctx.remove(prop), text: '×' }),
     ]);
   });
 

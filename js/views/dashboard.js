@@ -385,11 +385,12 @@ export function renderDashboard(container, ctx) {
   const rightStack = el('div', { class: 'col-3 stack' }, [assumeCard, methodCard]);
 
   // Actions — rendered into the top bar (keeps the dashboard one-screen) ----
+  // Top-bar actions are just the edit-history controls now — edits auto-save on
+  // commit (no Save), and Delete lives on each Properties-list card.
   if (ctx.actionsHost) {
     render(ctx.actionsHost, [
       ...(ctx.undoButton ? [ctx.undoButton] : []),
-      el('button', { class: 'topbar__link topbar__action', type: 'button', onclick: () => ctx.save(prop), text: 'Save' }),
-      el('button', { class: 'topbar__link topbar__action', type: 'button', onclick: () => ctx.remove(prop), text: 'Delete' }),
+      ...(ctx.redoButton ? [ctx.redoButton] : []),
     ]);
   }
 

@@ -14,9 +14,11 @@ const center = document.getElementById('topbar-center');
 const navProps = document.getElementById('nav-properties');
 const navCompare = document.getElementById('nav-compare');
 
-let flushSave = null;   // flush the active dashboard's pending auto-save (set in showDashboard)
+let flushSave = null;   // set in showDashboard; edits persist synchronously on commit, so usually a no-op
 let undoStack = [];     // committed prior states of the property being edited (undo history)
-let undoPropertyId = null;
+let redoStack = [];     // states undone and available to redo (cleared by any new edit)
+let historyId = null;   // the property the undo/redo stacks belong to
+let committedState = null;   // the current committed state, in memory (drives undo/redo snapshots)
 
 // ── blank property factory (for "+ New") ────────────────────────────────
 function blankProperty() {
@@ -82,6 +84,12 @@ function showList() {
     newProperty: createNew,
     loadSample: loadSample,
     goCompare: () => navigate('#/compare'),
+    remove: (p) => {
+      if (!confirm(`This will permanently delete "${p.name || 'this property'}".`)) return;
+      store.remove(p.id);
+      toast('Deleted.', 'info');
+      showList();   // re-render the list in place
+    },
   });
 }
 
@@ -100,20 +108,18 @@ function showDashboard(id) {
   const props = store.list();
   const idx = props.findIndex((p) => p.id === id);
   const working = deepCopy(saved);
-  // Auto-save: edits persist automatically (debounced), so nothing is lost and
-  // navigating never has to prompt. flushSave() commits a pending save now.
-  let saveTimer = null;
-  const autosave = () => { clearTimeout(saveTimer); saveTimer = null; store.save(working); };
-  flushSave = () => { if (saveTimer) autosave(); };
+  flushSave = null;   // edits persist synchronously on commit (see onCommit); nothing is ever pending
 
-  // Undo: each committed edit (a field commits on Enter/blur) pushes the prior
-  // state; Undo pops it and re-renders. History is per-property and resets when
-  // you switch to a different one.
-  if (undoPropertyId !== id) { undoStack = []; undoPropertyId = id; }
-  let baseline = deepCopy(saved);
+  // Undo/Redo: each committed edit (a field commits on Enter/blur) pushes the
+  // prior state; Undo pops it, Redo replays it. A new edit clears the redo
+  // history. The stacks are module-level so they survive the in-place re-render
+  // on undo/redo, and reset when you switch to a different property.
+  if (historyId !== id) { undoStack = []; redoStack = []; historyId = id; }
+  committedState = deepCopy(saved);
   const undoBtn = el('button', { class: 'topbar__link topbar__action', type: 'button', 'aria-label': 'Undo last change', text: 'Undo', onclick: () => undo(id) });
-  const refreshUndo = () => { undoBtn.disabled = undoStack.length === 0; };
-  refreshUndo();
+  const redoBtn = el('button', { class: 'topbar__link topbar__action', type: 'button', 'aria-label': 'Redo change', text: 'Redo', onclick: () => redo(id) });
+  const refreshHistory = () => { undoBtn.disabled = undoStack.length === 0; redoBtn.disabled = redoStack.length === 0; };
+  refreshHistory();
 
   // topbar center: switcher (prev/next + title) + verdict pills
   clear(center);
@@ -138,16 +144,19 @@ function showDashboard(id) {
     property: working,
     actionsHost,
     undoButton: undoBtn,
+    redoButton: redoBtn,
     setHeaderVerdicts: (m, p) => paintPills(pills, m, p),
-    onCommit: () => { undoStack.push(baseline); baseline = deepCopy(working); refreshUndo(); },
-    markDirty: () => { clearTimeout(saveTimer); saveTimer = setTimeout(autosave, 400); },
-    save: (p) => {
-      store.save(p);
-      if (store.isStorageOK()) { toast('Saved.', 'success'); }
-      else { toast("Couldn't save — storage is full or private mode. Export to keep your data.", 'info'); }
-      router(); navigate('#/p/' + encodeURIComponent(p.id));
+    // Each committed edit: snapshot the prior state for undo, drop the redo
+    // history, and persist immediately (commit = saved — no Save button).
+    onCommit: () => {
+      undoStack.push(committedState);
+      committedState = deepCopy(working);
+      redoStack = [];
+      store.save(working);
+      if (!store.isStorageOK()) toast("Couldn't save — storage is full or private mode. Export to keep your data.", 'info');
+      refreshHistory();
     },
-    remove: (p) => confirmDelete(p),
+    markDirty: () => {},   // no-op: commits persist synchronously via onCommit
   });
 }
 
@@ -170,12 +179,20 @@ function paintPills(host, m, p) {
 }
 
 // ── actions ────────────────────────────────────────────────────────────
-function guardNav(hash) { navigate(hash); }   // edits auto-save; router() flushes any pending save
+function guardNav(hash) { navigate(hash); }   // edits persist synchronously on commit
 function undo(id) {
   if (!undoStack.length) return;
+  redoStack.push(committedState);        // current state → available to redo
   const prev = undoStack.pop();          // the state before the most recent committed edit
   store.save(prev);
   showDashboard(id);                     // re-render from the restored state (history is module-level, preserved)
+}
+function redo(id) {
+  if (!redoStack.length) return;
+  undoStack.push(committedState);        // current state → available to undo
+  const next = redoStack.pop();
+  store.save(next);
+  showDashboard(id);
 }
 function createNew() {
   const p = store.save(blankProperty());
@@ -185,12 +202,6 @@ function loadSample() {
   const p = store.save(sampleProperty());
   toast('Sample deal loaded.', 'success');
   navigate('#/p/' + encodeURIComponent(p.id));
-}
-function confirmDelete(p) {
-  if (!confirm(`This will permanently delete "${p.name || 'this property'}".`)) return;
-  store.remove(p.id);
-  toast('Deleted.', 'info');
-  navigate('#/');
 }
 
 // ── export / import ──────────────────────────────────────────────────────
