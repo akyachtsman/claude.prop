@@ -484,6 +484,7 @@ body {
 .topbar__actions { display: flex; gap: var(--space-1); margin-left: var(--space-2); }
 .topbar__action { background: var(--color-navy-soft); }
 .topbar__action:hover, .topbar__action:focus-visible { background: var(--color-accent); }
+.topbar__action:disabled { opacity: 0.4; cursor: default; background: var(--color-navy-soft); }
 /* final one-screen rhythm trim */
 .card .input { min-height: 26px; }
 @media (pointer: coarse) { .card .input { min-height: 44px; } }

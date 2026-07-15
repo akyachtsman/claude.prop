@@ -15,6 +15,8 @@ const navProps = document.getElementById('nav-properties');
 const navCompare = document.getElementById('nav-compare');
 
 let flushSave = null;   // flush the active dashboard's pending auto-save (set in showDashboard)
+let undoStack = [];     // committed prior states of the property being edited (undo history)
+let undoPropertyId = null;
 
 // ── blank property factory (for "+ New") ────────────────────────────────
 function blankProperty() {
@@ -104,6 +106,15 @@ function showDashboard(id) {
   const autosave = () => { clearTimeout(saveTimer); saveTimer = null; store.save(working); };
   flushSave = () => { if (saveTimer) autosave(); };
 
+  // Undo: each committed edit (a field commits on Enter/blur) pushes the prior
+  // state; Undo pops it and re-renders. History is per-property and resets when
+  // you switch to a different one.
+  if (undoPropertyId !== id) { undoStack = []; undoPropertyId = id; }
+  let baseline = deepCopy(saved);
+  const undoBtn = el('button', { class: 'topbar__link topbar__action', type: 'button', 'aria-label': 'Undo last change', text: 'Undo', onclick: () => undo(id) });
+  const refreshUndo = () => { undoBtn.disabled = undoStack.length === 0; };
+  refreshUndo();
+
   // topbar center: switcher (prev/next + title) + verdict pills
   clear(center);
   const prevId = props[(idx - 1 + props.length) % props.length]?.id;
@@ -126,7 +137,9 @@ function showDashboard(id) {
   renderDashboard(view, {
     property: working,
     actionsHost,
+    undoButton: undoBtn,
     setHeaderVerdicts: (m, p) => paintPills(pills, m, p),
+    onCommit: () => { undoStack.push(baseline); baseline = deepCopy(working); refreshUndo(); },
     markDirty: () => { clearTimeout(saveTimer); saveTimer = setTimeout(autosave, 400); },
     save: (p) => {
       store.save(p);
@@ -158,6 +171,12 @@ function paintPills(host, m, p) {
 
 // ── actions ────────────────────────────────────────────────────────────
 function guardNav(hash) { navigate(hash); }   // edits auto-save; router() flushes any pending save
+function undo(id) {
+  if (!undoStack.length) return;
+  const prev = undoStack.pop();          // the state before the most recent committed edit
+  store.save(prev);
+  showDashboard(id);                     // re-render from the restored state (history is module-level, preserved)
+}
 function createNew() {
   const p = store.save(blankProperty());
   navigate('#/p/' + encodeURIComponent(p.id));

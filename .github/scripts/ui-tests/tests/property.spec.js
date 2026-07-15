@@ -36,6 +36,14 @@ async function loadSample(page) {
   await page.waitForSelector('.kpi-strip');
 }
 
+// Fields commit on `change` (Enter/blur), not per keystroke — fill then blur to
+// commit the edit so the dashboard recomputes.
+async function setField(page, selector, value) {
+  const loc = page.locator(selector);
+  await loc.fill(String(value));
+  await loc.blur();
+}
+
 // Each test gets a fresh browser context (empty localStorage), so no explicit
 // clear is needed — and clearing via addInitScript would wipe the store on the
 // reloads that S7/S10 depend on.
@@ -62,12 +70,15 @@ test('S5 calc fidelity — sample deal KPIs match the actual-close fixture', asy
   expect(errors).toEqual([]);
 });
 
-test('S6 live recalc — editing an input updates KPIs with no calculate button', async ({ page }) => {
+test('S6 commit recalc — KPIs update when a field commits (Enter/blur), not mid-type', async ({ page }) => {
   await loadSample(page);
-  const before = (await kpis(page))['CAP'];
-  await page.fill('input[aria-label="Offer price"]', '300000');
-  await expect.poll(async () => (await kpis(page))['CAP']).not.toBe(before);
-  expect((await kpis(page))['CAP']).toBe('22.21%');   // NOI $66,627 ÷ 300,000
+  const before = (await kpis(page))['CAP'];              // 5.13%
+  const offer = page.locator('.deal-strip input[aria-label="Offer price"]');
+  await offer.fill('300000');                            // typing only — must NOT recompute yet
+  await page.waitForTimeout(150);
+  expect((await kpis(page))['CAP']).toBe(before);
+  await offer.blur();                                    // commit → recompute (no calculate button)
+  await expect.poll(async () => (await kpis(page))['CAP']).toBe('22.21%');   // NOI $66,627 ÷ 300,000
 });
 
 test('S7 persistence — a saved property survives a reload', async ({ page }) => {
@@ -82,8 +93,8 @@ test('S8 compare — best/worst highlight and per-column verdict', async ({ page
   await page.click('#nav-properties');
   await page.click('button:has-text("+ New property")');
   await page.waitForSelector('.kpi-strip');
-  await page.fill('input[aria-label="Offer price"]', '250000');
-  await page.click('.topbar__action'); // Save
+  await setField(page, 'input[aria-label="Offer price"]', '250000');
+  await page.click('.topbar__action:has-text("Save")');
   await page.click('#nav-compare');
   await page.waitForSelector('.compare-table');
   await expect(page.locator('.cell--best').first()).toBeVisible();
@@ -134,6 +145,7 @@ test('S12 deal summary — the band is the single editable source; All-In derive
   await expect(page.locator('.card[aria-label="Offer & Debt Service"] input[aria-label="Offer price"]')).toHaveCount(0);
   // editing it recomputes the derived All-In (300000 × (1 − 0.7269)) and the card's copy
   await summaryOffer.fill('300000');
+  await summaryOffer.blur();                             // commit
   await expect(allIn).toHaveText('$81,930');
   await expect(page.locator('.card[aria-label="Offer & Debt Service"] .facts dd').last()).toHaveText('$81,930');
 });
@@ -187,11 +199,11 @@ test('S15 desired CAP/DSCR goal-seek — typing a target back-solves the offer p
   await loadSample(page);
   const offer = page.locator('.deal-strip input[aria-label="Offer price"]');
   // Desired CAP entered as a percent (8 = 8%) → offer = NOI ÷ 0.08 = 832,837; CAP reads 8.00%
-  await page.fill('.deal-strip input[aria-label="Desired CAP"]', '8');
+  await setField(page, '.deal-strip input[aria-label="Desired CAP"]', '8');
   await expect(offer).toHaveValue('832837');
   await expect.poll(async () => (await kpis(page))['CAP']).toBe('8.00%');
   // Desired DSCR 1.4 → offer back-solves through the loan (PV ÷ LTV) to 775,560; DSCR reads 1.40
-  await page.fill('.deal-strip input[aria-label="Desired DSCR"]', '1.4');
+  await setField(page, '.deal-strip input[aria-label="Desired DSCR"]', '1.4');
   await expect(offer).toHaveValue('775560');
   await expect.poll(async () => (await kpis(page))['DSCR']).toBe('1.40');
 });
@@ -200,23 +212,23 @@ test('S16 change marker — affected values get a corner marker on edit, not on 
   await loadSample(page);
   const marked = page.locator('.flash');                   // .flash renders the corner-fold marker
   await expect(marked).toHaveCount(0);                     // nothing marked on initial render
-  await page.fill('input[aria-label="APN"]', 'XYZ-123');    // pure text field, no computed effect
+  await setField(page, 'input[aria-label="APN"]', 'XYZ-123');   // pure text field, no computed effect
   await page.waitForTimeout(200);
   await expect(marked).toHaveCount(0);
   const capCell = page.locator('.kpi', { has: page.locator('.kpi__label', { hasText: /^CAP$/ }) });
-  await page.fill('.deal-strip input[aria-label="Offer price"]', '300000');   // ripples into CAP, All-In, …
+  await setField(page, '.deal-strip input[aria-label="Offer price"]', '300000');   // ripples into CAP, All-In, …
   await expect(capCell).toHaveClass(/flash/);
   await expect(marked.first()).toBeVisible();
   // the marker persists and the next edit clears + re-marks — never accumulates
   const n = await marked.count();
   await page.waitForTimeout(400);
   await expect(marked).toHaveCount(n);                     // still marked after a beat
-  await page.fill('.deal-strip input[aria-label="Offer price"]', '400000');   // next change
+  await setField(page, '.deal-strip input[aria-label="Offer price"]', '400000');   // next change
   await expect.poll(async () => marked.count()).toBe(n);   // prior markers cleared, new ones set
   // the tiny inline "% share of NOI" labels must never carry the corner-fold
   // marker — the 12px fold overlaps their 10px text. Editing an expense amount
   // recomputes every share, yet no .pct gets flashed.
-  await page.fill('input[aria-label="Insurance amount"]', '20000');
+  await setField(page, 'input[aria-label="Insurance amount"]', '20000');
   await page.waitForTimeout(200);
   await expect(page.locator('.pct.flash')).toHaveCount(0);
 });
@@ -234,7 +246,7 @@ test('S18 auto-save — edits persist without Save, and switching never prompts'
   let asked = false;
   page.on('dialog', (d) => { asked = true; d.dismiss(); });
   await loadSample(page);
-  await page.fill('.deal-strip input[aria-label="Offer price"]', '777000');
+  await setField(page, '.deal-strip input[aria-label="Offer price"]', '777000');   // fill + blur commits
   await page.waitForTimeout(600);                          // let the auto-save debounce fire
   await page.click('button[aria-label="Next property"]');  // must NOT show an unsaved-changes prompt
   await page.reload({ waitUntil: 'load' });
@@ -254,7 +266,7 @@ test('S19 amortization vs. maturity — a balloon is reported without changing D
   const dscrBefore = (await kpis(page))['DSCR'];
   expect(dscrBefore).toBe('0.84');
   // clearing the maturity removes the balloon and leaves DSCR untouched
-  await page.fill('input[aria-label="Loan 1 maturity years"]', '0');
+  await setField(page, 'input[aria-label="Loan 1 maturity years"]', '0');
   await expect(card).not.toContainText('$725,708');
   expect((await kpis(page))['DSCR']).toBe(dscrBefore);
 });
@@ -279,6 +291,27 @@ test('S20 stale-sample auto-refresh — an old built-in sample updates to the la
   // the stale $895K copy has been replaced with the accurate close figures
   await expect(page.locator('.deal-strip input[aria-label="Offer price"]')).toHaveValue('1300000');
   expect((await kpis(page))['CAP']).toBe('5.13%');
+});
+
+test('S21 undo — a committed edit can be reverted; typing alone is not undoable', async ({ page }) => {
+  await loadSample(page);
+  const undoBtn = page.locator('button[aria-label="Undo last change"]');
+  const offer = page.locator('.deal-strip input[aria-label="Offer price"]');
+  await expect(undoBtn).toBeDisabled();                 // nothing to undo on initial load
+  // typing without committing neither recomputes nor creates an undo step
+  await offer.fill('300000');
+  await page.waitForTimeout(150);
+  expect((await kpis(page))['CAP']).toBe('5.13%');
+  await expect(undoBtn).toBeDisabled();
+  // committing (blur) recomputes and arms Undo
+  await offer.blur();
+  await expect.poll(async () => (await kpis(page))['CAP']).toBe('22.21%');
+  await expect(undoBtn).toBeEnabled();
+  // Undo restores the prior offer and KPIs, and disarms itself
+  await undoBtn.click();
+  await expect(page.locator('.deal-strip input[aria-label="Offer price"]')).toHaveValue('1300000');
+  await expect.poll(async () => (await kpis(page))['CAP']).toBe('5.13%');
+  await expect(page.locator('button[aria-label="Undo last change"]')).toBeDisabled();
 });
 
 test('DELETE dismiss — delete asks for confirmation', async ({ page }) => {
