@@ -305,8 +305,8 @@ export function renderDashboard(container, ctx) {
     return el('div', { class: 'loan-edit' }, [
       el('div', { class: 'field' }, [el('span', { class: 'field__label', text: `Loan ${i + 1} — LTV / rate / term / type` }),
         el('div', { class: 'loan-grid' }, [
-          fieldNum(ln.ltv, (v) => { ln.ltv = v; onEdit(); }, { label: `Loan ${i + 1} LTV`, step: '0.01' }),
-          fieldNum(ln.rate, (v) => { ln.rate = v; onEdit(); }, { label: `Loan ${i + 1} rate`, step: '0.001' }),
+          fieldPercent(ln.ltv, (v) => { ln.ltv = v; onEdit(); }, { label: `Loan ${i + 1} LTV`, step: '0.1' }),
+          fieldPercent(ln.rate, (v) => { ln.rate = v; onEdit(); }, { label: `Loan ${i + 1} rate`, step: '0.1' }),
           fieldNum(ln.termYears, (v) => { ln.termYears = v; onEdit(); }, { label: `Loan ${i + 1} term` }),
           fieldSelect(ln.type, ['CONV', 'IO'], (v) => { ln.type = v; onEdit(); }, `Loan ${i + 1} type`),
         ])]),
