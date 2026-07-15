@@ -253,6 +253,28 @@ test('S19 amortization vs. maturity — a balloon is reported without changing D
   expect((await kpis(page))['DSCR']).toBe(dscrBefore);
 });
 
+test('S20 stale-sample auto-refresh — an old built-in sample updates to the latest figures on boot', async ({ page }) => {
+  await page.goto('./', { waitUntil: 'load' });
+  // seed a returning visitor's stale sample (old $895K figures, no sampleRev)
+  await page.evaluate(() => {
+    const stale = {
+      id: 'sample-715-plumas', schemaVersion: 1, name: '715 Plumas St — Commercial',
+      info: { askingPrice: 1350000, rentableSF: 11562 }, targets: { desiredCap: 0, desiredDscr: 0 },
+      offer: { offerPrice: 895000, fees: 0, improvements: 0 },
+      loans: [{ ltv: 0.727, rate: 0.062, termYears: 25, type: 'CONV' }],
+      tenants: [], expenses: [],
+      assumptions: { minOppCostEquity: 0.15, taxRate: 0.28, collectionLoss: 0.05, cashflowAppr: 0.03, capitalAppr: 0.02 },
+    };
+    localStorage.setItem('propanalytics.v1', JSON.stringify([stale]));
+  });
+  await page.goto('./', { waitUntil: 'load' });   // boot runs refreshBuiltinSample()
+  await page.goto('./#/p/sample-715-plumas', { waitUntil: 'load' });
+  await page.waitForSelector('.kpi-strip');
+  // the stale $895K copy has been replaced with the accurate close figures
+  await expect(page.locator('.deal-strip input[aria-label="Offer price"]')).toHaveValue('1300000');
+  expect((await kpis(page))['CAP']).toBe('5.13%');
+});
+
 test('DELETE dismiss — delete asks for confirmation', async ({ page }) => {
   await loadSample(page);
   let asked = false;
