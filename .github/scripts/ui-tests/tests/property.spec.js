@@ -180,6 +180,19 @@ test('S14 pro-forma horizon — slider extends to 10 years with a boundary and 1
   await expect(stats).toHaveCount(1);
 });
 
+test('S15 desired CAP/DSCR goal-seek — typing a target back-solves the offer price', async ({ page }) => {
+  await loadSample(page);
+  const offer = page.locator('.deal-strip input[aria-label="Offer price"]');
+  // Desired CAP 8% → offer = NOI ÷ 0.08 = 899,500; CAP reads 8.00% and passes
+  await page.fill('.deal-strip input[aria-label="Desired CAP"]', '0.08');
+  await expect(offer).toHaveValue('899500');
+  await expect.poll(async () => (await kpis(page))['CAP']).toBe('8.00%');
+  // Desired DSCR 1.4 → offer back-solves through the loan (PV ÷ LTV) to 841,227; DSCR reads 1.40
+  await page.fill('.deal-strip input[aria-label="Desired DSCR"]', '1.4');
+  await expect(offer).toHaveValue('841227');
+  await expect.poll(async () => (await kpis(page))['DSCR']).toBe('1.40');
+});
+
 test('DELETE dismiss — delete asks for confirmation', async ({ page }) => {
   await loadSample(page);
   let asked = false;
