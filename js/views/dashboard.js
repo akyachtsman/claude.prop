@@ -303,13 +303,13 @@ export function renderDashboard(container, ctx) {
     const pay = el('dd', {});
     out.debtNodes['pay' + i] = pay;
     return el('div', { class: 'loan-edit' }, [
-      el('div', { class: 'field' }, [el('span', { class: 'field__label', text: `Loan ${i + 1} — LTV / rate / term / type` }),
-        el('div', { class: 'loan-grid' }, [
-          fieldPercent(ln.ltv, (v) => { ln.ltv = v; onEdit(); }, { label: `Loan ${i + 1} LTV`, step: '0.1' }),
-          fieldPercent(ln.rate, (v) => { ln.rate = v; onEdit(); }, { label: `Loan ${i + 1} rate`, step: '0.1' }),
-          fieldNum(ln.termYears, (v) => { ln.termYears = v; onEdit(); }, { label: `Loan ${i + 1} term` }),
-          fieldSelect(ln.type, ['CONV', 'IO'], (v) => { ln.type = v; onEdit(); }, `Loan ${i + 1} type`),
-        ])]),
+      el('span', { class: 'loan-edit__title', text: `Loan ${i + 1}` }),
+      el('div', { class: 'loan-grid' }, [
+        labeledField('LTV', fieldPercent(ln.ltv, (v) => { ln.ltv = v; onEdit(); }, { label: `Loan ${i + 1} LTV`, step: '0.1' })),
+        labeledField('Rate', fieldPercent(ln.rate, (v) => { ln.rate = v; onEdit(); }, { label: `Loan ${i + 1} rate`, step: '0.1' })),
+        labeledField('Term', fieldNum(ln.termYears, (v) => { ln.termYears = v; onEdit(); }, { label: `Loan ${i + 1} term` })),
+        labeledField('Type', fieldSelect(ln.type, ['CONV', 'IO'], (v) => { ln.type = v; onEdit(); }, `Loan ${i + 1} type`)),
+      ]),
       el('dl', { class: 'facts facts--1col' }, [
         el('div', {}, [el('dt', { text: `Loan ${i + 1} amount / mo. payment` }),
           el('dd', {}, [amt, document.createTextNode(' · '), pay])]),
