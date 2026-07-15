@@ -271,10 +271,10 @@ export function renderDashboard(container, ctx) {
         .map((h, i) => el('th', { scope: 'col', class: i >= 1 && i <= 3 ? 'num' : '' , text: h })))),
       el('tbody', {}, [
         ...incomeRows,
-        // Total rent: Tenant | SF | Rent/mo | Rent/SF | (Total /yr over lease cols)
-        el('tr', { class: 'total' }, [el('td', { text: 'Total rent' }), out.totalSFCell, out.totalMoRentCell, out.avgRentCell, out.totalRentCell]),
-        // Rent − collection loss: label reflects the live assumption | value over lease cols
-        el('tr', {}, [out.rentLessLabel = el('td', {}), el('td', { class: 'num' }, []), el('td', { class: 'num' }, []), el('td', { class: 'num' }, []), out.rentLessCell]),
+        // Totals footer: gross rent, then the collection-loss deduction to the
+        // effective rent that feeds NOI — a single shaded band (see .rent-totals).
+        el('tr', { class: 'total rent-totals' }, [el('td', { text: 'Total rent' }), out.totalSFCell, out.totalMoRentCell, out.avgRentCell, out.totalRentCell]),
+        el('tr', { class: 'rent-totals rent-totals--sub' }, [out.rentLessLabel = el('td', { colspan: '4' }), out.rentLessCell]),
       ]),
     ])),
   ]);
@@ -411,7 +411,7 @@ export function renderDashboard(container, ctx) {
     setText(out.totalMoRentCell, fmt.money(m.totalMonthlyRent));
     setText(out.avgRentCell, fmt.moneyCents(m.avgRentPerSF));
     setText(out.totalRentCell, fmt.money(m.totalRent) + ' / yr');
-    out.rentLessLabel.textContent = `Rent − ${fmt.percent(prop.assumptions.collectionLoss)} coll. loss`;
+    out.rentLessLabel.textContent = `Less ${fmt.percent(prop.assumptions.collectionLoss)} collection loss`;
     setText(out.rentLessCell, fmt.money(m.rentLessCollection) + ' / yr');
     // expenses
     expPctNodes.forEach(({ pct, i }) => { setText(pct, fmt.percent(m.expensePctOfNoi[i]), true); });
