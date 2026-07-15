@@ -363,6 +363,9 @@ body {
 .card .input { min-height: 28px; padding: 2px var(--space-2); font-size: var(--font-sm); }
 @media (pointer: coarse) { .card .input { min-height: 44px; font-size: 16px; } }
 .loan-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; align-items: end; }
+/* Five loan fields wrap to a roomy 3-col grid (2 rows) so the percent inputs
+   show their full value (e.g. 72.6 / 6.19) instead of clipping to "72." */
+.loan-grid--5 { grid-template-columns: repeat(3, 1fr); gap: 4px 6px; }
 .loan-edit { margin-top: var(--space-1); }
 .loan-edit .field__label { display: block; }
 .loan-edit__title { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; color: var(--color-text-secondary); margin-bottom: 2px; }
