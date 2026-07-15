@@ -93,8 +93,7 @@ test('S8 compare — best/worst highlight and per-column verdict', async ({ page
   await page.click('#nav-properties');
   await page.click('button:has-text("+ New property")');
   await page.waitForSelector('.kpi-strip');
-  await setField(page, 'input[aria-label="Offer price"]', '250000');
-  await page.click('.topbar__action:has-text("Save")');
+  await setField(page, 'input[aria-label="Offer price"]', '250000');   // auto-saved on commit
   await page.click('#nav-compare');
   await page.waitForSelector('.compare-table');
   await expect(page.locator('.cell--best').first()).toBeVisible();
@@ -293,34 +292,43 @@ test('S20 stale-sample auto-refresh — an old built-in sample updates to the la
   expect((await kpis(page))['CAP']).toBe('5.13%');
 });
 
-test('S21 undo — a committed edit can be reverted; typing alone is not undoable', async ({ page }) => {
+test('S21 undo/redo — a committed edit can be reverted and replayed; typing alone is not undoable', async ({ page }) => {
   await loadSample(page);
   const undoBtn = page.locator('button[aria-label="Undo last change"]');
+  const redoBtn = page.locator('button[aria-label="Redo change"]');
   const offer = page.locator('.deal-strip input[aria-label="Offer price"]');
-  await expect(undoBtn).toBeDisabled();                 // nothing to undo on initial load
+  await expect(undoBtn).toBeDisabled();                 // nothing to undo/redo on initial load
+  await expect(redoBtn).toBeDisabled();
   // typing without committing neither recomputes nor creates an undo step
   await offer.fill('300000');
   await page.waitForTimeout(150);
   expect((await kpis(page))['CAP']).toBe('5.13%');
   await expect(undoBtn).toBeDisabled();
-  // committing (blur) recomputes and arms Undo
+  // committing (blur) recomputes and arms Undo (Redo stays empty)
   await offer.blur();
   await expect.poll(async () => (await kpis(page))['CAP']).toBe('22.21%');
   await expect(undoBtn).toBeEnabled();
-  // Undo restores the prior offer and KPIs, and disarms itself
+  await expect(redoBtn).toBeDisabled();
+  // Undo restores the prior offer and KPIs, and arms Redo
   await undoBtn.click();
   await expect(page.locator('.deal-strip input[aria-label="Offer price"]')).toHaveValue('1300000');
   await expect.poll(async () => (await kpis(page))['CAP']).toBe('5.13%');
   await expect(page.locator('button[aria-label="Undo last change"]')).toBeDisabled();
+  await expect(page.locator('button[aria-label="Redo change"]')).toBeEnabled();
+  // Redo replays the committed edit
+  await page.locator('button[aria-label="Redo change"]').click();
+  await expect(page.locator('.deal-strip input[aria-label="Offer price"]')).toHaveValue('300000');
+  await expect.poll(async () => (await kpis(page))['CAP']).toBe('22.21%');
 });
 
-test('DELETE dismiss — delete asks for confirmation', async ({ page }) => {
+test('DELETE — a property is removed from its Properties-list card, with confirmation', async ({ page }) => {
   await loadSample(page);
+  await page.goto('./', { waitUntil: 'load' });          // Delete now lives on the list card
+  await page.waitForSelector('.lcard');
   let asked = false;
-  page.on('dialog', (d) => { asked = true; d.dismiss(); });
-  await page.click('.topbar__action:has-text("Delete")');
+  page.on('dialog', (d) => { asked = true; d.accept(); });
+  await page.locator('.lcard__del').first().click();
   await page.waitForTimeout(200);
   expect(asked).toBe(true);
-  // dismissed → still on the dashboard
-  await expect(page.locator('.kpi-strip')).toBeVisible();
+  await expect(page.locator('.lcard')).toHaveCount(0);   // deleted → empty list
 });
