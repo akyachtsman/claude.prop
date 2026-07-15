@@ -252,6 +252,12 @@ body {
    that hold a value, not an input, a label, or a blank placeholder. Compare
    view keeps its own best/worst fills. */
 .data-table:not(.compare-table) td.num:not(:has(input)):not(:empty) { background: var(--gen-shade); }
+/* Income totals footer: gross rent → less collection loss → effective, as one
+   cohesive shaded band rather than sparse table rows. */
+.data-table .rent-totals td { background: var(--gen-shade); border-bottom: none; }
+.data-table .rent-totals td:first-child { white-space: nowrap; }
+.data-table .rent-totals--sub td { color: var(--color-text-secondary); font-weight: 600; }
+.data-table .rent-totals--sub .income-yr { color: var(--color-navy); font-weight: 700; }
 
 /* one-line fact rows (label left, value right) ---------------------------------- */
 .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 2px var(--space-4); margin: 0; }
