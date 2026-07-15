@@ -261,8 +261,10 @@ export function renderDashboard(container, ctx) {
   out.totalSFCell = el('td', { class: 'num' });        // SF column
   out.totalMoRentCell = el('td', { class: 'num' });    // Rent/mo column
   out.avgRentCell = el('td', { class: 'num' });         // Rent/SF column
-  out.totalRentCell = el('td', { class: 'num', colspan: '2' });   // over lease cols
-  out.rentLessCell = el('td', { class: 'num', colspan: '2' });    // over lease cols
+  // Left-aligned so the "/ yr" figure sits next to the row's data instead of
+  // drifting to the far-right table edge, away from its label.
+  out.totalRentCell = el('td', { class: 'num income-yr', colspan: '2' });   // over lease cols
+  out.rentLessCell = el('td', { class: 'num income-yr', colspan: '2' });    // over lease cols
   const incomeCard = card('Income', 'col-5', [
     tableWrap(el('table', { class: 'data-table data-table--dense' }, [
       el('thead', {}, el('tr', {}, ['Tenant', 'SF', 'Rent / mo', 'Rent / SF', 'Lease Expires', 'Lease Options']
