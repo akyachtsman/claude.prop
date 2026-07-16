@@ -5,6 +5,7 @@ https://raw.githubusercontent.com/akyachtsman/claude.directives/main/directives/
 https://raw.githubusercontent.com/akyachtsman/claude.directives/main/directives/design.md
 https://raw.githubusercontent.com/akyachtsman/claude.directives/main/directives/test.md
 https://raw.githubusercontent.com/akyachtsman/claude.directives/main/directives/data.md
+https://raw.githubusercontent.com/akyachtsman/claude.directives/main/directives/git.md
 
 ---
 
