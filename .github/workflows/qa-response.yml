@@ -9,7 +9,8 @@
 #     -d '{"event_type":"manual-qa-trigger"}'
 #
 # Required setup:
-#   - Add TEST_AUTH_CREDENTIAL as a repository secret (value from CLAUDE.md)
+#   - Add TEST_AUTH_CREDENTIAL as a repository secret — skip if the project has
+#     no auth; the empty secret makes auth tests self-skip
 #   - Add APP_URL as a repository variable (live URL)
 #   - Set UI_TESTS_DIR below to the path of your Playwright test directory
 
