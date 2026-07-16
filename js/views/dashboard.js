@@ -83,7 +83,6 @@ export function renderDashboard(container, ctx) {
   function refresh() {
     const m = compute(prop);
     ctx.setHeaderVerdicts(m, prop);        // topbar pills
-    ctx.markDirty();                       // unsaved indicator
     if (!firstPaint) clearFlashes();       // drop the prior edit's highlights before marking new ones
     paintKPIs(m);
     paintDerived(m);
@@ -497,7 +496,7 @@ export function renderDashboard(container, ctx) {
     chartPlot.style.setProperty('--pf-bot', botPx + 'px');
     const chart = el('div', { class: 'chart' }, [
       chartPlot,
-      el('div', { class: 'chart__xlabels' }, op.map((_, i) => el('span', { class: boundary && i === 4 ? 'x--boundary' : '', text: `YR ${i + 1}` }))),
+      el('div', { class: 'chart__xlabels' }, op.map((_, i) => el('span', { text: `YR ${i + 1}` }))),
       el('div', { class: 'legend' }, [
         el('span', {}, [el('i', { class: 'sw-cf' }), 'Operating cashflow']),
         el('span', {}, [el('i', { class: 'sw-ap' }), 'Appreciation']),

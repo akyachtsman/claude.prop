@@ -61,11 +61,13 @@ export function irr(series) {
   const lo0 = -0.9999, hi0 = 10;
   const fLo = npvAt(lo0), fHi = npvAt(hi0);
   if (!Number.isFinite(fLo) || !Number.isFinite(fHi) || fLo === 0 || fHi === 0 || fLo * fHi > 0) return null;
-  let lo = lo0, hi = hi0;
+  let lo = lo0, hi = hi0, fLoCur = fLo;
   for (let i = 0; i < 200; i++) {
     const mid = (lo + hi) / 2, f = npvAt(mid);
     if (Math.abs(f) < 1e-6) return mid;
-    if (fLo * f < 0) hi = mid; else lo = mid;
+    // Track the sign at the *moving* low end, not the fixed endpoint, so the
+    // bracket stays valid even if the series isn't strictly monotonic.
+    if (fLoCur * f < 0) hi = mid; else { lo = mid; fLoCur = f; }
   }
   return (lo + hi) / 2;
 }
@@ -96,7 +98,7 @@ export function compute(property) {
   });
   const pmt1 = loanCalc[0] ? loanCalc[0].payment : 0;
   const pmt2 = loanCalc[1] ? loanCalc[1].payment : 0;
-  const paymentsValid = [pmt1, pmt2].every((x) => x === null ? false : true);
+  const paymentsValid = [pmt1, pmt2].every((x) => x !== null);
   const monthlyDebt = (num(pmt1) + num(pmt2));
   const annualDebt = monthlyDebt * 12;
   const financeTotal = loanCalc.reduce((s, l) => s + num(l.amount), 0);

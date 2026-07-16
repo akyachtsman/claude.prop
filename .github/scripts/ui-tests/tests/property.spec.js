@@ -1,6 +1,6 @@
-// property.spec.js — project-specific scenarios S5–S11 for the Property
-// Analytics dashboard (spec.md SC-1..SC-7). Client-side only: no backend, so
-// these run fully against the local server. Desktop viewport (laptop-first app).
+// property.spec.js — project-specific scenarios S5–S22 (+ a delete test) for the
+// Property Analytics dashboard (spec.md SC-1..SC-7). Client-side only: no backend,
+// so these run fully against the local server. Desktop viewport (laptop-first app).
 
 import { test, expect } from '@playwright/test';
 
