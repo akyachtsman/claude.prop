@@ -81,7 +81,7 @@ export function renderCompare(container, ctx) {
 
   const selected = ctx.compareIds && ctx.compareIds.length
     ? all.filter((p) => ctx.compareIds.includes(p.id))
-    : all.slice(0, 4);
+    : all.slice();   // default: line up every saved property
   let layout = 'table';   // 'table' (rows) | 'cols' (side by side)
 
   const chips = el('div', { class: 'compare-picker' }, all.map((p) => {
@@ -89,8 +89,8 @@ export function renderCompare(container, ctx) {
     const c = el('button', { class: 'chip' + (on ? ' chip--on' : ''), type: 'button', 'aria-pressed': on ? 'true' : 'false', text: p.name || 'Untitled' });
     c.addEventListener('click', () => {
       const idx = selected.findIndex((s) => s.id === p.id);
-      if (idx >= 0) { if (selected.length > 2) selected.splice(idx, 1); }
-      else if (selected.length < 4) selected.push(p);
+      if (idx >= 0) { if (selected.length > 2) selected.splice(idx, 1); }   // keep at least 2
+      else selected.push(p);   // no upper cap — add as many as you like
       draw();
     });
     return c;
@@ -168,7 +168,7 @@ export function renderCompare(container, ctx) {
       el('button', { class: 'btn btn--ghost', type: 'button', onclick: () => ctx.goList(), text: 'Back to properties' }),
     ]),
     el('div', { class: 'compare-controls' }, [seg]),
-    el('p', { class: 'fineprint', text: 'Pick 2–4 properties. Best value per metric is green, worst is red; no-data is neutral.' }),
+    el('p', { class: 'fineprint', text: 'Pick any 2 or more properties. Best value per metric is green, worst is red; no-data is neutral.' }),
     chips, tableHost,
   ]);
   draw();
