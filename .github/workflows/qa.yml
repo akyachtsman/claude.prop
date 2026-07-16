@@ -49,17 +49,9 @@ jobs:
         uses: actions/checkout@v4
 
       # ── Secret scan ────────────────────────────────────────────────────────
-      # Flags common API token patterns before any tests run.
+      # Flags common API token patterns before any tests run (shared action).
       - name: Secret scan
-        run: |
-          # Canonical secret-scan pattern — keep identical to global.md and qa-response.yml.
-          if grep -rE \
-            'pat[A-Za-z0-9]{14}\.[A-Za-z0-9]{40,}|pat[A-Za-z0-9]{17}\.[a-f0-9]{64}|pat[lr]_[A-Za-z0-9]{10,}|sk-[A-Za-z0-9]{20,}|xoxb-' \
-            --include="*.js" --include="*.html" --include="*.css" --include="*.json" \
-            --exclude-dir=node_modules --exclude-dir=.git .; then
-            echo "ERROR: potential API token found in source files"
-            exit 1
-          fi
+        uses: ./.github/actions/secret-scan
 
       # ── Contrast guardrail ───────────────────────────────────────────────────
       # WCAG AA check against styles/tokens.css (this project's design tokens).
@@ -87,8 +79,10 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           # Per-project: paths whose changes warrant a browser run. Includes js/
           # and styles/ so a calc-engine or design change can't skip the S5
-          # fidelity suite (this is a no-backend app — the suite runs fully on CI).
-          UI_PATHS: '^(index\.html$|js/|styles/|\.github/scripts/ui-tests/|\.github/workflows/qa\.yml$)'
+          # fidelity suite, and .github/actions/ so a change to the shared
+          # ui-suite/secret-scan composite is exercised here rather than only
+          # post-merge (this is a no-backend app — the suite runs fully on CI).
+          UI_PATHS: '^(index\.html$|js/|styles/|\.github/actions/|\.github/scripts/ui-tests/|\.github/workflows/qa\.yml$)'
         run: |
           # No app yet (no index.html in the repo) → nothing to browser-test.
           # Keeps the scaffold/bootstrap PR clean: skip until the app exists.
@@ -122,54 +116,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # `cache: npm` requires a committed package-lock.json at the path below.
-      # Generate it once (`npm install` in UI_TESTS_DIR) and COMMIT it, or this
-      # step fails with "Dependencies lock file is not found".
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: ${{ env.UI_TESTS_DIR }}/package-lock.json
-
-      - name: Install test dependencies
-        run: npm install
-        working-directory: ${{ env.UI_TESTS_DIR }}
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium webkit
-        working-directory: ${{ env.UI_TESTS_DIR }}
-
-      # ── Start local server ─────────────────────────────────────────────────
-      # http-server is a pinned devDependency installed in UI_TESTS_DIR (above). Invoke
-      # its binary by path while staying at the repo root, so '.' still serves the app
-      # root AND nothing is fetched at runtime (works under locked egress). `npx
-      # --no-install` from the root would fail — the bin lives under UI_TESTS_DIR, not root.
-      # Adjust '.' to your build output directory if needed (e.g. dist, public).
-      - name: Start local server
-        run: |
-          "./$UI_TESTS_DIR/node_modules/.bin/http-server" . -p 8080 --silent &
-          sleep 2
-
-      # Non-blocking for now: UI_PATHS was widened to include js/ and styles/ so a
-      # calc-engine or design change now RUNS the suite (incl. the S5 fidelity
-      # test) and surfaces regressions in the log. Kept continue-on-error until a
+      # advisory-run keeps ONLY the Playwright run non-blocking (setup, install,
+      # server start and upload still fail the job). UI_PATHS was widened to js/
+      # and styles/ so a calc-engine or design change RUNS the suite (incl. S5
+      # fidelity) and surfaces regressions in the log. Advisory only until a
       # pre-existing mobile-topbar overflow (app.spec S4 at 390px) is fixed in its
-      # own PR; flip this to a hard gate once the suite is green on all projects.
-      - name: Run Playwright tests
-        continue-on-error: true
-        env:
-          APP_URL: http://localhost:8080
-          TEST_AUTH_CREDENTIAL: ${{ secrets.TEST_AUTH_CREDENTIAL }}
-        run: npx playwright test --reporter=list
-        working-directory: ${{ env.UI_TESTS_DIR }}
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
+      # own PR; set advisory-run to 'false' once the suite is green on all projects.
+      - name: UI suite (local server, advisory run)
+        uses: ./.github/actions/ui-suite
         with:
-          name: playwright-results-local
-          path: |
-            .agent-reports/screenshots/
-            .agent-reports/playwright-results.json
-          retention-days: 7
+          tests-dir: ${{ env.UI_TESTS_DIR }}
+          app-url: http://localhost:8080
+          test-auth-credential: ${{ secrets.TEST_AUTH_CREDENTIAL }}
+          artifact-name: playwright-results-local
+          start-local-server: 'true'
+          advisory-run: 'true'
