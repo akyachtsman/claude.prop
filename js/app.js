@@ -147,10 +147,12 @@ function showDashboard(id) {
     // Each committed edit: snapshot the prior state for undo, drop the redo
     // history, and persist immediately (commit = saved — no Save button).
     onCommit: () => {
+      // Signed-in + offline rejects the write (store returns null): discard the
+      // typed edit by re-rendering from the committed state; don't touch history.
+      if (!store.save(working)) { showDashboard(working.id); return; }
       undoStack.push(committedState);
       committedState = deepCopy(working);
       redoStack = [];
-      store.save(working);
       if (!store.isStorageOK()) toast("Couldn't save — storage is full or private mode. Export to keep your data.", 'info');
       refreshHistory();
     },
@@ -179,24 +181,28 @@ function paintPills(host, m, p) {
 function guardNav(hash) { navigate(hash); }   // edits persist synchronously on commit
 function undo(id) {
   if (!undoStack.length) return;
-  redoStack.push(committedState);        // current state → available to redo
-  const prev = undoStack.pop();          // the state before the most recent committed edit
-  store.save(prev);
-  showDashboard(id);                     // re-render from the restored state (history is module-level, preserved)
+  const prev = undoStack[undoStack.length - 1];   // the state before the most recent committed edit
+  if (!store.save(prev)) return;                   // offline reject → leave the stacks untouched
+  undoStack.pop();
+  redoStack.push(committedState);                  // current state → available to redo
+  showDashboard(id);                               // re-render from the restored state (history is module-level, preserved)
 }
 function redo(id) {
   if (!redoStack.length) return;
-  undoStack.push(committedState);        // current state → available to undo
-  const next = redoStack.pop();
-  store.save(next);
+  const next = redoStack[redoStack.length - 1];
+  if (!store.save(next)) return;                   // offline reject → leave the stacks untouched
+  redoStack.pop();
+  undoStack.push(committedState);                  // current state → available to undo
   showDashboard(id);
 }
 function createNew() {
   const p = store.save(blankProperty());
+  if (!p) return;                                  // offline reject (store toasts)
   navigate('#/p/' + encodeURIComponent(p.id));
 }
 function loadSample() {
   const p = store.save(sampleProperty());
+  if (!p) return;                                  // offline reject (store toasts)
   toast('Sample deal loaded.', 'success');
   navigate('#/p/' + encodeURIComponent(p.id));
 }
@@ -252,7 +258,25 @@ function seedDemos() {
 document.getElementById('btn-export').addEventListener('click', exportData);
 document.getElementById('btn-import').addEventListener('click', importData);
 if (!store.probe()) toast('Saving is off — private mode or storage full. Export to keep your data.', 'info');
-refreshBuiltinSample();
-seedDemos();
+
+// Resolve auth before the first render (boot ordering): exchange any magic-link
+// ?code, swap to the cloud backend, run the initial fetch + first-sign-in
+// reconcile. Loaded dynamically and guarded so that if the account layer can't
+// initialize, the app still boots fully in logged-out local mode (FR5).
+try {
+  const { initAccount } = await import('./account.js');
+  await initAccount({ rerender: router });
+} catch (e) {
+  store.setSession(null);
+}
+
+// The built-in sample refresh + one-time demo seed belong to the logged-out
+// local backend only; cloud accounts get their fixtures from the sign-in
+// reconcile (js/account.js), so guard these to the local backend.
+if (store.backendKind() === 'local') {
+  refreshBuiltinSample();
+  seedDemos();
+}
+
 window.addEventListener('hashchange', router);
 router();
