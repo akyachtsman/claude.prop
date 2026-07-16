@@ -528,6 +528,22 @@ body {
 .compare-table--rows th:first-child, .compare-table--rows td:first-child { min-width: 176px; }
 .compare-name { display: block; font-weight: 700; color: var(--color-navy); }
 .compare-table--rows .compare-verdict { display: inline-block; margin-top: 3px; }
+/* sortable column headers: the whole header is a button; a caret shows the
+   active sort (a faint ↕ appears on hover for the rest, signalling it's sortable) */
+.compare-table th.th-sort { padding: 0; }
+.th-sort__btn {
+  display: flex; align-items: center; gap: 3px; width: 100%;
+  font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit;
+  background: none; border: none; cursor: pointer;
+  padding: var(--space-1) var(--space-2);
+}
+.compare-table th.num .th-sort__btn { justify-content: flex-end; }
+.th-sort__btn:hover { color: var(--color-navy); }
+.th-sort__btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+.th-sort__caret { font-size: 9px; opacity: 0; transition: opacity .12s; }
+.th-sort__btn:hover .th-sort__caret { opacity: .5; }
+.th-sort--on .th-sort__caret { opacity: 1; color: var(--color-accent); }
+.th-sort--on .th-sort__label { color: var(--color-navy); }
 
 /* toast */
 .toast {

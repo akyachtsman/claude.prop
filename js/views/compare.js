@@ -68,6 +68,8 @@ export function renderCompare(container, ctx) {
     ? all.filter((p) => ctx.compareIds.includes(p.id))
     : all.slice();   // default: line up every saved property
   let layout = 'table';   // 'table' (rows) | 'cols' (side by side)
+  // Row-table sorting: key is 'name' or a METRICS index; null = selection order.
+  let sortKey = null, sortDir = 'desc';
 
   const chips = el('div', { class: 'compare-picker' }, all.map((p) => {
     const on = selected.some((s) => s.id === p.id);
@@ -106,13 +108,56 @@ export function renderCompare(container, ctx) {
     if (layout === 'table') drawTable(); else drawSideBySide();
   }
 
-  // Table: one row per property, metrics across the top.
+  // A clickable, keyboard-operable sort header. Toggles direction when it's
+  // already the active column; otherwise sorts by it (numbers default high→low,
+  // names A→Z). aria-sort keeps it accessible.
+  function sortHeader(key, label, isNum) {
+    const active = sortKey === key;
+    const th = el('th', {
+      scope: 'col', class: (isNum ? 'num ' : '') + 'th-sort' + (active ? ' th-sort--on' : ''),
+      'aria-sort': active ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none',
+    });
+    const btn = el('button', { class: 'th-sort__btn', type: 'button', title: `Sort by ${label}` }, [
+      el('span', { class: 'th-sort__label', text: label }),
+      el('span', { class: 'th-sort__caret', 'aria-hidden': 'true', text: active ? (sortDir === 'asc' ? '▲' : '▼') : '↕' }),
+    ]);
+    btn.addEventListener('click', () => {
+      if (sortKey === key) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+      else { sortKey = key; sortDir = isNum ? 'desc' : 'asc'; }
+      draw();
+    });
+    th.appendChild(btn);
+    return th;
+  }
+
+  // Order rows by the active sort; non-finite values ("—") always sink to the
+  // bottom regardless of direction. Returns a new array (selection order kept).
+  function sortRows(rows) {
+    if (sortKey === null) return rows;
+    const dir = sortDir === 'asc' ? 1 : -1;
+    const numeric = sortKey !== 'name';
+    const keyOf = numeric ? ({ p, m }) => METRICS[sortKey][1](m, p) : ({ p }) => (p.name || '').toLowerCase();
+    return rows.slice().sort((a, b) => {
+      const va = keyOf(a), vb = keyOf(b);
+      if (numeric) {
+        const na = fnum(va), nb = fnum(vb);
+        if (na && nb) return 0;
+        if (na) return 1;              // a is "—" → after b
+        if (nb) return -1;             // b is "—" → after a
+        return (va - vb) * dir;
+      }
+      return String(va).localeCompare(String(vb)) * dir;
+    });
+  }
+
+  // Table: one row per property, metrics across the top; click any header to sort.
   function drawTable() {
     const cols = selected.map((p) => ({ p, m: compute(p) }));
-    const head = el('tr', {}, [el('th', { scope: 'col', text: 'Prospect' }),
-      ...METRICS.map(([label]) => el('th', { scope: 'col', class: 'num', text: label }))]);
+    // best/worst is computed over the full set, so it's independent of row order.
     const bw = METRICS.map(([label, sel, f, dir]) => extremes(cols.map(({ m, p }) => sel(m, p)), dir));
-    const body = cols.map(({ p, m }) => el('tr', {}, [
+    const head = el('tr', {}, [sortHeader('name', 'Prospect', false),
+      ...METRICS.map(([label], i) => sortHeader(i, label, true))]);
+    const body = sortRows(cols).map(({ p, m }) => el('tr', {}, [
       el('td', {}, [el('span', { class: 'compare-name', text: p.name || 'Untitled' }), verdictPill(p, m)]),
       ...METRICS.map(([label, sel, f], ci) => {
         const v = sel(m, p);
@@ -153,7 +198,7 @@ export function renderCompare(container, ctx) {
       el('button', { class: 'btn btn--ghost', type: 'button', onclick: () => ctx.goList(), text: 'Back to properties' }),
     ]),
     el('div', { class: 'compare-controls' }, [seg]),
-    el('p', { class: 'fineprint', text: 'Pick any 2 or more properties. Best value per metric is green, worst is red; no-data is neutral.' }),
+    el('p', { class: 'fineprint', text: 'Pick any 2 or more properties. Click a column header to sort. Best value per metric is green, worst is red; no-data is neutral.' }),
     chips, tableHost,
   ]);
   draw();
