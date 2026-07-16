@@ -1,0 +1,19 @@
+name: 'Secret scan'
+description: >
+  Canonical repo secret scan — the single source of truth for the token
+  pattern (previously duplicated byte-for-byte in qa.yml and qa-response.yml).
+  Flags common API-token shapes in source files and fails the job on a hit.
+
+runs:
+  using: composite
+  steps:
+    - name: Secret scan
+      shell: bash
+      run: |
+        if grep -rE \
+          'pat[A-Za-z0-9]{14}\.[A-Za-z0-9]{40,}|pat[A-Za-z0-9]{17}\.[a-f0-9]{64}|pat[lr]_[A-Za-z0-9]{10,}|sk-[A-Za-z0-9]{20,}|xoxb-' \
+          --include="*.js" --include="*.html" --include="*.css" --include="*.json" \
+          --exclude-dir=node_modules --exclude-dir=.git .; then
+          echo "ERROR: potential API token found in source files"
+          exit 1
+        fi

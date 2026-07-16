@@ -50,37 +50,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      # Blocking: the live URL is fully reachable, so a failure fails the check.
+      # workflow_dispatch input overrides the repo variable when provided.
+      - name: UI suite (live URL)
+        uses: ./.github/actions/ui-suite
         with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: ${{ env.UI_TESTS_DIR }}/package-lock.json
-
-      - name: Install test dependencies
-        run: npm install
-        working-directory: ${{ env.UI_TESTS_DIR }}
-
-      - name: Install Playwright browsers
-        timeout-minutes: 8
-        run: npx playwright install --with-deps chromium webkit
-        working-directory: ${{ env.UI_TESTS_DIR }}
-
-      - name: Run Playwright tests (live)
-        timeout-minutes: 12
-        env:
-          # workflow_dispatch input overrides repo variable if provided
-          APP_URL: ${{ github.event.inputs.app_url || vars.APP_URL }}
-          TEST_AUTH_CREDENTIAL: ${{ secrets.TEST_AUTH_CREDENTIAL }}
-        run: npx playwright test --reporter=list
-        working-directory: ${{ env.UI_TESTS_DIR }}
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-results-live
-          path: |
-            .agent-reports/screenshots/
-            .agent-reports/playwright-results.json
-          retention-days: 7
+          tests-dir: ${{ env.UI_TESTS_DIR }}
+          app-url: ${{ github.event.inputs.app_url || vars.APP_URL }}
+          test-auth-credential: ${{ secrets.TEST_AUTH_CREDENTIAL }}
+          artifact-name: playwright-results-live

@@ -1,0 +1,81 @@
+name: 'UI test suite'
+description: >
+  Install test deps + Playwright browsers, optionally start a bundled local
+  server, run the Playwright suite, and upload results. Single source of truth
+  for the run block shared by qa.yml, qa-live.yml and qa-response.yml.
+  The run step is blocking; a caller that wants an advisory run sets
+  continue-on-error on the `uses:` step instead.
+
+inputs:
+  tests-dir:
+    description: 'Directory containing playwright.config.js and package.json.'
+    required: true
+  app-url:
+    description: 'Base URL the Playwright suite targets.'
+    required: true
+  test-auth-credential:
+    description: 'Optional auth secret; empty for no-auth projects.'
+    required: false
+    default: ''
+  artifact-name:
+    description: 'Name for the uploaded results artifact.'
+    required: true
+  start-local-server:
+    description: "Set 'true' to start a bundled http-server before the run (local-URL runs)."
+    required: false
+    default: 'false'
+  server-root:
+    description: 'Directory the local server serves (when start-local-server is true).'
+    required: false
+    default: '.'
+
+runs:
+  using: composite
+  steps:
+    # `cache: npm` requires a committed package-lock.json at the path below.
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: ${{ inputs.tests-dir }}/package-lock.json
+
+    - name: Install test dependencies
+      shell: bash
+      run: npm install
+      working-directory: ${{ inputs.tests-dir }}
+
+    # Both browsers: playwright.config.js defines a webkit project (iPhone)
+    # alongside chromium; installing chromium alone fails the webkit project.
+    - name: Install Playwright browsers
+      shell: bash
+      run: npx playwright install --with-deps chromium webkit
+      working-directory: ${{ inputs.tests-dir }}
+
+    # http-server is a pinned devDependency in tests-dir. Invoke its binary by
+    # path from the repo root so `server-root` still serves the app root and
+    # nothing is fetched at runtime (works under locked egress).
+    - name: Start local server
+      if: ${{ inputs.start-local-server == 'true' }}
+      shell: bash
+      run: |
+        "./${{ inputs.tests-dir }}/node_modules/.bin/http-server" ${{ inputs.server-root }} -p 8080 --silent &
+        sleep 2
+
+    - name: Run Playwright tests
+      shell: bash
+      env:
+        APP_URL: ${{ inputs.app-url }}
+        TEST_AUTH_CREDENTIAL: ${{ inputs.test-auth-credential }}
+      run: npx playwright test --reporter=list
+      working-directory: ${{ inputs.tests-dir }}
+
+    - name: Upload test results
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: |
+          .agent-reports/screenshots/
+          .agent-reports/playwright-results.json
+        retention-days: 7
