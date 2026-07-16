@@ -540,6 +540,18 @@ body {
 .topbar__action { background: var(--color-navy-soft); }
 .topbar__action:hover, .topbar__action:focus-visible { background: var(--color-accent); }
 .topbar__action:disabled { opacity: 0.4; cursor: default; background: var(--color-navy-soft); }
+/* Phone width: the desktop topbar (brand + center + 4 nav links) is wider than a
+   phone, so it reflows — brand + nav stay at the top (nav wraps to its own line
+   if needed), the center slot (title/switcher/pills/actions) drops to a
+   full-width row below and wraps, and the switcher subtitle truncates instead of
+   forcing width. Prevents horizontal page scroll at phone width; desktop is
+   unchanged. Placed after the base .topbar rules so its flex shorthand wins. */
+@media (max-width: 680px) {
+  .topbar { flex-wrap: wrap; gap: var(--space-2); padding: var(--space-2) var(--space-3); min-height: 0; }
+  .topbar__center { order: 3; flex: 1 1 100%; flex-wrap: wrap; gap: var(--space-2) var(--space-3); }
+  .topbar__nav { flex-wrap: wrap; }
+  .switcher__title .sub { display: block; overflow: hidden; text-overflow: ellipsis; }
+}
 /* final one-screen rhythm trim */
 .card .input { min-height: 26px; }
 @media (pointer: coarse) { .card .input { min-height: 44px; } }
