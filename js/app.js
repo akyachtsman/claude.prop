@@ -71,10 +71,10 @@ function router() {
   // and all data stay hidden until sign-in. If the account layer failed to load
   // (auth infra unreachable), fall through to the local app so the tool still
   // works rather than showing a dead gate.
-  if (account && store.backendKind() !== 'cloud') {
+  if (account && account.needsAuthScreen()) {
     document.body.classList.add('is-gated');
     clear(center);
-    return account.renderAuthGate(view);
+    return account.renderAuthScreen(view);
   }
   document.body.classList.remove('is-gated');
   const r = parseHash();

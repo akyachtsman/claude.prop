@@ -111,29 +111,34 @@ fine-pointer context; the generic `app.spec.js` covers the mobile viewports).
 | S21 | Undo/redo | Each committed edit is one undo step; the Undo topbar button reverts the last change and Redo replays it; both disarm when empty; typing without committing is not undoable | Undo/Redo missing/stuck-disabled, doesn't revert/replay, or a mid-type change is captured |
 | S22 | Demo seed | Three extra demo deals (`demoProperties()`) seed once on boot when the store is already non-empty (a brand-new visitor still meets the empty first-run), guarded by `store.hasSeeded()`; a seeded deal the user deletes never reappears | Seed fires on an empty first-run, doesn't seed on a non-empty store, or a deleted demo reappears after reload |
 | S23 | Auth gate (logged out) | Logged out shows **only** the full-page sign-in wall (`.authgate`); the topbar nav, KPI strip, and every deal are hidden — no app or data leaks | Gate missing, or any `.lcard`/`.kpi-strip`/nav visible while logged out |
-| S24 | Magic-link send | Entering an email on the gate and clicking **Send sign-in link** shows the `.authgate__status--ok` "Check your email" state (stubbed `signInWithOtp`) | No "check your email" state, or a hard error on send |
-| S25 | Signed-in chrome | With a session the gate is gone, the topbar shows the account email + **Sign out**, and `store.backendKind()` is `cloud` (reads/writes `propanalytics.cloud.<uid>`) | Gate still shown, email/Sign out missing, or backend stays local |
-| S26 | Offline read-only | Signed-in + offline shows the `#offline-banner` and `body.is-readonly`; the write choke-point (`store.save`/`remove`) rejects edits (no cache mutation); reconnect clears the banner | No banner/read-only state, or an edit persists while offline signed-in |
-| S27 | First-sign-in seed | A fresh account (reconcile enabled) is seeded with the 715 Plumas sample + 3 demos on first sign-in (`missingFixtures` gap-seed) | Fewer than 4 deals, or a fixture missing after sign-in |
+| S24 | Password sign-in | Valid email+password on the gate signs in and reveals the app (account email in the topbar, gate gone); stubbed `signInWithPassword` (`/auth/v1/token`) | Sign-in doesn't reveal the app, or a hard error on valid creds |
+| S25 | Forgot password | The **Forgot password?** link switches to reset mode (password field hidden); **Send reset link** shows the `.authgate__status--ok` "Check your email" state (stubbed `/auth/v1/recover`) | No reset mode, or no "check your email" state |
+| S26 | Signed-in chrome | With a session the gate is gone, the topbar shows the account email + **Sign out**, and `store.backendKind()` is `cloud` (reads/writes `propanalytics.cloud.<uid>`) | Gate still shown, email/Sign out missing, or backend stays local |
+| S27 | Offline read-only | Signed-in + offline shows the `#offline-banner` and `body.is-readonly`; the write choke-point (`store.save`/`remove`) rejects edits (no cache mutation); reconnect clears the banner | No banner/read-only state, or an edit persists while offline signed-in |
+| S28 | First-sign-in seed | A fresh account (reconcile enabled) is seeded with the 715 Plumas sample + 3 demos on first sign-in (`missingFixtures` gap-seed) | Fewer than 4 deals, or a fixture missing after sign-in |
 
-**The app is gated behind login** (owner decision, 2026-07-16): logged out shows
-only the sign-in wall; the app + all data require a Supabase session. (On public
-Pages this is a UI curtain, not file security — the real protection is per-user
-RLS on the data.) Because of the gate, **all UI scenarios run signed-in**:
+**The app is gated behind login** (owner decision, 2026-07-16), using **email +
+password** (`signIn`/`signUp`/`resetPassword`/`updatePassword` in `js/supabase.js`;
+the gate has sign-in / create-account / forgot modes + a recovery form). Logged
+out shows only the sign-in wall; the app + all data require a Supabase session.
+(On public Pages this is a UI curtain, not file security — the real protection is
+per-user RLS on the data.) Because of the gate, **all UI scenarios run signed-in**:
 `property.spec.js` + the generic `app.spec.js` boot via
 `tests/_supabase-mock.js` `installSignedIn()` — it injects a session
 (`sb-<ref>-auth-token`), stubs `**/auth/v1/**` + a **stateful**
 `**/rest/v1/properties**` (GET/upsert/delete over an in-memory map that survives
 reloads), and suppresses the first-sign-in reconcile so a signed-in empty account
 behaves like the old local first-run (same "Load sample deal"/"+ New" flow). The
-logged-out gate states + fresh-account seed live in `auth.spec.js` (S23–S27).
-The store layer (backend swap, offline choke-point, first-sign-in upload/dedup)
-is covered by Node unit tests in `tests/*.test.mjs` (run `node --test
+logged-out gate states + fresh-account seed live in `auth.spec.js` (S23–S28) with
+the auth client stubbed (register the `**/auth/v1/**` catch-all route FIRST and
+`token`/`recover` specifics LAST — Playwright's last-registered route wins). The
+store layer (backend swap, offline choke-point, first-sign-in upload/dedup) is
+covered by Node unit tests in `tests/*.test.mjs` (run `node --test
 tests/store.test.mjs tests/reconcile.test.mjs`; also a blocking CI step in
 `qa.yml`). RLS isolation + authenticated-role upsert are proven at the DB via the
-Supabase MCP (impersonated, rolled-back). Magic-link round-trip is verified
-**manually** (owner must set Auth Site URL + Redirect URLs to the Pages URL and
-`http://localhost:8099`).
+Supabase MCP (impersonated, rolled-back). The password-reset email round-trip is
+verified **manually** (owner must set Auth Site URL + Redirect URLs to the Pages
+URL and `http://localhost:8099`).
 
 ## Reporting Requirements
 Agents write evidence to `.agent-reports/`:
