@@ -4,7 +4,7 @@
 import { el, render, clear, toast } from './dom.js';
 import * as store from './store.js';
 import { compute, capVerdict, dscrVerdict } from './model.js';
-import { sampleProperty, comparisonSamples } from './sample.js';
+import { sampleProperty } from './sample.js';
 import { renderDashboard } from './views/dashboard.js';
 import { renderList } from './views/list.js';
 import { renderCompare } from './views/compare.js';
@@ -83,7 +83,6 @@ function showList() {
     open: (id) => navigate('#/p/' + encodeURIComponent(id)),
     newProperty: createNew,
     loadSample: loadSample,
-    loadComparisonSet: loadComparisonSet,
     goCompare: () => navigate('#/compare'),
     remove: (p) => {
       if (!confirm(`This will permanently delete "${p.name || 'this property'}".`)) return;
@@ -203,15 +202,6 @@ function loadSample() {
   const p = store.save(sampleProperty());
   toast('Sample deal loaded.', 'success');
   navigate('#/p/' + encodeURIComponent(p.id));
-}
-// Load the demo set (715 Plumas + two contrasting deals) and jump to Compare so
-// a three-way line-up is ready with no data entry. Idempotent: fixed sample ids
-// mean re-running overwrites in place rather than piling up duplicates.
-function loadComparisonSet() {
-  if (!store.get(sampleProperty().id)) store.save(sampleProperty());
-  comparisonSamples().forEach((p) => store.save(p));
-  toast('Added sample properties for comparison.', 'success');
-  navigate('#/compare');
 }
 
 // ── export / import ──────────────────────────────────────────────────────

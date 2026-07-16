@@ -29,7 +29,6 @@ export function renderList(container, ctx) {
       el('div', { class: 'empty__actions' }, [
         el('button', { class: 'btn btn--primary', type: 'button', onclick: () => ctx.newProperty(), text: 'Add your first property' }),
         el('button', { class: 'btn btn--ghost', type: 'button', onclick: () => ctx.loadSample(), text: 'Load sample deal' }),
-        el('button', { class: 'btn btn--ghost', type: 'button', onclick: () => ctx.loadComparisonSet(), text: 'Add sample properties' }),
       ]),
     ])]);
     return;
@@ -69,7 +68,6 @@ export function renderList(container, ctx) {
     el('div', { class: 'list-head' }, [
       el('h1', { text: 'Properties' }),
       el('div', { class: 'list-head__actions' }, [
-        el('button', { class: 'btn btn--ghost', type: 'button', onclick: () => ctx.loadComparisonSet(), text: 'Add sample properties' }),
         el('button', { class: 'btn btn--ghost', type: 'button', onclick: () => ctx.goCompare(), text: 'Compare' }),
         el('button', { class: 'btn btn--primary', type: 'button', onclick: () => ctx.newProperty(), text: '+ New property' }),
       ]),
