@@ -104,6 +104,84 @@ function makeLocalBackend() {
   };
 }
 
+// ── cloud backend — the signed-in repository (Supabase + a per-user cache) ──
+// Reads are synchronous from the cache `propanalytics.cloud.<uid>` (never the
+// logged-out `propanalytics.v1` key). Writes go to the cache AND enqueue a
+// serialized write-through to Supabase. Signed-in + offline REJECTS the write
+// (the choke-point) — there is no offline edit to lose or reconcile (spec Q3).
+function isOnline() {
+  try { return typeof navigator === 'undefined' ? true : navigator.onLine !== false; }
+  catch (e) { return true; }
+}
+
+function makeCloudBackend(uid, ops, hooks) {
+  const cache = makeCache('propanalytics.cloud.' + uid);
+  const chains = new Map();   // id -> Promise: serialize write-through per id
+
+  // Chain async op after any prior op for the same id (in order), regardless of
+  // the prior outcome, so upsert N always lands before N+1. Different ids run free.
+  function enqueue(id, fn) {
+    const prev = chains.get(id) || Promise.resolve();
+    const next = prev.then(fn, fn);
+    chains.set(id, next.catch(() => {}));   // keep the chain alive after a failure
+    return next;
+  }
+  function onWriteError(err) {
+    if (err && err.isAuth) hooks.onAuthLost();                       // session expired → sign out (T18)
+    else hooks.notify("Couldn't reach your account — will re-sync.", 'info');
+  }
+  function rejectOffline() { hooks.notify("You're offline — reconnect to edit.", 'info'); }
+
+  return {
+    kind: 'cloud',
+    uid,
+    probe: () => cache.probe(),
+    isStorageOK: () => cache.isStorageOK(),
+    list() { return cache.read().slice(); },
+    get(id) { return cache.read().find((p) => p.id === id) || null; },
+    save(property) {
+      if (!isOnline()) { rejectOffline(); return null; }             // choke-point (T10): no cache mutation
+      const { list, rec } = upsertInto(cache.read(), property);
+      cache.write(list);
+      enqueue(rec.id, () => ops.upsert(rec)).catch(onWriteError);
+      return rec;
+    },
+    remove(id) {
+      if (!isOnline()) { rejectOffline(); return; }
+      cache.write(cache.read().filter((p) => p.id !== id));
+      enqueue(id, () => ops.remove(id)).catch(onWriteError);
+    },
+    exportAll() {
+      return JSON.stringify({ schemaVersion: SCHEMA, exportedAt: new Date().toISOString(), properties: cache.read().slice() }, null, 2);
+    },
+    // Import while signed in is additive (upsert) — never wipes account rows that
+    // aren't in the file. Online-gated like any write.
+    importAll(text) {
+      const r = parseImport(text);
+      if (!r.ok) return { ok: false, error: r.error };
+      if (!isOnline()) { rejectOffline(); return { ok: false, error: "You're offline — reconnect to import." }; }
+      let merged = cache.read();
+      for (const p of r.props) {
+        const res = upsertInto(merged, p);
+        merged = res.list;
+        enqueue(res.rec.id, () => ops.upsert(res.rec)).catch(onWriteError);
+      }
+      cache.write(merged);
+      return { ok: true, count: r.props.length };
+    },
+    // Cloud seeding is the first-sign-in reconcile (app.js), not the demo-seed
+    // flag — report already-seeded so boot's seedDemos() no-ops on this backend.
+    hasSeeded() { return true; },
+    markSeeded() { /* n/a for cloud */ },
+    // Pull the account's rows into the cache (initial fetch on sign-in, T16).
+    async fetchAll() {
+      const rows = await ops.fetchAll();
+      cache.write(rows);
+      return rows.slice();
+    },
+  };
+}
+
 // ── active backend ────────────────────────────────────────────────────────
 let active = makeLocalBackend();
 
@@ -124,5 +202,35 @@ export function newId() {
   return 'p-' + Date.now().toString(36) + '-' + Math.floor(Math.random() * 1e6).toString(36);
 }
 
+// ── backend selection (auth-driven) ─────────────────────────────────────────
+/**
+ * Swap the active backend. `session` null → local (`propanalytics.v1`, untouched
+ * by the cloud path). A session → cloud backend on `propanalytics.cloud.<uid>`,
+ * using `cloudOps` (js/cloud.js) for write-through and `hooks` = { notify(msg,kind),
+ * onAuthLost() } for offline/expired-session feedback. Idempotent per uid.
+ */
+export function setSession(session, cloudOps, hooks) {
+  if (!session || !session.user || !cloudOps) {
+    active = makeLocalBackend();
+    return;
+  }
+  const h = { notify: () => {}, onAuthLost: () => {}, ...(hooks || {}) };
+  active = makeCloudBackend(session.user.id, cloudOps, h);
+}
+
+/** 'local' | 'cloud' — lets boot guard seeding to the local backend (T11). */
+export function backendKind() { return active.kind; }
+
+/** Initial cloud fetch after sign-in (T16). No-op on the local backend. */
+export async function fetchAll() {
+  return typeof active.fetchAll === 'function' ? active.fetchAll() : active.list();
+}
+
+/** The logged-out local set, read without switching the active backend — the
+ *  first-sign-in reconcile (D6) needs it while the cloud backend is active. */
+export function readLocalDeals() {
+  return makeLocalBackend().list();
+}
+
 // Internals exposed for the cloud layer + tests (not used by views).
-export const _internal = { upsertInto, parseImport, makeCache, makeLocalBackend, SCHEMA };
+export const _internal = { upsertInto, parseImport, makeCache, makeLocalBackend, makeCloudBackend, isOnline, SCHEMA };
