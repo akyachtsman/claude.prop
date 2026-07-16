@@ -110,6 +110,22 @@ fine-pointer context; the generic `app.spec.js` covers the mobile viewports).
 | S20 | Stale-sample refresh | A returning visitor's older built-in sample (lower `sampleRev`) auto-updates to the latest figures on boot (offer `$1,300,000`, CAP `5.13%`); user-created deals are never touched | Stale sample survives a reload, or a non-sample property is overwritten |
 | S21 | Undo/redo | Each committed edit is one undo step; the Undo topbar button reverts the last change and Redo replays it; both disarm when empty; typing without committing is not undoable | Undo/Redo missing/stuck-disabled, doesn't revert/replay, or a mid-type change is captured |
 | S22 | Demo seed | Three extra demo deals (`demoProperties()`) seed once on boot when the store is already non-empty (a brand-new visitor still meets the empty first-run), guarded by `store.hasSeeded()`; a seeded deal the user deletes never reappears | Seed fires on an empty first-run, doesn't seed on a non-empty store, or a deleted demo reappears after reload |
+| S23 | Signed-out affordance | Logged out shows a topbar **Sign in** control and the app behaves exactly as today (local backend); the sample deal still computes (CAP `5.13%`) | No Sign in control, or logged-out parity broken |
+| S24 | Magic-link modal | Clicking Sign in opens a Banker-Navy modal (email + Send link); a successful `signInWithOtp` shows "Check your email"; Cancel closes it | Modal missing, no "check your email" state, or a hard error on send |
+| S25 | Signed-in chrome | With a session present the topbar shows the account email + **Sign out** and `store.backendKind()` is `cloud` (reads/writes the `propanalytics.cloud.<uid>` cache, not `propanalytics.v1`) | Email/Sign out missing, or backend stays local while signed in |
+| S26 | Offline read-only | Signed-in + offline shows the `#offline-banner` and `body.is-readonly`; the write choke-point (`store.save`/`remove`) rejects edits (no cache mutation); reconnect clears the banner | No banner/read-only state, or an edit persists while offline signed-in |
+
+Auth scenarios (S23–S26) live in `.github/scripts/ui-tests/tests/auth.spec.js`
+with the **Supabase client fully stubbed** (`page.route` on `**/auth/v1/**` +
+`**/rest/v1/properties**`; signed-in state injected via the
+`sb-<ref>-auth-token` localStorage key) — no real backend, since magic-link email
+isn't CI-automatable. The store layer (backend swap, offline choke-point,
+first-sign-in upload/dedup) is covered by Node unit tests in `tests/*.test.mjs`
+(run `node --test tests/store.test.mjs tests/reconcile.test.mjs`; also a blocking
+CI step in `qa.yml`). RLS isolation + authenticated-role upsert are proven at the
+DB via the Supabase MCP (impersonated, rolled-back). Magic-link round-trip is
+verified **manually** (owner must set Auth Site URL + Redirect URLs to the Pages
+URL and `http://localhost:8099`).
 
 ## Reporting Requirements
 Agents write evidence to `.agent-reports/`:

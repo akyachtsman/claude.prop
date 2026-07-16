@@ -60,6 +60,13 @@ jobs:
       - name: Contrast guardrail (WCAG AA)
         run: node .github/scripts/check-contrast.js
 
+      # ── Store unit tests ─────────────────────────────────────────────────────
+      # Node-native tests for the storage layer (backend swap, offline
+      # choke-point, first-sign-in upload/dedup). Browser-free — shims
+      # localStorage/navigator — so they run in the blocking gate.
+      - name: Unit tests (store + reconcile)
+        run: node --test tests/store.test.mjs tests/reconcile.test.mjs
+
   ui-changes:
     name: Detect UI-relevant changes
     runs-on: ubuntu-latest
