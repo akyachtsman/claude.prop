@@ -98,6 +98,30 @@ test('S27 signed-in + offline — read-only banner appears and body is gated', a
   await expect(page.locator('#offline-banner')).toBeHidden();
 });
 
+test('S29 upload prompt — shows once with local deals and dismisses cleanly (no stacking)', async ({ page }) => {
+  const localDeal = {
+    id: 'p-local-xyz', schemaVersion: 1, name: 'My Local Deal',
+    info: { askingPrice: 500000, rentableSF: 5000, lotSize: '', yearBuilt: '', zoning: '', hvacAge: '', roofAge: '', parking: '', ceilingHeight: '', appraisedValue: 0, apn: '', bedrooms: '', baths: '' },
+    targets: { desiredCap: 0.06, desiredDscr: 1.25 },
+    offer: { offerPrice: 450000, fees: 0, improvements: 0 },
+    loans: [{ ltv: 0.7, rate: 0.065, termYears: 25, maturityYears: 0, type: 'CONV' }, { ltv: 0, rate: 0.065, termYears: 25, maturityYears: 0, type: 'IO' }],
+    tenants: [], expenses: [],
+    assumptions: { minOppCostEquity: 0.15, taxRate: 0.28, collectionLoss: 0.05, cashflowAppr: 0.02, capitalAppr: 0.02 },
+  };
+  const second = { ...localDeal, id: 'p-local-2', name: 'Another Local Deal' };
+  await page.addInitScript((deals) => { localStorage.setItem('propanalytics.v1', JSON.stringify(deals)); }, [localDeal, second]);
+  await installSignedIn(page, { seed: [], reconcile: true });
+  await page.goto('./', { waitUntil: 'load' });
+  // exactly one prompt — the re-entry guard prevents stacked duplicates
+  await expect(page.locator('.modal__overlay')).toHaveCount(1);
+  await expect(page.locator('.modal__title', { hasText: 'Move your local deals in?' })).toBeVisible();
+  // dismissing it removes it for good (it does not reappear from a second reconcile)
+  await page.locator('button', { hasText: 'Move them in' }).click();
+  await expect(page.locator('.modal__overlay')).toHaveCount(0);
+  await page.waitForSelector('.lcard');
+  await expect(page.locator('.lcard__name', { hasText: 'My Local Deal' })).toBeVisible();
+});
+
 test('S28 first-sign-in seed — a fresh account is seeded with the sample + demos', async ({ page }) => {
   // reconcile:true lets the app's first-sign-in gap-seed run (js/account.js seeds
   // the real fixtures via the browser's own imports). It upserts 4 rows into the

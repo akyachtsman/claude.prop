@@ -30,7 +30,17 @@ function modal(children) {
 // ── first-sign-in reconcile (D6 fixed order: upload wins, then gap-seed) ────
 function fixtures() { return [sampleProperty(), ...demoProperties()]; }
 
+// Re-entry guard (synchronous): the upload prompt awaits a user click, and the
+// localStorage "done" flag is only written afterwards — so if two auth events
+// (INITIAL_SESSION + SIGNED_IN, or a double SIGNED_IN) each call reconcile before
+// the first resolves, both would stack an identical modal. Claim the uid up front
+// so only the first call ever runs.
+const reconciledUids = new Set();
+
 async function reconcile(uid) {
+  if (reconciledUids.has(uid)) return;
+  reconciledUids.add(uid);
+
   const RECON_KEY = 'propanalytics.reconciled.' + uid;
   try { if (localStorage.getItem(RECON_KEY)) return; } catch (e) { /* proceed */ }
 
