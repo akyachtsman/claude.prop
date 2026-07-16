@@ -37,8 +37,10 @@ offline, no mandatory login just to look around).
   constitution `data.md`).
 - **FR5** Logged out, the entire app works against local storage exactly as today,
   including every existing behavior (S5–S22) and JSON export/import.
-- **FR6** While signed in but offline, edits are not lost: they persist locally and
-  reach the account once connectivity returns.
+- **FR6** While signed in but offline, the app is **read-only**: cached deals stay
+  viewable, but editing controls are disabled with a clear offline indicator.
+  Writes happen only online, straight to the account — so there is no offline edit
+  to lose or reconcile. (Logged-out local mode is unaffected — still fully editable.)
 - **FR7** The views are unchanged: the storage swap happens behind the existing
   repository interface (`list/get/save/remove/export/import`); no view rewires its
   data access.
@@ -54,9 +56,9 @@ offline, no mandatory login just to look around).
 - **SC1** A property saved while signed in appears after a full reload in a
   *different* browser profile signed in as the same user (cross-device persistence).
 - **SC2** Two different accounts using the app never see each other's properties.
-- **SC3** With the network blocked, a signed-in user can still edit a property;
-  after reconnect, that change is present in the account (survives a reload on
-  another device).
+- **SC3** With the network blocked, a signed-in user can still **view** their
+  cached deals, but editing is disabled with an offline notice (no write is
+  attempted); restoring the network re-enables editing.
 - **SC4** Logged-out behavior is identical to today — the full S5–S22 suite passes
   with no account.
 - **SC5** No secret/privileged key is present in any shipped client asset; only the
@@ -89,6 +91,25 @@ offline, no mandatory login just to look around).
   out (today's behavior), sign-in is an upgrade. Confirm.
 - **Q6 — Session longevity.** A magic-link session stays signed in until explicit
   sign-out (persistent). Acceptable, or cap it?
+
+## Clarifications  (phase 2 — resolved)
+- **Q1 → Offer to upload.** On first sign-in with existing local deals, show a
+  one-time, non-destructive prompt ("Move your N local deals into your account?").
+  Nothing is uploaded without approval; local data is never deleted by the prompt.
+- **Q2 → Samples live per-account (cloud).** The built-in **715 Plumas** sample and
+  the three **demo deals** are real account data — a fresh account is seeded with
+  them, and they sync like any deal. Because they carry fixed ids
+  (`sample-715-plumas`, `demo-*`), the Q1 upload upserts by id, so uploading a
+  device's local copies never duplicates the seeded ones.
+- **Q3 → No offline editing (read-only).** There is deliberately **no** offline
+  write path when signed in, so **no conflict-resolution is needed**. Writes are
+  online-only and go straight to the account; offline is view-only from cache.
+  (Supersedes any "edit offline then sync" reading of FR6/SC3.)
+- **Q4 → Keep local cache on sign-out.** Sign-out returns to logged-out (local)
+  mode with the cache intact; it does not wipe the device.
+- **Q5 → Sign-in is optional.** The app is fully usable logged out (today's
+  behavior); an account is an upgrade, never a gate to using the app.
+- **Q6 → Session persists** until explicit sign-out.
 
 ## Constitution constraints (binding — cited)
 - **`data.md`** — RLS **always on**; each user isolated to their own rows; the
