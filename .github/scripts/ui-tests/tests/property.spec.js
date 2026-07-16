@@ -30,7 +30,16 @@ async function kpis(page) {
   });
 }
 
+// Suppress the one-time demo seed (seedDemos in app.js) for the scenarios that
+// assert on specific list contents/counts, so they stay deterministic. The seed
+// only fires on a non-empty store that hasn't been seeded; setting the flag up
+// front makes it a no-op. S22 deliberately omits this to exercise the seed.
+async function suppressDemoSeed(page) {
+  await page.addInitScript(() => { try { localStorage.setItem('propanalytics.seed.v1', 'test'); } catch (e) { /* ignore */ } });
+}
+
 async function loadSample(page) {
+  await suppressDemoSeed(page);
   await page.goto('./', { waitUntil: 'load' });
   await page.click('button:has-text("Load sample deal")');
   await page.waitForSelector('.kpi-strip');
@@ -278,6 +287,7 @@ test('S19 amortization vs. maturity — a balloon is reported without changing D
 });
 
 test('S20 stale-sample auto-refresh — an old built-in sample updates to the latest figures on boot', async ({ page }) => {
+  await suppressDemoSeed(page);
   await page.goto('./', { waitUntil: 'load' });
   // seed a returning visitor's stale sample (old $895K figures, no sampleRev)
   await page.evaluate(() => {
@@ -338,4 +348,31 @@ test('DELETE — a property is removed from its Properties-list card, with confi
   await page.waitForTimeout(200);
   expect(asked).toBe(true);
   await expect(page.locator('.lcard')).toHaveCount(0);   // deleted → empty list
+});
+
+test('S22 demo seed — extra demo deals seed once on a non-empty store, and a deleted one stays gone', async ({ page }) => {
+  const errors = watchErrors(page);
+  // First boot is empty → the seed must NOT fire (brand-new visitors keep the
+  // empty first-run), so the empty state is what we see.
+  await page.goto('./', { waitUntil: 'load' });
+  await page.click('button:has-text("Add your first property")');
+  await page.waitForSelector('.kpi-strip');
+  // A genuine reload with a non-empty store → the three demo deals seed in
+  // alongside it (page.reload re-executes app.js; a hash change would not).
+  await page.reload({ waitUntil: 'load' });
+  await page.click('#nav-properties');
+  await page.waitForSelector('.lcard');
+  await expect(page.locator('.lcard')).toHaveCount(4);   // the created one + 3 demos
+  for (const name of ['2201 Del Paso Blvd', '88 Capitol Mall', '540 N Street']) {
+    await expect(page.locator('.lcard__name', { hasText: name })).toHaveCount(1);
+  }
+  // Delete one demo, then reload: the seed is one-time, so it does not reappear.
+  page.on('dialog', (d) => d.accept());
+  await page.locator('.lcard', { hasText: '540 N Street' }).locator('.lcard__del').click();
+  await page.waitForTimeout(200);
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForSelector('.lcard');
+  await expect(page.locator('.lcard')).toHaveCount(3);
+  await expect(page.locator('.lcard__name', { hasText: '540 N Street' })).toHaveCount(0);
+  expect(errors).toEqual([]);
 });

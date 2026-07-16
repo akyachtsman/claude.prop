@@ -4,7 +4,7 @@
 import { el, render, clear, toast } from './dom.js';
 import * as store from './store.js';
 import { compute, capVerdict, dscrVerdict } from './model.js';
-import { sampleProperty } from './sample.js';
+import { sampleProperty, demoProperties } from './sample.js';
 import { renderDashboard } from './views/dashboard.js';
 import { renderList } from './views/list.js';
 import { renderCompare } from './views/compare.js';
@@ -238,11 +238,23 @@ function refreshBuiltinSample() {
   }
 }
 
+// Seed the extra demo deals once, so an existing user gets a richer Compare set
+// without lifting a finger. Guarded two ways: only when the store already holds
+// data (a brand-new visitor still meets the empty first-run), and only once ever
+// (store.hasSeeded), so a demo the user deletes never comes back. Never
+// overwrites a property the user already has under the same id.
+function seedDemos() {
+  if (store.hasSeeded() || store.list().length === 0) return;
+  demoProperties().forEach((p) => { if (!store.get(p.id)) store.save(p); });
+  store.markSeeded();
+}
+
 // ── boot ──────────────────────────────────────────────────────────────
 document.getElementById('btn-export').addEventListener('click', exportData);
 document.getElementById('btn-import').addEventListener('click', importData);
 if (!store.probe()) toast('Saving is off — private mode or storage full. Export to keep your data.', 'info');
 refreshBuiltinSample();
+seedDemos();
 window.addEventListener('hashchange', router);
 window.addEventListener('beforeunload', () => { if (flushSave) flushSave(); });   // don't lose an in-flight edit on close
 router();

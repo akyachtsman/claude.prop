@@ -61,6 +61,110 @@ export function sampleProperty() {
   };
 }
 
+// Three more demo deals, seeded once alongside 715 (see seedDemos in app.js) so
+// the Compare view has a richer, varied field without any data entry. Spread
+// deliberately across the quality range — a strong industrial NNN, an
+// overpriced trophy office that doesn't cover its debt, and a steady mid-market
+// apartment — so best/worst highlighting varies column to column. Same
+// assumptions as 715 for an apples-to-apples model. Fixed ids make the seed
+// idempotent. Invented addresses / rent rolls — illustrative only.
+export function demoProperties() {
+  const baseAssumptions = {
+    minOppCostEquity: 0.15, taxRate: 0.28, collectionLoss: 0.05,
+    cashflowAppr: 0.03, capitalAppr: 0.02,
+  };
+  const at = '2026-07-16T00:00:00.000Z';
+  return [
+    {
+      id: 'demo-2201-del-paso', schemaVersion: 1,
+      name: '2201 Del Paso Blvd — Industrial', createdAt: at, updatedAt: at,
+      info: {
+        askingPrice: 1250000, rentableSF: 14200, lotSize: '1.1 ac', yearBuilt: 1978,
+        zoning: 'M1', hvacAge: '—', roofAge: '4 yr', parking: 'Yard + 18',
+        ceilingHeight: '22 ft', appraisedValue: 0, apn: '—', bedrooms: '—', baths: '—',
+      },
+      targets: { desiredCap: 0, desiredDscr: 0 },
+      offer: { offerPrice: 1200000, fees: 0, improvements: 0 },
+      loans: [{ ltv: 0.65, rate: 0.068, termYears: 25, maturityYears: 10, type: 'CONV' }],
+      tenants: [
+        { name: 'Regional distributor', sf: 9800, monthlyIncome: 6200, leaseExpires: '2032-03-31', leaseOptions: '2×5 yr' },
+        { name: 'Fabrication shop', sf: 4400, monthlyIncome: 3300, leaseExpires: '2029-11-30', leaseOptions: '1×5 yr' },
+      ],
+      expenses: [
+        { key: 'insurance', label: 'Insurance', amount: 6000, included: true, estimated: false },
+        { key: 'taxes', label: 'Property taxes', amount: 13200, included: true, estimated: true },
+        { key: 'hoa', label: 'HOA', amount: 0, included: true, estimated: false },
+        { key: 'utilities', label: 'Utilities', amount: 0, included: true, estimated: false },
+        { key: 'management', label: 'Management', amount: 5700, included: false, estimated: true },
+        { key: 'maintenance', label: 'Maintenance', amount: 0, included: true, estimated: false },
+        { key: 'landscaping', label: 'Landscaping', amount: 0, included: true, estimated: false },
+        { key: 'cleaning', label: 'Cleaning', amount: 0, included: true, estimated: false },
+        { key: 'misc', label: 'Misc', amount: 0, included: true, estimated: false },
+      ],
+      assumptions: { ...baseAssumptions },
+    },
+    {
+      id: 'demo-88-capitol-mall', schemaVersion: 1,
+      name: '88 Capitol Mall — Office', createdAt: at, updatedAt: at,
+      info: {
+        askingPrice: 2500000, rentableSF: 12500, lotSize: '0.4 ac', yearBuilt: 2002,
+        zoning: 'C3', hvacAge: '6 yr', roofAge: '9 yr', parking: 'Structure',
+        ceilingHeight: '9 ft', appraisedValue: 0, apn: '—', bedrooms: '—', baths: '—',
+      },
+      targets: { desiredCap: 0, desiredDscr: 0 },
+      offer: { offerPrice: 2400000, fees: 0, improvements: 0 },
+      loans: [{ ltv: 0.70, rate: 0.066, termYears: 25, maturityYears: 10, type: 'CONV' }],
+      tenants: [
+        { name: 'Law firm', sf: 6000, monthlyIncome: 7500, leaseExpires: '2028-06-30', leaseOptions: '—' },
+        { name: 'Title company', sf: 4000, monthlyIncome: 4200, leaseExpires: '2027-12-31', leaseOptions: '—' },
+        { name: 'Coworking suite', sf: 2500, monthlyIncome: 1800, leaseExpires: '2026-12-31', leaseOptions: '—' },
+      ],
+      expenses: [
+        { key: 'insurance', label: 'Insurance', amount: 12000, included: true, estimated: false },
+        { key: 'taxes', label: 'Property taxes', amount: 26400, included: true, estimated: true },
+        { key: 'hoa', label: 'HOA', amount: 0, included: true, estimated: false },
+        { key: 'utilities', label: 'Utilities', amount: 9600, included: true, estimated: true },
+        { key: 'management', label: 'Management', amount: 9720, included: false, estimated: true },
+        { key: 'maintenance', label: 'Maintenance', amount: 0, included: true, estimated: false },
+        { key: 'landscaping', label: 'Landscaping', amount: 0, included: true, estimated: false },
+        { key: 'cleaning', label: 'Cleaning', amount: 6000, included: true, estimated: true },
+        { key: 'misc', label: 'Misc', amount: 0, included: true, estimated: false },
+      ],
+      assumptions: { ...baseAssumptions },
+    },
+    {
+      id: 'demo-540-n-street', schemaVersion: 1,
+      name: '540 N Street — Apartments', createdAt: at, updatedAt: at,
+      info: {
+        askingPrice: 1075000, rentableSF: 5200, lotSize: '7,000 sf', yearBuilt: 1962,
+        zoning: 'R3', hvacAge: '—', roofAge: '7 yr', parking: '8 spaces',
+        ceilingHeight: '8 ft', appraisedValue: 0, apn: '—', bedrooms: '8', baths: '8',
+      },
+      targets: { desiredCap: 0, desiredDscr: 0 },
+      offer: { offerPrice: 1050000, fees: 0, improvements: 0 },
+      loans: [{ ltv: 0.72, rate: 0.061, termYears: 25, maturityYears: 10, type: 'CONV' }],
+      tenants: [
+        { name: 'Unit 1 — 2BR', sf: 900, monthlyIncome: 2100, leaseExpires: '2027-01-31', leaseOptions: '—' },
+        { name: 'Unit 2 — 2BR', sf: 900, monthlyIncome: 2100, leaseExpires: '2027-04-30', leaseOptions: '—' },
+        { name: 'Unit 3 — 1BR', sf: 700, monthlyIncome: 1700, leaseExpires: '2026-10-31', leaseOptions: '—' },
+        { name: 'Unit 4 — 1BR', sf: 700, monthlyIncome: 1700, leaseExpires: '2027-02-28', leaseOptions: '—' },
+      ],
+      expenses: [
+        { key: 'insurance', label: 'Insurance', amount: 5200, included: true, estimated: false },
+        { key: 'taxes', label: 'Property taxes', amount: 11550, included: true, estimated: true },
+        { key: 'hoa', label: 'HOA', amount: 0, included: true, estimated: false },
+        { key: 'utilities', label: 'Utilities', amount: 4800, included: true, estimated: true },
+        { key: 'management', label: 'Management', amount: 5700, included: false, estimated: true },
+        { key: 'maintenance', label: 'Maintenance', amount: 6000, included: true, estimated: true },
+        { key: 'landscaping', label: 'Landscaping', amount: 1200, included: true, estimated: true },
+        { key: 'cleaning', label: 'Cleaning', amount: 0, included: true, estimated: false },
+        { key: 'misc', label: 'Misc', amount: 0, included: true, estimated: false },
+      ],
+      assumptions: { ...baseAssumptions },
+    },
+  ];
+}
+
 // Known-good metric values (rounded) for the fidelity test (SC-1), computed by
 // the shipped js/model.js from the actual-close inputs above. This is a
 // value-add deal that does not yet cash-flow at the price paid: NOI covers only
