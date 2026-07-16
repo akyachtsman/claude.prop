@@ -115,7 +115,7 @@ fine-pointer context; the generic `app.spec.js` covers the mobile viewports).
 | S25 | Forgot password | The **Forgot password?** link switches to reset mode (password field hidden); **Send reset link** shows the `.authgate__status--ok` "Check your email" state (stubbed `/auth/v1/recover`) | No reset mode, or no "check your email" state |
 | S26 | Signed-in chrome | With a session the gate is gone, the topbar shows the account email + **Sign out**, and `store.backendKind()` is `cloud` (reads/writes `propanalytics.cloud.<uid>`) | Gate still shown, email/Sign out missing, or backend stays local |
 | S27 | Offline read-only | Signed-in + offline shows the `#offline-banner` and `body.is-readonly`; the write choke-point (`store.save`/`remove`) rejects edits (no cache mutation); reconnect clears the banner | No banner/read-only state, or an edit persists while offline signed-in |
-| S28 | Signed-in list renders deals | A signed-in account holding the fixtures shows all four cards (715 Plumas sample + 3 demos). The first-sign-in gap-seed *logic* itself is unit-tested in `tests/reconcile.test.mjs` (kept out of the browser test so it's deterministic across chromium/webkit) | Fewer than 4 cards, or a fixture missing |
+| S28 | First-sign-in seed | A fresh account (reconcile enabled) gap-seeds the 715 Plumas sample + 3 demos on first sign-in; the test reloads (reading the persisted stateful mock) so the assertion is engine-independent across chromium/webkit. The gap-seed *logic* is also unit-tested in `tests/reconcile.test.mjs` | Fewer than 4 cards, or a fixture missing |
 
 **The app is gated behind login** (owner decision, 2026-07-16), using **email +
 password** (`signIn`/`signUp`/`resetPassword`/`updatePassword` in `js/supabase.js`;
