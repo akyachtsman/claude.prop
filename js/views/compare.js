@@ -69,7 +69,7 @@ export function renderCompare(container, ctx) {
     : all.slice();   // default: line up every saved property
   let layout = 'table';   // 'table' (rows) | 'cols' (side by side)
   // Row-table sorting: key is 'name' or a METRICS index; null = selection order.
-  let sortKey = null, sortDir = 'desc';
+  let sortKey = null, sortDir = 'asc';
 
   const chips = el('div', { class: 'compare-picker' }, all.map((p) => {
     const on = selected.some((s) => s.id === p.id);
@@ -109,8 +109,8 @@ export function renderCompare(container, ctx) {
   }
 
   // A clickable, keyboard-operable sort header. Toggles direction when it's
-  // already the active column; otherwise sorts by it (numbers default high→low,
-  // names A→Z). aria-sort keeps it accessible.
+  // already the active column; otherwise sorts by it ascending first (design.md
+  // Tables & Sorting), then re-click to flip. aria-sort keeps it accessible.
   function sortHeader(key, label, isNum) {
     const active = sortKey === key;
     const th = el('th', {
@@ -123,7 +123,7 @@ export function renderCompare(container, ctx) {
     ]);
     btn.addEventListener('click', () => {
       if (sortKey === key) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
-      else { sortKey = key; sortDir = isNum ? 'desc' : 'asc'; }
+      else { sortKey = key; sortDir = 'asc'; }   // ascending first (design.md)
       draw();
     });
     th.appendChild(btn);
