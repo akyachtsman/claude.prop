@@ -1,10 +1,12 @@
 // supabase.js — the single Supabase client for the app + thin auth helpers.
 //
-// PKCE flow: the magic link returns `?code=…` as a query param (not a URL
-// fragment), so it never collides with the app's hash router. `detectSessionInUrl`
-// makes supabase-js exchange that code for a session and clean the URL on load;
-// `persistSession` keeps the user signed in until an explicit sign-out (spec Q6).
-// The vendored client library is bundled locally (js/vendor) — no runtime CDN.
+// Email + password auth. Sign-up/sign-in use the password grant. "Forgot
+// password" emails a reset link; clicking it returns to the app with a PKCE
+// `?code=` that supabase-js exchanges into a short-lived recovery session
+// (`PASSWORD_RECOVERY` event), after which the app collects a new password via
+// updatePassword(). `detectSessionInUrl` performs that exchange and cleans the
+// URL; `persistSession` keeps the user signed in until sign-out. The client
+// library is vendored locally (js/vendor) — no runtime CDN.
 
 import { createClient } from './vendor/supabase-js.js';
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './config.js';
@@ -18,20 +20,40 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   },
 });
 
-// Where the magic link returns the user. Uses the current origin + path so the
-// same build works on GitHub Pages and on a localhost dev server; both URLs must
-// be listed in the Supabase dashboard's Auth → Redirect URLs allowlist.
+// Where password-reset / email-confirm links return the user. Uses the current
+// origin + path so the same build works on GitHub Pages and localhost; both URLs
+// must be listed in the Supabase dashboard's Auth → Redirect URLs allowlist.
 function redirectTo() {
   const { origin, pathname } = window.location;
   return origin + pathname;
 }
 
-/** Email magic-link sign-in. Resolves { ok } / { ok:false, error }. */
-export async function signInWithEmail(email) {
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: redirectTo() },
+/** Sign in with email + password. Resolves { ok } / { ok:false, error }. */
+export async function signIn(email, password) {
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+/** Create an account with email + password. If the project requires email
+ *  confirmation, no session is returned yet — resolves { ok, needsConfirm:true }.
+ *  Otherwise the user is signed in immediately ({ ok, needsConfirm:false }). */
+export async function signUp(email, password) {
+  const { data, error } = await supabase.auth.signUp({
+    email, password, options: { emailRedirectTo: redirectTo() },
   });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, needsConfirm: !data.session };
+}
+
+/** Email a password-reset link (returns to the app in recovery mode). */
+export async function resetPassword(email) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: redirectTo() });
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+/** Set a new password (used during a recovery session, or any signed-in user). */
+export async function updatePassword(password) {
+  const { error } = await supabase.auth.updateUser({ password });
   return error ? { ok: false, error: error.message } : { ok: true };
 }
 

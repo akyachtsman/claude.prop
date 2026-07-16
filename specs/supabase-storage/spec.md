@@ -117,6 +117,10 @@ offline, no mandatory login just to look around).
     this is a UI curtain, not file security — per-user RLS remains the real data
     protection. A local fallback still boots the app if the auth layer can't load,
     so an outage never bricks the tool.
+  - **Amendment (2026-07-16, owner): auth is email + password**, not magic-link.
+    The gate has sign in / create account / forgot-password modes; "Forgot
+    password" emails a reset link that returns to a set-new-password (recovery)
+    screen. This supersedes the "magic-link email only" non-goal below.
 - **Q6 → Session persists** until explicit sign-out.
 
 ## Constitution constraints (binding — cited)

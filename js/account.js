@@ -3,7 +3,7 @@
 // fetch, and the offline read-only state. Everything routes through store's
 // stable interface; views are untouched.
 
-import { supabase, signInWithEmail, signOut, getSession, onAuthChange } from './supabase.js';
+import { signIn, signUp, resetPassword, updatePassword, signOut, getSession, onAuthChange } from './supabase.js';
 import { cloudOps } from './cloud.js';
 import * as store from './store.js';
 import { el, clear, toast } from './dom.js';
@@ -13,6 +13,7 @@ import { missingFixtures } from './reconcile.js';
 const slot = document.getElementById('topbar-account');
 const banner = document.getElementById('offline-banner');
 let rerender = () => {};      // set by init() — re-renders the current view
+let recovering = false;       // true while a password-reset link is being completed
 
 // ── modal helper (Banker Navy) ─────────────────────────────────────────────
 function modal(children) {
@@ -91,46 +92,125 @@ function renderControl(session) {
   // Logged out: nothing here — the full-page auth gate owns sign-in.
 }
 
-// The email magic-link form, shared by the full-page gate. Returns its nodes.
-function buildSignInForm() {
-  const email = el('input', { class: 'input', type: 'email', 'aria-label': 'Email for sign-in link',
-    placeholder: 'you@example.com', autocomplete: 'email' });
-  const status = el('p', { class: 'authgate__status', role: 'status' });
-  const send = el('button', { class: 'btn btn--primary authgate__send', type: 'button', text: 'Send sign-in link' });
-  const submit = async () => {
-    const addr = email.value.trim();
-    if (!addr) { status.classList.remove('authgate__status--ok'); status.textContent = 'Enter your email first.'; return; }
-    send.disabled = true; status.classList.remove('authgate__status--ok'); status.textContent = 'Sending…';
-    const res = await signInWithEmail(addr);
-    if (res.ok) {
-      status.classList.add('authgate__status--ok');
-      status.textContent = `Check your email — a one-time sign-in link is on its way to ${addr}.`;
-      send.textContent = 'Link sent';
-    } else {
-      send.disabled = false;
-      status.textContent = res.error || 'Could not send the link. Try again.';
-    }
-  };
-  send.addEventListener('click', submit);
-  email.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
-  return { email, status, send };
+/** True whenever the full-page auth screen (sign in / reset) should be shown
+ *  instead of the app: logged out, or mid password-recovery. */
+export function needsAuthScreen() {
+  return recovering || store.backendKind() !== 'cloud';
 }
 
-/** Full-page sign-in gate: the only thing a logged-out visitor sees. */
-export function renderAuthGate(host) {
-  const { email, status, send } = buildSignInForm();
+/** Full-page auth screen — the only thing a logged-out visitor sees. Renders the
+ *  set-new-password form during recovery, else the email+password gate. */
+export function renderAuthScreen(host) {
+  return recovering ? renderRecover(host) : renderGate(host);
+}
+
+// Email + password gate with three modes: sign in / create account / forgot.
+function renderGate(host) {
+  let mode = 'signin';
+  const email = el('input', { class: 'input', type: 'email', 'aria-label': 'Email', placeholder: 'you@example.com', autocomplete: 'email' });
+  const password = el('input', { class: 'input', type: 'password', 'aria-label': 'Password', placeholder: 'Password', autocomplete: 'current-password' });
+  const pwField = el('div', { class: 'field authgate__field' }, [password]);
+  const title = el('h1', { class: 'authgate__title' });
+  const sub = el('p', { class: 'authgate__sub' });
+  const submitBtn = el('button', { class: 'btn btn--primary authgate__send', type: 'button' });
+  const status = el('p', { class: 'authgate__status', role: 'status' });
+  const links = el('div', { class: 'authgate__links' });
+
+  const setStatus = (msg, ok = false) => { status.textContent = msg || ''; status.classList.toggle('authgate__status--ok', !!ok); };
+  const linkTo = (label, to) => el('button', { class: 'authgate__link', type: 'button', text: label,
+    onclick: () => { mode = to; paint(); email.focus(); } });
+
+  function paint() {
+    setStatus(''); submitBtn.disabled = false;
+    clear(links);
+    if (mode === 'signin') {
+      title.textContent = 'Sign in to your portfolio';
+      sub.textContent = 'Enter your email and password to reach your deals on any device.';
+      password.setAttribute('autocomplete', 'current-password'); pwField.hidden = false;
+      submitBtn.textContent = 'Sign in';
+      links.appendChild(linkTo('Create an account', 'signup'));
+      links.appendChild(linkTo('Forgot password?', 'forgot'));
+    } else if (mode === 'signup') {
+      title.textContent = 'Create your account';
+      sub.textContent = 'Choose an email and a password (at least 6 characters). Your deals sync to this account.';
+      password.setAttribute('autocomplete', 'new-password'); pwField.hidden = false;
+      submitBtn.textContent = 'Create account';
+      links.appendChild(linkTo('Have an account? Sign in', 'signin'));
+    } else {
+      title.textContent = 'Reset your password';
+      sub.textContent = 'Enter your email and we’ll send a link to set a new password.';
+      pwField.hidden = true;
+      submitBtn.textContent = 'Send reset link';
+      links.appendChild(linkTo('Back to sign in', 'signin'));
+    }
+  }
+
+  async function submit() {
+    const addr = email.value.trim();
+    if (!addr) return setStatus('Enter your email first.');
+    if (mode !== 'forgot' && !password.value) return setStatus('Enter your password.');
+    submitBtn.disabled = true; setStatus('Working…');
+    if (mode === 'signin') {
+      const r = await signIn(addr, password.value);
+      if (!r.ok) { submitBtn.disabled = false; setStatus(r.error || 'Could not sign in.'); }
+      // success → onAuthChange(SIGNED_IN) renders the app
+    } else if (mode === 'signup') {
+      const r = await signUp(addr, password.value);
+      if (!r.ok) { submitBtn.disabled = false; setStatus(r.error || 'Could not create the account.'); }
+      else if (r.needsConfirm) setStatus(`Almost there — confirm your email (${addr}), then sign in.`, true);
+      // else success → onAuthChange(SIGNED_IN) renders the app
+    } else {
+      const r = await resetPassword(addr);
+      if (r.ok) setStatus('Check your email for a link to set a new password.', true);
+      else { submitBtn.disabled = false; setStatus(r.error || 'Could not send the reset link.'); }
+    }
+  }
+  submitBtn.addEventListener('click', submit);
+  [email, password].forEach((i) => i.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); }));
+
   clear(host);
   host.appendChild(el('div', { class: 'authgate' }, [
     el('div', { class: 'authgate__card' }, [
       el('div', { class: 'authgate__brand', text: 'Property Analytics' }),
-      el('h1', { class: 'authgate__title', text: 'Sign in to your portfolio' }),
-      el('p', { class: 'authgate__sub', text: 'Your deals are saved to your account and sync across every device. Enter your email for a one-time sign-in link — no password.' }),
+      title, sub,
       el('div', { class: 'field authgate__field' }, [email]),
-      send,
-      status,
+      pwField, submitBtn, status, links,
     ]),
   ]));
+  paint();
   email.focus();
+}
+
+// Set-new-password form, shown after the user follows a reset link (recovery).
+function renderRecover(host) {
+  const password = el('input', { class: 'input', type: 'password', 'aria-label': 'New password', placeholder: 'New password', autocomplete: 'new-password' });
+  const status = el('p', { class: 'authgate__status', role: 'status' });
+  const btn = el('button', { class: 'btn btn--primary authgate__send', type: 'button', text: 'Set new password' });
+  const submit = async () => {
+    if (!password.value || password.value.length < 6) { status.textContent = 'Use at least 6 characters.'; return; }
+    btn.disabled = true; status.textContent = 'Saving…';
+    const r = await updatePassword(password.value);
+    if (!r.ok) { btn.disabled = false; status.textContent = r.error || 'Could not set the password.'; return; }
+    recovering = false;                         // now a full session → load the account + show the app
+    const session = await getSession();
+    await applySession(session);
+    renderControl(session);
+    refreshOnline();
+    rerender();
+  };
+  btn.addEventListener('click', submit);
+  password.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+  clear(host);
+  host.appendChild(el('div', { class: 'authgate' }, [
+    el('div', { class: 'authgate__card' }, [
+      el('div', { class: 'authgate__brand', text: 'Property Analytics' }),
+      el('h1', { class: 'authgate__title', text: 'Set a new password' }),
+      el('p', { class: 'authgate__sub', text: 'Choose a new password for your account (at least 6 characters).' }),
+      el('div', { class: 'field authgate__field' }, [password]),
+      btn, status,
+    ]),
+  ]));
+  password.focus();
 }
 
 // ── offline read-only state (T19) ───────────────────────────────────────────
@@ -159,26 +239,38 @@ window.addEventListener('online', async () => {
  *  after to decide local seeding. */
 export async function initAccount({ rerender: rr }) {
   rerender = rr || rerender;
-  let session = null;
-  try { session = await getSession(); } catch (e) { session = null; }
-  await applySession(session);
-  renderControl(session);
-  refreshOnline();
 
-  let first = true;
-  onAuthChange(async (event, sess) => {
-    if (first) { first = false; return; }          // initial state already handled above
-    if (event === 'SIGNED_IN') {
-      await applySession(sess);
-      renderControl(sess);
+  // Drive the initial apply from the first auth event (INITIAL_SESSION) rather
+  // than a separate getSession() call — that avoids a race where getSession
+  // resolves null before the persisted session hydrates and the INITIAL_SESSION
+  // that carries it gets dropped (which stranded the user on the gate). Boot
+  // waits on that first event so the session is applied before the first render.
+  let booted = false;
+  await new Promise((resolve) => {
+    const done = () => { if (!booted) { booted = true; resolve(); } };
+    const applyAndRender = async (sess) => {
+      recovering = false;
+      if (sess) { await applySession(sess); renderControl(sess); }
+      else { store.setSession(null); renderControl(null); }
       refreshOnline();
-      rerender();
-    } else if (event === 'SIGNED_OUT') {
-      store.setSession(null);
-      renderControl(null);
-      setReadonly(false);
-      rerender();
-    }
-    // TOKEN_REFRESHED / USER_UPDATED: session stays valid, nothing to swap.
+    };
+    onAuthChange(async (event, sess) => {
+      if (event === 'PASSWORD_RECOVERY') { recovering = true; rerender(); done(); return; }
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+        await applyAndRender(sess);
+        booted ? rerender() : done();
+        return;
+      }
+      if (event === 'SIGNED_OUT') {
+        recovering = false;
+        store.setSession(null); renderControl(null); setReadonly(false);
+        booted ? rerender() : done();
+        return;
+      }
+      // TOKEN_REFRESHED / USER_UPDATED: session stays valid, nothing to swap.
+      if (!booted) done();
+    });
+    // Safety net: never hang boot if no auth event arrives (treat as logged out).
+    setTimeout(done, 3000);
   });
 }
