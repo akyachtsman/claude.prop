@@ -339,3 +339,24 @@ test('DELETE — a property is removed from its Properties-list card, with confi
   expect(asked).toBe(true);
   await expect(page.locator('.lcard')).toHaveCount(0);   // deleted → empty list
 });
+
+test('S22 sample set — "Add sample properties" loads a 3-way compare, idempotently', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto('./', { waitUntil: 'load' });
+  // Available from the first-run empty state, no data entry required.
+  await page.click('button:has-text("Add sample properties")');
+  await page.waitForSelector('.compare-table--rows');
+  // Three prospects, each on its own row, with best/worst variety across metrics.
+  await expect(page.locator('.compare-table--rows tbody tr')).toHaveCount(3);
+  await expect(page.locator('.cell--best').first()).toBeVisible();
+  await expect(page.locator('.cell--worst').first()).toBeVisible();
+  // Idempotent: re-running from the list adds no duplicates (fixed sample ids).
+  await page.goto('./', { waitUntil: 'load' });
+  await page.waitForSelector('.lcard');
+  await expect(page.locator('.lcard')).toHaveCount(3);
+  await page.click('button:has-text("Add sample properties")');
+  await page.waitForSelector('.compare-table--rows');
+  await page.goto('./', { waitUntil: 'load' });
+  await expect(page.locator('.lcard')).toHaveCount(3);
+  expect(errors).toEqual([]);
+});
