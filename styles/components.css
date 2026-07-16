@@ -260,10 +260,14 @@ body {
 /* Income totals footer: gross rent → collection-loss deduction → effective rent
    (feeds NOI). One shaded band in three tiers, each separated by a visible rule;
    the effective figure — the one that feeds NOI — is emphasized in navy. */
-.data-table .rent-totals td { background: var(--gen-shade); }
+.data-table .rent-totals td { background: var(--gen-shade); border-bottom: none; }
 .data-table .rent-totals td:first-child { white-space: nowrap; }
-.data-table .rent-totals--gross td, .data-table .rent-totals--loss td { border-bottom: 1px solid var(--color-border-hover); }
-.data-table .rent-totals--eff td { border-bottom: none; }
+/* Tier dividers use an inset shadow, not a collapsed border: a flashed cell
+   gets position:relative and would otherwise paint its background over a shared
+   row border (making the line vanish after an edit). An inset shadow is owned
+   by the cell and can't be covered. */
+.data-table .rent-totals--gross td, .data-table .rent-totals--loss td { box-shadow: inset 0 -1px 0 var(--color-border-hover); }
+.data-table .rent-totals--eff td { box-shadow: none; }
 .data-table .rent-totals--loss td { color: var(--color-text-secondary); font-weight: 600; }
 .data-table .rent-totals--loss .income-yr { color: var(--color-fail); font-weight: 700; }
 .data-table .rent-totals--eff .rt-label--eff { color: var(--color-navy); font-weight: 700; }
