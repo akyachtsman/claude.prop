@@ -28,6 +28,13 @@ inputs:
     description: 'Directory the local server serves (when start-local-server is true).'
     required: false
     default: '.'
+  advisory-run:
+    description: >
+      Set 'true' to make ONLY the Playwright run step advisory (non-blocking).
+      Setup, install, server start and upload stay blocking — so infrastructure
+      failures still fail the job while a known test failure can be tolerated.
+    required: false
+    default: 'false'
 
 runs:
   using: composite
@@ -62,8 +69,10 @@ runs:
         "./${{ inputs.tests-dir }}/node_modules/.bin/http-server" ${{ inputs.server-root }} -p 8080 --silent &
         sleep 2
 
+    # Only this step honors advisory-run; every other step above stays blocking.
     - name: Run Playwright tests
       shell: bash
+      continue-on-error: ${{ inputs.advisory-run == 'true' }}
       env:
         APP_URL: ${{ inputs.app-url }}
         TEST_AUTH_CREDENTIAL: ${{ inputs.test-auth-credential }}

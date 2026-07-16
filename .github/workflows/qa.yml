@@ -79,8 +79,10 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           # Per-project: paths whose changes warrant a browser run. Includes js/
           # and styles/ so a calc-engine or design change can't skip the S5
-          # fidelity suite (this is a no-backend app — the suite runs fully on CI).
-          UI_PATHS: '^(index\.html$|js/|styles/|\.github/scripts/ui-tests/|\.github/workflows/qa\.yml$)'
+          # fidelity suite, and .github/actions/ so a change to the shared
+          # ui-suite/secret-scan composite is exercised here rather than only
+          # post-merge (this is a no-backend app — the suite runs fully on CI).
+          UI_PATHS: '^(index\.html$|js/|styles/|\.github/actions/|\.github/scripts/ui-tests/|\.github/workflows/qa\.yml$)'
         run: |
           # No app yet (no index.html in the repo) → nothing to browser-test.
           # Keeps the scaffold/bootstrap PR clean: skip until the app exists.
@@ -114,13 +116,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Advisory (continue-on-error) for now: UI_PATHS was widened to include js/
-      # and styles/ so a calc-engine or design change RUNS the suite (incl. the S5
-      # fidelity test) and surfaces regressions in the log. Kept non-blocking until
-      # a pre-existing mobile-topbar overflow (app.spec S4 at 390px) is fixed in its
-      # own PR; drop continue-on-error here once the suite is green on all projects.
-      - name: UI suite (local server, advisory)
-        continue-on-error: true
+      # advisory-run keeps ONLY the Playwright run non-blocking (setup, install,
+      # server start and upload still fail the job). UI_PATHS was widened to js/
+      # and styles/ so a calc-engine or design change RUNS the suite (incl. S5
+      # fidelity) and surfaces regressions in the log. Advisory only until a
+      # pre-existing mobile-topbar overflow (app.spec S4 at 390px) is fixed in its
+      # own PR; set advisory-run to 'false' once the suite is green on all projects.
+      - name: UI suite (local server, advisory run)
         uses: ./.github/actions/ui-suite
         with:
           tests-dir: ${{ env.UI_TESTS_DIR }}
@@ -128,3 +130,4 @@ jobs:
           test-auth-credential: ${{ secrets.TEST_AUTH_CREDENTIAL }}
           artifact-name: playwright-results-local
           start-local-server: 'true'
+          advisory-run: 'true'
