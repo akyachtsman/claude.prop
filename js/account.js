@@ -8,6 +8,7 @@ import { cloudOps } from './cloud.js';
 import * as store from './store.js';
 import { el, clear, toast } from './dom.js';
 import { sampleProperty, demoProperties } from './sample.js';
+import { missingFixtures } from './reconcile.js';
 
 const slot = document.getElementById('topbar-account');
 const banner = document.getElementById('offline-banner');
@@ -37,8 +38,7 @@ async function reconcile(uid) {
   }
   // Seed only fixture ids the account is missing, so an uploaded/edited copy is
   // never overwritten and a fresh account still gets its samples.
-  const have = new Set(store.list().map((p) => p.id));
-  fixtures().forEach((f) => { if (!have.has(f.id)) store.save(f); });
+  missingFixtures(store.list(), fixtures()).forEach((f) => store.save(f));
 
   try { localStorage.setItem(RECON_KEY, new Date().toISOString()); } catch (e) { /* ignore */ }
 }
