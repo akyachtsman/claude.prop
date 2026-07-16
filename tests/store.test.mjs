@@ -30,9 +30,11 @@ function mockOps() {
   const ops = {
     calls,
     delayFirst: 0,
+    failNext: null,   // set to { isAuth } to make the next upsert reject
     async upsert(p) {
       const d = ops.delayFirst; ops.delayFirst = 0;
       if (d) await new Promise((r) => setTimeout(r, d));
+      if (ops.failNext) { const f = ops.failNext; ops.failNext = null; const e = new Error('boom'); e.isAuth = !!f.isAuth; throw e; }
       calls.push(['upsert', p.id]);
     },
     async remove(id) { calls.push(['remove', id]); },
@@ -125,6 +127,41 @@ test('offline notify + auth-lost hooks fire', () => {
   online = false;
   store.save(deal('z'));
   assert.ok(seen.some((m) => /offline/i.test(m)), 'offline toast fired');
+});
+
+test('remove returns true online, false when offline (signed in)', () => {
+  reset();
+  store.setSession(session('u1'), mockOps(), {});
+  store.save(deal('k'));
+  assert.equal(store.remove('k'), true, 'online remove reports success');
+  store.save(deal('k2'));
+  online = false;
+  assert.equal(store.remove('k2'), false, 'offline remove reports rejection');
+});
+
+test('transient (non-auth) write failure rolls cache back to cloud truth + fires onResync', async () => {
+  reset();
+  const ops = mockOps();
+  const seen = [];
+  store.setSession(session('u1'), ops, { notify: (m) => seen.push(m), onResync: () => seen.push('RESYNC') });
+  ops.rows = [{ id: 'server', name: 'server truth' }];   // what fetchAll returns on rollback
+  ops.failNext = { isAuth: false };
+  store.save(deal('local-optimistic'));                  // cache shows it briefly, then upsert fails
+  await new Promise((r) => setTimeout(r, 20));
+  assert.deepEqual(store.list().map((p) => p.id), ['server'], 'cache rolled back to the account truth');
+  assert.ok(seen.includes('RESYNC'), 'onResync fired to re-render');
+  assert.ok(seen.some((m) => /couldn.t save/i.test(m)), 'honest toast (no false re-sync promise)');
+});
+
+test('auth (401) write failure fires onAuthLost exactly once', async () => {
+  reset();
+  const ops = mockOps();
+  let lost = 0;
+  store.setSession(session('u1'), ops, { onAuthLost: () => { lost++; } });
+  ops.failNext = { isAuth: true };
+  store.save(deal('x'));
+  await new Promise((r) => setTimeout(r, 20));
+  assert.equal(lost, 1, 'auth-lost routed once');
 });
 
 test('sign out returns to local with propanalytics.v1 intact', () => {

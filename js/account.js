@@ -18,8 +18,10 @@ let rerender = () => {};      // set by init() — re-renders the current view
 function modal(children) {
   const panel = el('div', { class: 'modal__panel', role: 'dialog', 'aria-modal': 'true' }, children);
   const overlay = el('div', { class: 'modal__overlay' }, [panel]);
-  const close = () => overlay.remove();
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  const close = () => { document.removeEventListener('keydown', onKey); overlay.remove(); };
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', onKey);
   document.body.appendChild(overlay);
   return { close, panel };
 }
@@ -62,10 +64,11 @@ function confirmUpload(n) {
 // ── apply a session to the store (initial fetch + reconcile) ────────────────
 async function applySession(session) {
   if (!session || !session.user) { store.setSession(null); return; }
-  store.setSession(session, cloudOps, { notify: toast, onAuthLost });
+  store.setSession(session, cloudOps, { notify: toast, onAuthLost, onResync: () => rerender() });
   try {
     await store.fetchAll();                 // initial cloud pull → cache
   } catch (e) {
+    if (e && e.isAuth) { onAuthLost(); return; }   // expired session → sign out, don't reconcile
     toast("Couldn't load your account — showing cached deals.", 'info');
   }
   await reconcile(session.user.id);

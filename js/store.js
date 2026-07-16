@@ -86,7 +86,7 @@ function makeLocalBackend() {
       cache.write(list);
       return rec;
     },
-    remove(id) { cache.write(cache.read().filter((p) => p.id !== id)); },
+    remove(id) { cache.write(cache.read().filter((p) => p.id !== id)); return true; },
     exportAll() {
       return JSON.stringify({ schemaVersion: SCHEMA, exportedAt: new Date().toISOString(), properties: cache.read().slice() }, null, 2);
     },
@@ -118,17 +118,37 @@ function makeCloudBackend(uid, ops, hooks) {
   const cache = makeCache('propanalytics.cloud.' + uid);
   const chains = new Map();   // id -> Promise: serialize write-through per id
 
+  let authLostFired = false;
+
   // Chain async op after any prior op for the same id (in order), regardless of
-  // the prior outcome, so upsert N always lands before N+1. Different ids run free.
+  // the prior outcome, so upsert N always lands before N+1. Different ids run
+  // free. The chain is pruned once idle so the Map can't grow unbounded.
   function enqueue(id, fn) {
     const prev = chains.get(id) || Promise.resolve();
     const next = prev.then(fn, fn);
-    chains.set(id, next.catch(() => {}));   // keep the chain alive after a failure
+    const guarded = next.catch(() => {});   // keep the chain alive after a failure
+    chains.set(id, guarded);
+    guarded.then(() => { if (chains.get(id) === guarded) chains.delete(id); });
     return next;
   }
+
+  // Pull the account's truth back into the cache after a failed write, so the
+  // cache stays a faithful mirror of the cloud (there is no offline write queue
+  // by design — spec Q3).
+  async function resyncFromCloud() {
+    try { cache.write(await ops.fetchAll()); hooks.onResync(); }
+    catch (e) { /* leave the cache; the next boot/online fetch reconciles */ }
+  }
+
   function onWriteError(err) {
-    if (err && err.isAuth) hooks.onAuthLost();                       // session expired → sign out (T18)
-    else hooks.notify("Couldn't reach your account — will re-sync.", 'info');
+    if (err && err.isAuth) {                                         // session expired (T18)
+      if (!authLostFired) { authLostFired = true; hooks.onAuthLost(); }
+      return;
+    }
+    // Online, but the write didn't land. Don't falsely promise a re-sync that no
+    // code performs — roll the cache back to the account's truth instead.
+    hooks.notify("Couldn't save that change — reloaded from your account.", 'info');
+    resyncFromCloud();
   }
   function rejectOffline() { hooks.notify("You're offline — reconnect to edit.", 'info'); }
 
@@ -147,9 +167,10 @@ function makeCloudBackend(uid, ops, hooks) {
       return rec;
     },
     remove(id) {
-      if (!isOnline()) { rejectOffline(); return; }
+      if (!isOnline()) { rejectOffline(); return false; }
       cache.write(cache.read().filter((p) => p.id !== id));
       enqueue(id, () => ops.remove(id)).catch(onWriteError);
+      return true;
     },
     exportAll() {
       return JSON.stringify({ schemaVersion: SCHEMA, exportedAt: new Date().toISOString(), properties: cache.read().slice() }, null, 2);
@@ -214,7 +235,7 @@ export function setSession(session, cloudOps, hooks) {
     active = makeLocalBackend();
     return;
   }
-  const h = { notify: () => {}, onAuthLost: () => {}, ...(hooks || {}) };
+  const h = { notify: () => {}, onAuthLost: () => {}, onResync: () => {}, ...(hooks || {}) };
   active = makeCloudBackend(session.user.id, cloudOps, h);
 }
 

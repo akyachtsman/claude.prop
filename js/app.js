@@ -85,7 +85,7 @@ function showList() {
     goCompare: () => navigate('#/compare'),
     remove: (p) => {
       if (!confirm(`This will permanently delete "${p.name || 'this property'}".`)) return;
-      store.remove(p.id);
+      if (!store.remove(p.id)) return;   // offline reject (store toasts) — leave the card
       toast('Deleted.', 'info');
       showList();   // re-render the list in place
     },
