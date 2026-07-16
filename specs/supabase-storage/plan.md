@@ -1,61 +1,67 @@
 # Plan — Permanent per-user storage (HOW)
 
 Reads `spec.md` (phase 1 + clarifications). Honors the constitution: `data.md`
-(RLS always on, no secret keys in the browser), `global.md` (static tier, no
-build, `textContent`, cross-platform), `design.md` (Banker Navy tokens),
-`test.md` (existing suite stays green, new behavior covered).
+(RLS always on, no secret keys in the browser, **versioned reversible
+migrations**), `global.md` (static tier, no build, `textContent`, cross-platform),
+`design.md` (Banker Navy tokens), `test.md` (existing suite green, new behavior
+covered). Revised after a fresh-context self-review (findings folded in below).
 
 ## Key decisions & trade-offs
 
 ### D1 — Client library: vendor `supabase-js`, don't hand-roll auth
-Magic-link sign-in involves session tokens, refresh, and PKCE — security-sensitive
-and error-prone to hand-write. Use `@supabase/supabase-js` v2, **vendored** as a
-single pinned ESM file at `js/vendor/supabase-js.js` (fetched once from a CDN at
-implement time, then committed — **no CDN at runtime**, works offline, matches the
-no-build rule). Trade-off: ~120 KB added to a currently-tiny app. Accepted — auth
-correctness beats byte count, and it's cached after first load.
+Magic-link involves session tokens, refresh, and PKCE — security-sensitive and
+error-prone to hand-write. Use `@supabase/supabase-js` v2, **vendored** as a single
+pinned ESM file at `js/vendor/supabase-js.js` (fetched once from a CDN at implement
+time, then committed — **no CDN at runtime**, works offline). Trade-off: ~120 KB.
+Accepted — auth correctness beats byte count.
 
 ### D2 — Config: public URL + publishable key, committed (not a secret)
-`js/config.js` (committed) exports `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`.
-Per `data.md`, the **no-hardcoded-keys** rule governs the **service-role/secret**
-key — which never appears in this static app. The publishable key is *designed* to
-ship in every browser; **RLS is the protection**, not key secrecy. A header comment
-in `config.js` states this explicitly so it isn't mistaken for a leaked secret.
+`js/config.js` (committed) exports `SUPABASE_URL` + `SUPABASE_PUBLISHABLE_KEY`.
+`data.md`'s no-hardcoded-keys rule governs the **service-role/secret** key — which
+never appears in this static app. The publishable key is *designed* to ship in every
+browser; **RLS is the protection**. A no-build Pages site has no CI/build to inject a
+"repo variable," so committing the public key is the compliant, pragmatic path; a
+header comment in `config.js` states this so it isn't mistaken for a leak.
 
-### D3 — Store stays synchronous; cloud is write-through; editing is online-gated
-The views call `store.save()` synchronously inside `onCommit` (and undo/redo). We
-**keep that synchronous interface** (FR7 — no view rewiring). Model:
-- **localStorage is the always-synchronous cache** and the sole read/write target
-  the views see — unchanged from today.
-- When **signed in**, each committed local write is **mirrored to the cloud** by an
-  async write-through (`upsert`/`delete` on the `properties` table). The UI does not
-  block on it.
-- **Editing is only enabled when logged-out OR (signed-in AND online).** When
-  signed-in AND offline, the dashboard is **read-only** (inputs disabled, an offline
-  banner shows) — so a write-through never fires without connectivity. This is how
-  "no offline editing" (clarification Q3) is enforced without an offline write queue
-  or any conflict resolution.
-- On **sign-in / load (online)**, the cloud is fetched as the **source of truth**,
-  replaces the local cache, and the app re-renders.
-
-Trade-off vs. "cloud is the only writer": that would force an async `store.save`
-and ripple through app.js + undo/redo. Local-cache-first keeps the whole existing
-synchronous engine intact and treats the cloud as a replica — far less invasive,
-and safe because editing can't happen offline.
+### D3 — Store stays synchronous; per-user cache namespace; cloud write-through
+The views call `store.save()` synchronously in `onCommit` and undo/redo (FR7 — no
+view rewiring). Keep that. Model:
+- **Two distinct localStorage namespaces, never mixed:**
+  - Logged-out / local: the existing key **`propanalytics.v1`** — *untouched* by the
+    cloud path. This is the "your local deals" set the upload prompt promises never to
+    destroy (Q1/SC6/US5).
+  - Signed-in cloud cache: a **per-user key `propanalytics.cloud.<user_id>`**. The
+    sign-in fetch populates *this*, never `propanalytics.v1`.
+- **Reads** always come from the active backend's namespace (sync, instant UI).
+- **Writes** (signed-in): local cache write (sync) **+** async write-through
+  (`upsert`/`delete`) to Supabase.
+- **`store.save`/`store.remove` are the single enforcement choke-point.** When
+  signed-in AND offline they **reject the write** (no cache mutation, no network) and
+  `toast("You're offline — reconnect to edit.")`. So *every* write entry point is
+  gated at once: field commits, **`+ New`**, **Load sample**, **undo/redo** — all
+  route through `store.save`/`remove`. The dashboard also disables inputs + shows a
+  read-only banner (UX), but the choke-point is the guarantee.
+- **Per-id write-through serialization.** A `Map<id, Promise>` chains async writes
+  for the same id so upsert N always lands before N+1 — rapid commits / undo-redo
+  can't leave the cloud stale then "win" on reload. Different ids run in parallel.
 
 ### D4 — Backend selection behind the existing interface
-`store.js` gains an internal `backend` that is either `local` (today's localStorage
-code, extracted unchanged) or `cloud` (localStorage cache + Supabase write-through).
-`setSession(session|null)` swaps it. Public methods
+`store.js` gains an internal `backend` (`local` | `cloud`) chosen by
+`setSession(session|null)`. Public method signatures
 (`list/get/save/remove/export/import/newId/probe/isStorageOK/hasSeeded/markSeeded`)
-are unchanged in signature. `save`/`remove` additionally enqueue the cloud
-write-through when the cloud backend is active.
+are unchanged. `save`/`remove` additionally enqueue the serialized cloud op when the
+cloud backend is active. `refreshBuiltinSample()` and `seedDemos()` (boot,
+`app.js:255–256`) are **guarded to the local backend only** — cloud accounts get their
+fixtures from D6, so boot-seeding never runs against the cloud namespace.
 
-### D5 — Schema: composite PK so ids are per-user
-Samples are per-account (Q2), so the app id (`sample-715-plumas`, `demo-*`,
-`p-…`) is **not** globally unique — scope it to the user.
+### D5 — Schema: composite PK, per-user RLS, committed reversible migration
+Samples are per-account (Q2), so the app id is not globally unique — scope it to the
+user. Committed as a versioned artifact **`supabase/migrations/0001_properties.sql`**
+(+ a documented inverse) in the same PR as the code, per `data.md` reversibility;
+applied via the Supabase MCP `apply_migration`.
 
 ```sql
+-- up
 create table public.properties (
   user_id    uuid        not null default auth.uid() references auth.users(id) on delete cascade,
   id         text        not null,                    -- app property id, unique per user
@@ -66,92 +72,115 @@ create table public.properties (
   primary key (user_id, id)
 );
 alter table public.properties enable row level security;
-
-create policy "select own"  on public.properties for select using (auth.uid() = user_id);
-create policy "insert own"  on public.properties for insert with check (auth.uid() = user_id);
-create policy "update own"  on public.properties for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
-create policy "delete own"  on public.properties for delete using (auth.uid() = user_id);
-
+create policy "select own" on public.properties for select using (auth.uid() = user_id);
+create policy "insert own" on public.properties for insert with check (auth.uid() = user_id);
+create policy "update own" on public.properties for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "delete own" on public.properties for delete using (auth.uid() = user_id);
 grant select, insert, update, delete on public.properties to authenticated;
+
+-- down (documented inverse; deprecation preferred over destruction in production):
+-- drop policy "select own" on public.properties;  (…insert/update/delete own…)
+-- drop table public.properties;
 ```
-`data jsonb` stores the same object we already export — one row per property, so
-the calc engine and export/import shapes are untouched. Writes use
-`upsert on conflict (user_id, id)`; `user_id` defaults to `auth.uid()` so the client
-never sends it. Applied via the Supabase MCP `apply_migration` (idempotent SQL).
+`data jsonb` = the same object we already export. Writes `upsert on conflict
+(user_id, id)`; `user_id` defaults to `auth.uid()` so the client never sends it.
 
-### D6 — Seeding samples client-side (single source of truth)
-No DB trigger duplicating sample data. On first sign-in to an **empty** account, the
-client seeds `sampleProperty()` + `demoProperties()` into the cloud (same factories
-`js/sample.js` already exposes). The Q1 "offer to upload" then upserts the device's
-local deals by `(user_id, id)` — so a local `sample-715-plumas` merges with the
-seeded one instead of duplicating.
+### D6 — Seeding + first-sign-in upload: upload wins, seed fills gaps
+On first sign-in, in this **fixed order** so a re-seed can never clobber a user's
+edited sample:
+1. If the device has local deals → **offer to upload** (one prompt). On accept,
+   `upsert` the local set by `(user_id, id)` — the user's copies (incl. an edited
+   `sample-715-plumas`) land first and **win**.
+2. Then seed **only fixture ids absent from the account** (`sampleProperty()` +
+   `demoProperties()` whose id isn't already present) — so a fresh account gets its
+   samples, but an uploaded/edited copy is never overwritten.
+Decline the prompt → account starts empty (or seeded fixtures only); local
+`propanalytics.v1` is untouched.
 
-### D7 — Auth flow (magic link)
-- Sign in: `supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: <pages URL> } })` → "check your email" state.
-- Return: supabase-js parses the session from the redirect and persists it (its own
-  localStorage keys). `onAuthStateChange` drives `store.setSession()` + a re-render.
-- Sign out: `supabase.auth.signOut()` → local backend, **cache kept** (Q4).
-- Requires (dashboard, done by owner): Site URL + Redirect URL = the Pages URL (and
-  `http://localhost:8099` for local dev).
+### D7 — Auth flow (magic link, PKCE, boot-ordered)
+- **PKCE flow** (`createClient(url, key, { auth: { flowType: 'pkce', detectSessionInUrl: true, persistSession: true }})`): the magic link returns **`?code=…` (query param, not a URL fragment)**, so it can't collide with the hash router or drive `parseHash`.
+- **Boot ordering (fixes the redirect vs. router race):** initialize supabase →
+  `await` the session (supabase-js exchanges `?code` and cleans the URL) →
+  `store.setSession(session)` → **then** call `router()` for the first time. The
+  existing `hashchange`→`router` wiring is added *after* the initial session is
+  resolved, so no route renders against a half-exchanged URL.
+- Sign in: `signInWithOtp({ email, options:{ emailRedirectTo: <Pages URL> }})` →
+  "check your email" state.
+- `onAuthStateChange` drives `setSession()` + re-render. **`SIGNED_OUT`** → local
+  backend, **cache kept** (Q4).
+- Owner dashboard config: Site URL + Redirect URLs = the Pages URL and
+  `http://localhost:8099` (local dev).
 
 ### D8 — UI (Banker Navy)
-- Topbar account control: logged-out → **Sign in** (opens a small email form:
-  input + "Send link", then a "Check your email" confirmation); signed-in → the
-  email + **Sign out**. Built with `el()`/`textContent`, project tokens, reflows on
-  phone (topbar is already responsive).
-- **Offline-while-signed-in**: a slim read-only banner + disabled inputs; uses
-  `--color-*` tokens, not ad-hoc styling.
-- Empty/loading/success states: a brief "Syncing…" while the initial cloud fetch
-  runs; toasts reuse the existing `toast()`.
+- Topbar account control: logged-out → **Sign in** (email input + "Send link" →
+  "Check your email"); signed-in → email + **Sign out**. `el()`/`textContent`,
+  project tokens, reflows on phone (topbar already responsive).
+- **Signed-in + offline** → slim read-only banner + disabled inputs (token-styled).
+- A brief "Syncing…" state during the initial cloud fetch; toasts reuse `toast()`.
 
 ## Data flow
-1. **Boot, logged out:** `store` = local backend → today's app exactly (samples/demos
-   local, S5–S22 behavior). No network.
-2. **Sign in:** email → magic link → redirect → session. `setSession(session)` →
-   cloud backend. Initial fetch: `select * from properties` (RLS-scoped to the user)
-   → replace local cache → re-render. If the account is empty → seed samples+demos to
-   cloud; if the device had local deals → **offer to upload** (upsert by id).
-3. **Edit (signed-in, online):** view calls `store.save(p)` → local cache write
-   (sync, instant UI) → async `upsert` to cloud. `remove` → local delete + async cloud
-   `delete`.
-4. **Offline (signed-in):** `navigator.onLine`/Supabase error → read-only mode:
-   inputs disabled, banner shown; cache still renders. No writes attempted.
-5. **Sign out:** `setSession(null)` → local backend, cache retained.
+1. **Boot, logged out:** backend = local (`propanalytics.v1`) → today's app exactly;
+   `refreshBuiltinSample`/`seedDemos` run here only. No network.
+2. **Sign in:** email → PKCE `?code` → boot-ordered exchange → session.
+   `setSession` → cloud backend (`propanalytics.cloud.<uid>`). Initial
+   `select * from properties` (RLS-scoped) → populate the **cloud** cache (local key
+   untouched) → re-render. Then D6 (offer-to-upload, then gap-seed).
+3. **Edit (signed-in, online):** `store.save(p)` → cloud-cache write (sync) →
+   serialized async `upsert`. `remove` → cache delete + serialized async `delete`.
+4. **Offline (signed-in):** `store.save/remove` reject + toast; read-only banner;
+   cache still renders. No write attempted anywhere.
+5. **Sign out:** `setSession(null)` → local backend on `propanalytics.v1` (its
+   original contents intact); cloud cache retained but inactive.
 
 ## Main failure modes & handling
-- **Cloud write-through fails while "online" (transient blip).** Local cache already
-  has the change; show a toast ("Couldn't reach your account — will re-sync"). On the
-  next successful op or reload, the source-of-truth fetch reconciles (last local write
-  re-pushed on next edit; or cloud wins on reload). No silent divergence — the toast
-  makes it visible. (Rare: editing requires online.)
-- **Initial fetch fails after sign-in.** Stay on the cached view, show read-only +
-  a "couldn't load your account" toast; retry on reconnect. Never blank the app.
-- **Expired/invalid session.** `onAuthStateChange('SIGNED_OUT')` → local backend +
-  a gentle "signed out — sign in again" toast. Local cache preserved.
-- **RLS/misconfig (empty results or 401).** Surfaced as a load error toast, not a
-  silent empty portfolio; verified pre-ship at the DB level (below).
-- **Storage full / private mode.** Existing `isStorageOK()` path still applies to the
-  cache; supabase-js session storage failing → treat as logged-out.
+- **Out-of-order write-through** → per-id serialization (D3). N+1 waits for N.
+- **Write-through 401 (session expired mid-edit)** → distinguished from a network
+  blip by status: 401/auth error routes to the **`SIGNED_OUT`** path (switch to local
+  backend + "signed out — sign in again" toast), **not** the "will re-sync" toast
+  (which would never re-sync while unauthenticated).
+- **Transient write-through failure (network blip, still authed)** → toast
+  ("couldn't reach your account — will re-sync"); cache holds the change; next op or
+  reload reconciles.
+- **Initial fetch fails after sign-in** → stay on cache, read-only, "couldn't load
+  your account" toast; retry on reconnect. Never blank the app.
+- **Redirect vs. router** → PKCE query-param + boot ordering (D7); `#…` never carries
+  tokens.
+- **`navigator.onLine` is a weak signal** → it's only the *fast* offline hint; the
+  real guard is the Supabase call erroring → read-only. Editing re-enables when a
+  write/fetch succeeds again, not on `onLine` alone.
+- **RLS misconfig / 401 on read** → load-error toast (not a silent empty portfolio);
+  proven at the DB pre-ship (below).
+- **Storage full / private mode** → existing `isStorageOK()`; supabase-js session
+  storage failing → treat as logged-out.
 
 ## Testing strategy
-- **Logged-out parity (primary gate):** the full S5–S22 + app.spec suite runs with
-  **no session** → must stay green (FR10, SC4). This is the hard CI gate.
-- **Backend abstraction (unit, Node):** `store.js` with a mocked cloud backend —
-  verify save/remove enqueue cloud ops, session swap flips backends, logged-out never
-  calls the cloud.
-- **RLS isolation (DB-level, via Supabase MCP):** `execute_sql`/`get_advisors` to
-  confirm RLS is on, policies scope to `auth.uid()`, and a second user can't read row
-  one — verified directly against the DB (the honest way to prove SC2/SC5 without a
-  brittle two-account browser test). No secret key in built assets — grep the bundle.
-- **Auth round-trip:** magic-link email + redirect is verified **manually** (email
-  isn't automatable in CI); the UI states (signed-out / check-email / signed-in /
-  offline-read-only) get a Playwright test with the Supabase client **stubbed**.
+- **Logged-out parity (hard CI gate):** full S5–S22 + app.spec with **no session** →
+  green, unchanged (FR10/SC4). Uses the local backend on `propanalytics.v1`.
+- **Store abstraction (unit, Node):** mocked cloud backend — session swap flips
+  backend + namespace; logged-out never calls the cloud; `save/remove` enqueue
+  serialized cloud ops in order; **offline (signed-in) `save`/`remove` reject and do
+  not mutate the cache** (the choke-point).
+- **First-sign-in upload/dedup (unit, Node):** the D6 logic — upload upserts the local
+  set, seed fills only missing fixture ids, an edited local sample is **not**
+  clobbered, declining leaves `propanalytics.v1` intact (the data-loss guard).
+- **RLS isolation (DB, via Supabase MCP) — run as the authenticated role, not the
+  service connection:** seed rows for user A and user B, then
+  `set local role authenticated; set local request.jwt.claims = '{"sub":"<userB>"}';`
+  and confirm a `select` returns **zero** of user A's rows (and B sees only B's).
+  A plain service-connection select bypasses RLS and would false-pass — impersonation
+  is mandatory. `get_advisors` additionally confirms RLS-enabled.
+- **Real write→row (integration, MCP):** at least one check that an authenticated-role
+  `upsert` produces the expected row and an update upserts (not duplicates) by
+  `(user_id, id)`.
+- **Auth round-trip:** magic-link email + redirect verified **manually** (email isn't
+  CI-automatable); the UI states (signed-out / check-email / signed-in / offline
+  read-only) get a Playwright test with the supabase client **stubbed**.
 - New project-scenario rows (S23+) added to CLAUDE.md per the ui-tester contract.
 
-## Rollout / sequencing notes
-- Supabase project `yucnxlimmrgzbqtdizle` must be `ACTIVE_HEALTHY` before the
-  migration (it was `COMING_UP` at plan time).
-- Ship behind the existing app with **zero logged-out behavior change** first; the
-  account layer is purely additive.
-- `data.md` compliance checkpoints: RLS on (D5), no secret key shipped (D2 + grep
-  test), per-user isolation proven at the DB (testing).
+## Rollout / sequencing
+- Project `yucnxlimmrgzbqtdizle` must be `ACTIVE_HEALTHY` before the migration.
+- Migration SQL committed with code in one PR (revert restores source + documents the
+  inverse). RLS on, no secret key shipped (grep the built assets), isolation proven at
+  the DB.
+- Purely additive: logged-out behavior is byte-for-byte unchanged; the account layer
+  layers on top.
