@@ -30,7 +30,7 @@ function fieldText(value, onChange, opts = {}) {
 // Percentage entry: the model stores a decimal (0.09) but the user types/reads
 // percent (9). onChange still receives the decimal.
 function fieldPercent(value, onChange, opts = {}) {
-  const shown = (value === '' || value == null) ? '' : String(parseFloat((value * 100).toFixed(6)));
+  const shown = fmt.percentInput(value);
   const wrap = el('span', { class: 'input-pct' }, [
     el('input', {
       class: 'input', type: 'number', step: opts.step || '0.1', inputmode: 'decimal',

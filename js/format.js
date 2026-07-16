@@ -41,6 +41,17 @@ export function ratio(v) {
   return orDash(v, (n) => n.toFixed(2));
 }
 
+/** Editable percent field value: a stored ratio → the bare number the user
+ *  reads/edits (0.0619 → "6.19"), float-representation cruft removed and no "%"
+ *  sign (the field renders the sign separately). Blank/non-finite → "" so the
+ *  input shows empty rather than "NaN". */
+export function percentInput(v) {
+  if (v === '' || v == null) return '';
+  const n = typeof v === 'number' ? v : parseFloat(v);
+  if (!Number.isFinite(n)) return '';
+  return String(parseFloat((n * 100).toFixed(6)));
+}
+
 /** K/M suffix above 999 (1200 → "1.2K", 2400000 → "2.4M"); else the integer. */
 export function compact(v) {
   return orDash(v, (n) => {
