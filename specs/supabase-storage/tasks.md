@@ -4,19 +4,15 @@ Derived from `plan.md`. Ordered + dependency-aware; `[P]` = parallel-safe (no
 dependency on an unfinished task). Each task names concrete files and is sized to
 roughly a failing-check → implement → verify → commit loop. Check off in place.
 
-## Phase A — Backend foundation (DB)
-- [ ] **T1. Precondition:** confirm project `yucnxlimmrgzbqtdizle` is `ACTIVE_HEALTHY`
-  (Supabase MCP `list_projects`/`get_project`). Block Phase A DB tasks until it is.
-- [ ] **T2.** Write `supabase/migrations/0001_properties.sql` — the D5 `up` (table,
-  composite PK `(user_id,id)`, `enable row level security`, four `auth.uid()`
-  policies, `grant … to authenticated`) **and** the documented `down` inverse as
-  comments. Commit (versioned artifact, `data.md` reversibility). Depends: —
-- [ ] **T3.** Apply the migration via MCP `apply_migration` (name `properties`).
-  Depends: T1, T2.
-- [ ] **T4. RLS proof (as the authenticated role):** via MCP `execute_sql`, insert a
-  row for a fake user A and user B, then `set local role authenticated; set local
-  request.jwt.claims = '{"sub":"<B>"}';` and assert a `select` returns **0** of A's
-  rows. Also `get_advisors` → RLS-enabled, no warnings. Depends: T3.
+## Phase A — Backend foundation (DB)   ✅ DONE
+- [x] **T1.** Project `yucnxlimmrgzbqtdizle` confirmed `ACTIVE_HEALTHY`.
+- [x] **T2.** `supabase/migrations/0001_properties.sql` written (up + documented down).
+- [x] **T3.** Applied via MCP `apply_migration` (`properties`).
+- [x] **T4. RLS proof (authenticated role):** structural check → RLS on, 4 policies
+  with correct `auth.uid()=user_id` predicates; rolled-back two-user impersonation →
+  user B sees 1 row (own), 0 of A's, `auth.uid()` resolves to B. `get_advisors`
+  clean. **Bonus:** revoked public EXECUTE on `rls_auto_enable()` (advisor 0028/0029)
+  → `supabase/migrations/0002_revoke_rls_auto_enable_exec.sql`; advisors now zero lints.
 
 ## Phase B — Client config + library  (no DB dependency)
 - [ ] **T5. [P]** Vendor `@supabase/supabase-js` v2 → `js/vendor/supabase-js.js`
