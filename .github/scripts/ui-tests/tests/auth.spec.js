@@ -1,13 +1,21 @@
-// auth.spec.js — S23–S26 account/auth UI states with the Supabase client fully
-// STUBBED (no real backend, magic-link email isn't CI-automatable). Verifies the
-// sign-in affordance, the magic-link modal, the signed-in chrome, offline
-// read-only, and that logged-out parity is unaffected. Desktop context.
+// auth.spec.js — S23–S27 account/auth UI with the Supabase client fully STUBBED
+// (no real backend; magic-link email isn't CI-automatable). The app is gated
+// behind login, so this covers: the full-page sign-in wall (logged out), the
+// magic-link send state, the signed-in chrome, offline read-only, and the
+// first-sign-in account seed. Desktop context.
 import { test, expect } from '@playwright/test';
+import { installSignedIn } from './_supabase-mock.js';
 
 test.use({ viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false });
 
-const PROJECT_REF = 'yucnxlimmrgzbqtdizle';               // must match js/config.js
-const AUTH_KEY = `sb-${PROJECT_REF}-auth-token`;
+// Stub Supabase for the LOGGED-OUT cases (no session injected).
+async function stubLoggedOut(page, { otpOk = true } = {}) {
+  await page.route('**/auth/v1/otp**', (r) =>
+    r.fulfill({ status: otpOk ? 200 : 400, contentType: 'application/json', body: otpOk ? '{}' : '{"error":"bad"}' }));
+  await page.route('**/auth/v1/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
+  await page.route('**/rest/v1/properties**', (r) =>
+    r.fulfill({ status: 200, contentType: 'application/json', headers: { 'content-range': '0-0/0' }, body: '[]' }));
+}
 
 function watchErrors(page) {
   const errors = [];
@@ -16,68 +24,41 @@ function watchErrors(page) {
   return errors;
 }
 
-// Stub every Supabase call so no test touches the network.
-async function stubSupabase(page, { otpOk = true } = {}) {
-  await page.route('**/auth/v1/otp**', (r) =>
-    r.fulfill({ status: otpOk ? 200 : 400, contentType: 'application/json', body: otpOk ? '{}' : '{"error":"bad"}' }));
-  await page.route('**/auth/v1/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
-  await page.route('**/rest/v1/properties**', (r) =>
-    r.fulfill({ status: 200, contentType: 'application/json', headers: { 'content-range': '0-0/0' }, body: '[]' }));
-}
-
-// Seed a valid-looking session in storage before load → app boots signed in.
-async function injectSession(page, email = 'tester@example.com') {
-  await page.addInitScript(([key, addr]) => {
-    const future = Math.floor(Date.now() / 1000) + 3600 * 24 * 365;
-    localStorage.setItem(key, JSON.stringify({
-      access_token: 'fake', refresh_token: 'fake', token_type: 'bearer',
-      expires_in: 3600 * 24 * 365, expires_at: future,
-      user: { id: '00000000-0000-0000-0000-000000000001', email: addr, aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {} },
-    }));
-  }, [AUTH_KEY, email]);
-}
-
-test('S23 signed-out — Sign in affordance is present and logged-out parity holds', async ({ page }) => {
+test('S23 auth gate — logged out shows only the sign-in wall; no app or data leaks', async ({ page }) => {
   const errors = watchErrors(page);
-  await stubSupabase(page);
+  await stubLoggedOut(page);
   await page.goto('./', { waitUntil: 'load' });
-  await expect(page.locator('#topbar-account button', { hasText: 'Sign in' })).toBeVisible();
-  // parity: the logged-out app still computes the fixture (CAP 5.13%)
-  await page.click('button:has-text("Load sample deal")');
-  await page.waitForSelector('.kpi-strip');
-  const cap = await page.locator('.kpi', { hasText: 'CAP' }).locator('.kpi__value').first().textContent();
-  expect(cap).toContain('5.13');
+  await expect(page.locator('.authgate__title')).toBeVisible();
+  await expect(page.locator('.authgate .input[type="email"]')).toBeVisible();
+  // the app + nav + any data must be hidden behind the gate
+  await expect(page.locator('.topbar__nav')).toBeHidden();
+  await expect(page.locator('.lcard')).toHaveCount(0);
+  await expect(page.locator('.kpi-strip')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 
-test('S24 magic-link modal — Send link shows "check your email"; Cancel closes', async ({ page }) => {
-  await stubSupabase(page, { otpOk: true });
+test('S24 magic-link — Send sign-in link shows "check your email"', async ({ page }) => {
+  await stubLoggedOut(page, { otpOk: true });
   await page.goto('./', { waitUntil: 'load' });
-  await page.click('#topbar-account button:has-text("Sign in")');
-  const panel = page.locator('.modal__panel', { hasText: 'Sign in' });
-  await expect(panel).toBeVisible();
-  await panel.locator('input[type="email"]').fill('investor@example.com');
-  await panel.locator('button:has-text("Send link")').click();
-  await expect(panel.locator('.modal__status--ok')).toContainText('Check your email');
-  // a second modal open + Cancel dismisses
-  await page.keyboard.press('Escape').catch(() => {});
+  await page.locator('.authgate .input[type="email"]').fill('investor@example.com');
+  await page.locator('.authgate__send').click();
+  await expect(page.locator('.authgate__status--ok')).toContainText('Check your email');
 });
 
-test('S25 signed-in — email + Sign out shown; store is on the cloud backend', async ({ page }) => {
+test('S25 signed-in — email + Sign out shown; store is on the cloud backend; gate gone', async ({ page }) => {
   const errors = watchErrors(page);
-  await stubSupabase(page);
-  await injectSession(page, 'tester@example.com');
+  await installSignedIn(page, { email: 'tester@example.com' });
   await page.goto('./', { waitUntil: 'load' });
   await expect(page.locator('.account__email')).toHaveText('tester@example.com');
   await expect(page.locator('#topbar-account button', { hasText: 'Sign out' })).toBeVisible();
+  await expect(page.locator('.authgate__title')).toHaveCount(0);
   const kind = await page.evaluate(async () => (await import('/js/store.js')).backendKind());
   expect(kind).toBe('cloud');
   expect(errors).toEqual([]);
 });
 
 test('S26 signed-in + offline — read-only banner appears and body is gated', async ({ page, context }) => {
-  await stubSupabase(page);
-  await injectSession(page);
+  await installSignedIn(page);
   await page.goto('./', { waitUntil: 'load' });
   await expect(page.locator('#topbar-account button', { hasText: 'Sign out' })).toBeVisible();
   await context.setOffline(true);
@@ -87,4 +68,15 @@ test('S26 signed-in + offline — read-only banner appears and body is gated', a
   await context.setOffline(false);
   await page.evaluate(() => window.dispatchEvent(new Event('online')));
   await expect(page.locator('#offline-banner')).toBeHidden();
+});
+
+test('S27 first-sign-in seed — a fresh account is seeded with the sample + demos', async ({ page }) => {
+  // reconcile:true lets the gap-seed run against an empty (stubbed) account
+  await installSignedIn(page, { seed: [], reconcile: true });
+  await page.goto('./', { waitUntil: 'load' });
+  await page.waitForSelector('.lcard');
+  await expect(page.locator('.lcard')).toHaveCount(4);   // 715 Plumas sample + 3 demos
+  for (const name of ['715 Plumas', '2201 Del Paso', '88 Capitol Mall', '540 N Street']) {
+    await expect(page.locator('.lcard__name', { hasText: name })).toHaveCount(1);
+  }
 });

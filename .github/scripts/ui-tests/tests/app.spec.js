@@ -13,6 +13,13 @@
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
+import { installSignedIn } from './_supabase-mock.js';
+
+// The app is gated behind login, so the generic exploration must run as an
+// authenticated user. Boot every scenario signed in against the stubbed Supabase
+// (magic-link email isn't CI-automatable). The dedicated logged-out gate states
+// are covered in auth.spec.js.
+test.beforeEach(async ({ page }) => { await installSignedIn(page); });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CREDENTIAL DISCOVERY — read from CLAUDE.md at runtime

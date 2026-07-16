@@ -565,6 +565,31 @@ body {
 }
 .account__btn { white-space: nowrap; }
 
+/* auth gate (full-page sign-in wall) ----------------------------------------- */
+body.is-gated .topbar__nav,
+body.is-gated .topbar__center { display: none; }
+.authgate {
+  min-height: calc(100vh - 56px);
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--space-6);
+}
+.authgate__card {
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-md);
+  padding: var(--space-8); width: 100%; max-width: 420px;
+  display: flex; flex-direction: column; gap: var(--space-3); text-align: left;
+}
+.authgate__brand {
+  font-weight: 700; font-size: var(--font-sm); letter-spacing: var(--tracking-wide);
+  text-transform: uppercase; color: var(--color-accent);
+}
+.authgate__title { font-size: var(--font-2xl); font-weight: 700; color: var(--color-text-primary); margin: 0; }
+.authgate__sub { font-size: var(--font-base); color: var(--color-text-secondary); margin: 0; line-height: 1.5; }
+.authgate__field { margin-top: var(--space-2); }
+.authgate__send { width: 100%; justify-content: center; }
+.authgate__status { min-height: 1.2em; font-size: var(--font-sm); color: var(--color-text-secondary); margin: 0; }
+.authgate__status--ok { color: var(--color-accent); font-weight: 600; }
+
 /* offline read-only banner --------------------------------------------------- */
 .offline-banner {
   background: var(--color-neutral-bg); color: var(--color-neutral-text);

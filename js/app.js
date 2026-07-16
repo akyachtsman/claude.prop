@@ -15,6 +15,7 @@ const center = document.getElementById('topbar-center');
 const navProps = document.getElementById('nav-properties');
 const navCompare = document.getElementById('nav-compare');
 
+let account = null;     // the (dynamically imported) account layer; null if auth infra failed to load
 let undoStack = [];     // committed prior states of the property being edited (undo history)
 let redoStack = [];     // states undone and available to redo (cleared by any new edit)
 let historyId = null;   // the property the undo/redo stacks belong to
@@ -66,6 +67,16 @@ function setActiveNav(route) {
 }
 
 function router() {
+  // Auth gate: without a cloud session, show only the sign-in screen — the app
+  // and all data stay hidden until sign-in. If the account layer failed to load
+  // (auth infra unreachable), fall through to the local app so the tool still
+  // works rather than showing a dead gate.
+  if (account && store.backendKind() !== 'cloud') {
+    document.body.classList.add('is-gated');
+    clear(center);
+    return account.renderAuthGate(view);
+  }
+  document.body.classList.remove('is-gated');
   const r = parseHash();
   setActiveNav(r.route);
   if (r.route === 'dashboard') return showDashboard(r.id);
@@ -262,18 +273,20 @@ if (!store.probe()) toast('Saving is off — private mode or storage full. Expor
 // Resolve auth before the first render (boot ordering): exchange any magic-link
 // ?code, swap to the cloud backend, run the initial fetch + first-sign-in
 // reconcile. Loaded dynamically and guarded so that if the account layer can't
-// initialize, the app still boots fully in logged-out local mode (FR5).
+// initialize, the app still boots (in the local fallback below) rather than
+// showing a dead gate.
 try {
-  const { initAccount } = await import('./account.js');
-  await initAccount({ rerender: router });
+  account = await import('./account.js');
+  await account.initAccount({ rerender: router });
 } catch (e) {
+  account = null;
   store.setSession(null);
 }
 
-// The built-in sample refresh + one-time demo seed belong to the logged-out
-// local backend only; cloud accounts get their fixtures from the sign-in
-// reconcile (js/account.js), so guard these to the local backend.
-if (store.backendKind() === 'local') {
+// Fallback only: if the account layer couldn't load, run the local app with its
+// built-in sample + demo seed so the tool still works. When the account layer is
+// present, cloud accounts get their fixtures from the sign-in reconcile instead.
+if (!account && store.backendKind() === 'local') {
   refreshBuiltinSample();
   seedDemos();
 }

@@ -109,6 +109,14 @@ offline, no mandatory login just to look around).
   mode with the cache intact; it does not wipe the device.
 - **Q5 → Sign-in is optional.** The app is fully usable logged out (today's
   behavior); an account is an upgrade, never a gate to using the app.
+  - **Amendment (2026-07-16, owner): sign-in is now REQUIRED — the app is gated
+    behind a full-page login wall.** Logged out shows only the sign-in screen;
+    the app + all data need a session. This supersedes Q5's "optional" and the
+    logged-out-parity framing of FR5/FR10 (the calc engine is unchanged, but the
+    S5–S22 suite now runs *signed-in* via a stubbed Supabase). On public Pages
+    this is a UI curtain, not file security — per-user RLS remains the real data
+    protection. A local fallback still boots the app if the auth layer can't load,
+    so an outage never bricks the tool.
 - **Q6 → Session persists** until explicit sign-out.
 
 ## Constitution constraints (binding — cited)
