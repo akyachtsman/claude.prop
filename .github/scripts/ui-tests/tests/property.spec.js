@@ -110,14 +110,14 @@ test('S8 compare — best/worst highlight and per-column verdict', async ({ page
   await expect(page.locator('.cell--best').first()).toBeVisible();
   await expect(page.locator('.cell--worst').first()).toBeVisible();
   await expect(page.locator('.compare-verdict .pill').first()).toBeVisible();
-  // sorting: click the CAP header (3rd column) → highest first, then toggle
+  // sorting: click the CAP header (3rd column) → ascending first, then toggle
   const capTh = page.locator('.compare-table--rows thead th:nth-child(3)');
   await capTh.locator('.th-sort__btn').click();
-  await expect(capTh).toHaveAttribute('aria-sort', 'descending');
-  await expect(page.locator('.compare-table--rows tbody tr').first().locator('.compare-name')).toContainText('715 Plumas');   // 5.13% > 0%
-  await capTh.locator('.th-sort__btn').click();
   await expect(capTh).toHaveAttribute('aria-sort', 'ascending');
-  await expect(page.locator('.compare-table--rows tbody tr').first().locator('.compare-name')).toContainText('New property'); // 0% first
+  await expect(page.locator('.compare-table--rows tbody tr').first().locator('.compare-name')).toContainText('New property'); // 0% lowest first
+  await capTh.locator('.th-sort__btn').click();
+  await expect(capTh).toHaveAttribute('aria-sort', 'descending');
+  await expect(page.locator('.compare-table--rows tbody tr').first().locator('.compare-name')).toContainText('715 Plumas');   // 5.13% highest
   // toggle to the side-by-side layout (metrics as rows, properties as columns)
   await page.click('.seg__btn:has-text("Side by side")');
   await expect(page.locator('.compare-table:not(.compare-table--rows)')).toBeVisible();
