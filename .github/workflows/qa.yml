@@ -13,7 +13,8 @@
 #                   the authoritative UI gate.
 #
 # Required setup:
-#   - Add TEST_AUTH_CREDENTIAL as a repository secret (value from CLAUDE.md)
+#   - Add TEST_AUTH_CREDENTIAL as a repository secret — skip if the project has
+#     no auth; the empty secret makes auth tests self-skip
 #   - Set UI_TESTS_DIR below to the path of your Playwright test directory
 #   - Adjust the UI_PATHS regex in the ui-changes job to your project layout
 

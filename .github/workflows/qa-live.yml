@@ -4,7 +4,8 @@
 # pages-build-deployment is auto-created by GitHub when Pages is enabled — no extra setup.
 #
 # Required setup:
-#   - Add TEST_AUTH_CREDENTIAL as a repository secret (value from CLAUDE.md)
+#   - Add TEST_AUTH_CREDENTIAL as a repository secret — skip if the project has
+#     no auth; the empty secret makes auth tests self-skip
 #   - Add APP_URL as a repository variable: Settings → Secrets and variables → Variables
 #     e.g. https://<your-username>.github.io/<your-repo>/
 #   - Set UI_TESTS_DIR below to the path of your Playwright test directory
