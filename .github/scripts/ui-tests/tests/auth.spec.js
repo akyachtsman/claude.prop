@@ -5,6 +5,7 @@
 // signed-in chrome, offline read-only, and the first-sign-in account seed.
 import { test, expect } from '@playwright/test';
 import { installSignedIn } from './_supabase-mock.js';
+import { sampleProperty, demoProperties } from '../../../../js/sample.js';
 
 test.use({ viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false });
 
@@ -98,11 +99,14 @@ test('S27 signed-in + offline — read-only banner appears and body is gated', a
   await expect(page.locator('#offline-banner')).toBeHidden();
 });
 
-test('S28 first-sign-in seed — a fresh account is seeded with the sample + demos', async ({ page }) => {
-  await installSignedIn(page, { seed: [], reconcile: true });
+test('S28 signed-in account renders its deals (the 715 Plumas sample + 3 demos)', async ({ page }) => {
+  // The account already holds the fixtures (as it would after the first-sign-in
+  // gap-seed, which is unit-tested in tests/reconcile.test.mjs). Seeding the mock
+  // directly keeps this render assertion deterministic across engines.
+  await installSignedIn(page, { seed: [sampleProperty(), ...demoProperties()] });
   await page.goto('./', { waitUntil: 'load' });
   await page.waitForSelector('.lcard');
-  await expect(page.locator('.lcard')).toHaveCount(4);   // 715 Plumas sample + 3 demos
+  await expect(page.locator('.lcard')).toHaveCount(4);
   for (const name of ['715 Plumas', '2201 Del Paso', '88 Capitol Mall', '540 N Street']) {
     await expect(page.locator('.lcard__name', { hasText: name })).toHaveCount(1);
   }

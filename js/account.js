@@ -240,31 +240,37 @@ window.addEventListener('online', async () => {
 export async function initAccount({ rerender: rr }) {
   rerender = rr || rerender;
 
-  // Subscribe BEFORE resolving the session so a PASSWORD_RECOVERY event from a
-  // reset link (fired during the URL exchange) is never missed. INITIAL_SESSION
-  // is handled by the explicit getSession() below, so it's ignored here.
-  onAuthChange(async (event, sess) => {
-    if (event === 'INITIAL_SESSION') return;
-    if (event === 'PASSWORD_RECOVERY') { recovering = true; rerender(); return; }
-    if (event === 'SIGNED_IN') {
+  // Drive the initial apply from the first auth event (INITIAL_SESSION) rather
+  // than a separate getSession() call — that avoids a race where getSession
+  // resolves null before the persisted session hydrates and the INITIAL_SESSION
+  // that carries it gets dropped (which stranded the user on the gate). Boot
+  // waits on that first event so the session is applied before the first render.
+  let booted = false;
+  await new Promise((resolve) => {
+    const done = () => { if (!booted) { booted = true; resolve(); } };
+    const applyAndRender = async (sess) => {
       recovering = false;
-      await applySession(sess);
-      renderControl(sess);
+      if (sess) { await applySession(sess); renderControl(sess); }
+      else { store.setSession(null); renderControl(null); }
       refreshOnline();
-      rerender();
-    } else if (event === 'SIGNED_OUT') {
-      recovering = false;
-      store.setSession(null);
-      renderControl(null);
-      setReadonly(false);
-      rerender();
-    }
-    // TOKEN_REFRESHED / USER_UPDATED: session stays valid, nothing to swap.
+    };
+    onAuthChange(async (event, sess) => {
+      if (event === 'PASSWORD_RECOVERY') { recovering = true; rerender(); done(); return; }
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+        await applyAndRender(sess);
+        booted ? rerender() : done();
+        return;
+      }
+      if (event === 'SIGNED_OUT') {
+        recovering = false;
+        store.setSession(null); renderControl(null); setReadonly(false);
+        booted ? rerender() : done();
+        return;
+      }
+      // TOKEN_REFRESHED / USER_UPDATED: session stays valid, nothing to swap.
+      if (!booted) done();
+    });
+    // Safety net: never hang boot if no auth event arrives (treat as logged out).
+    setTimeout(done, 3000);
   });
-
-  let session = null;
-  try { session = await getSession(); } catch (e) { session = null; }
-  await applySession(session);
-  renderControl(session);
-  refreshOnline();
 }
