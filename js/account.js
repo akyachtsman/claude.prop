@@ -87,37 +87,25 @@ function renderControl(session) {
     slot.appendChild(el('span', { class: 'account__email', title: session.user.email, text: session.user.email }));
     slot.appendChild(el('button', { class: 'topbar__link account__btn', type: 'button', text: 'Sign out',
       onclick: () => signOut() }));
-  } else {
-    slot.appendChild(el('button', { class: 'topbar__link account__btn', type: 'button', text: 'Sign in',
-      onclick: openSignIn }));
   }
+  // Logged out: nothing here — the full-page auth gate owns sign-in.
 }
 
-function openSignIn() {
+// The email magic-link form, shared by the full-page gate. Returns its nodes.
+function buildSignInForm() {
   const email = el('input', { class: 'input', type: 'email', 'aria-label': 'Email for sign-in link',
     placeholder: 'you@example.com', autocomplete: 'email' });
-  const status = el('p', { class: 'modal__body modal__status' });
-  const send = el('button', { class: 'btn btn--primary', type: 'button', text: 'Send link' });
-  const m = modal([
-    el('h2', { class: 'modal__title', text: 'Sign in' }),
-    el('p', { class: 'modal__body', text: 'Enter your email and we’ll send a one-time sign-in link. No password.' }),
-    el('div', { class: 'field' }, [email]),
-    status,
-    el('div', { class: 'modal__actions' }, [
-      el('button', { class: 'btn btn--ghost', type: 'button', text: 'Cancel', onclick: () => m.close() }),
-      send,
-    ]),
-  ]);
-  email.focus();
+  const status = el('p', { class: 'authgate__status', role: 'status' });
+  const send = el('button', { class: 'btn btn--primary authgate__send', type: 'button', text: 'Send sign-in link' });
   const submit = async () => {
     const addr = email.value.trim();
-    if (!addr) { status.textContent = 'Enter your email first.'; return; }
-    send.disabled = true; status.textContent = 'Sending…';
+    if (!addr) { status.classList.remove('authgate__status--ok'); status.textContent = 'Enter your email first.'; return; }
+    send.disabled = true; status.classList.remove('authgate__status--ok'); status.textContent = 'Sending…';
     const res = await signInWithEmail(addr);
     if (res.ok) {
-      status.classList.add('modal__status--ok');
-      status.textContent = `Check your email — a sign-in link is on its way to ${addr}.`;
-      send.remove();
+      status.classList.add('authgate__status--ok');
+      status.textContent = `Check your email — a one-time sign-in link is on its way to ${addr}.`;
+      send.textContent = 'Link sent';
     } else {
       send.disabled = false;
       status.textContent = res.error || 'Could not send the link. Try again.';
@@ -125,6 +113,24 @@ function openSignIn() {
   };
   send.addEventListener('click', submit);
   email.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+  return { email, status, send };
+}
+
+/** Full-page sign-in gate: the only thing a logged-out visitor sees. */
+export function renderAuthGate(host) {
+  const { email, status, send } = buildSignInForm();
+  clear(host);
+  host.appendChild(el('div', { class: 'authgate' }, [
+    el('div', { class: 'authgate__card' }, [
+      el('div', { class: 'authgate__brand', text: 'Property Analytics' }),
+      el('h1', { class: 'authgate__title', text: 'Sign in to your portfolio' }),
+      el('p', { class: 'authgate__sub', text: 'Your deals are saved to your account and sync across every device. Enter your email for a one-time sign-in link — no password.' }),
+      el('div', { class: 'field authgate__field' }, [email]),
+      send,
+      status,
+    ]),
+  ]));
+  email.focus();
 }
 
 // ── offline read-only state (T19) ───────────────────────────────────────────

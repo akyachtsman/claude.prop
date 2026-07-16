@@ -3,11 +3,19 @@
 // so these run fully against the local server. Desktop viewport (laptop-first app).
 
 import { test, expect } from '@playwright/test';
+import { readFileSync } from 'fs';
+import { installSignedIn, CLOUD_KEY } from './_supabase-mock.js';
 
 // Laptop-first functional tests: force a desktop, fine-pointer context so the
 // one-screen and 44px-touch behaviours are tested in their intended mode.
 // (The generic app.spec.js covers the mobile/touch viewports.)
 test.use({ viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false });
+
+// The app is gated behind login: every scenario boots SIGNED IN against a stubbed
+// Supabase (no backend). The account starts empty (reconcile suppressed), so a
+// signed-in fresh account behaves like the old local first-run — same "Load
+// sample deal" / "+ New property" affordances, backed by the stateful mock.
+test.beforeEach(async ({ page }) => { await installSignedIn(page); });
 
 // Console-error gate (test.md): fail if any pageerror or console.error fires.
 function watchErrors(page) {
@@ -30,16 +38,7 @@ async function kpis(page) {
   });
 }
 
-// Suppress the one-time demo seed (seedDemos in app.js) for the scenarios that
-// assert on specific list contents/counts, so they stay deterministic. The seed
-// only fires on a non-empty store that hasn't been seeded; setting the flag up
-// front makes it a no-op. S22 deliberately omits this to exercise the seed.
-async function suppressDemoSeed(page) {
-  await page.addInitScript(() => { try { localStorage.setItem('propanalytics.seed.v1', 'test'); } catch (e) { /* ignore */ } });
-}
-
 async function loadSample(page) {
-  await suppressDemoSeed(page);
   await page.goto('./', { waitUntil: 'load' });
   await page.click('button:has-text("Load sample deal")');
   await page.waitForSelector('.kpi-strip');
@@ -138,12 +137,16 @@ test('S9 empty/zero — a zeroed property renders "—", never NaN', async ({ pa
 
 test('S10 export/import round-trip — data restores identically', async ({ page }) => {
   await loadSample(page);
-  // capture the serialized store, clear, restore, reload — SC-6 substance
-  const saved = await page.evaluate(() => localStorage.getItem('propanalytics.v1'));
-  expect(saved).toContain('715 Plumas St');
-  await page.evaluate(() => localStorage.clear());
-  await page.evaluate((v) => localStorage.setItem('propanalytics.v1', v), saved);
-  await page.goto('./', { waitUntil: 'load' });
+  // Export → capture the downloaded JSON (the real export path, signed in)
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.click('#btn-export'),
+  ]);
+  const json = readFileSync(await download.path(), 'utf8');
+  expect(json).toContain('715 Plumas St');
+  // Import that same JSON back through the file picker → the property is still present
+  page.once('filechooser', (fc) => fc.setFiles({ name: 'export.json', mimeType: 'application/json', buffer: Buffer.from(json) }));
+  await page.click('#btn-import');
   await expect(page.locator('.lcard__name')).toContainText('715 Plumas St');
 });
 
@@ -294,28 +297,9 @@ test('S19 amortization vs. maturity — a balloon is reported without changing D
   expect((await kpis(page))['DSCR']).toBe(dscrBefore);
 });
 
-test('S20 stale-sample auto-refresh — an old built-in sample updates to the latest figures on boot', async ({ page }) => {
-  await suppressDemoSeed(page);
-  await page.goto('./', { waitUntil: 'load' });
-  // seed a returning visitor's stale sample (old $895K figures, no sampleRev)
-  await page.evaluate(() => {
-    const stale = {
-      id: 'sample-715-plumas', schemaVersion: 1, name: '715 Plumas St — Commercial',
-      info: { askingPrice: 1350000, rentableSF: 11562 }, targets: { desiredCap: 0, desiredDscr: 0 },
-      offer: { offerPrice: 895000, fees: 0, improvements: 0 },
-      loans: [{ ltv: 0.727, rate: 0.062, termYears: 25, type: 'CONV' }],
-      tenants: [], expenses: [],
-      assumptions: { minOppCostEquity: 0.15, taxRate: 0.28, collectionLoss: 0.05, cashflowAppr: 0.03, capitalAppr: 0.02 },
-    };
-    localStorage.setItem('propanalytics.v1', JSON.stringify([stale]));
-  });
-  await page.goto('./', { waitUntil: 'load' });   // boot runs refreshBuiltinSample()
-  await page.goto('./#/p/sample-715-plumas', { waitUntil: 'load' });
-  await page.waitForSelector('.kpi-strip');
-  // the stale $895K copy has been replaced with the accurate close figures
-  await expect(page.locator('.deal-strip input[aria-label="Offer price"]')).toHaveValue('1300000');
-  expect((await kpis(page))['CAP']).toBe('5.13%');
-});
+// (S20 stale-sample auto-refresh removed: it exercised the LOCAL built-in-sample
+//  migration, which the login gate retires — a signed-in account's sample is
+//  authoritative and updates via normal upsert, not a boot-time local refresh.)
 
 test('S21 undo/redo — a committed edit can be reverted and replayed; typing alone is not undoable', async ({ page }) => {
   await loadSample(page);
@@ -358,29 +342,7 @@ test('DELETE — a property is removed from its Properties-list card, with confi
   await expect(page.locator('.lcard')).toHaveCount(0);   // deleted → empty list
 });
 
-test('S22 demo seed — extra demo deals seed once on a non-empty store, and a deleted one stays gone', async ({ page }) => {
-  const errors = watchErrors(page);
-  // First boot is empty → the seed must NOT fire (brand-new visitors keep the
-  // empty first-run), so the empty state is what we see.
-  await page.goto('./', { waitUntil: 'load' });
-  await page.click('button:has-text("Add your first property")');
-  await page.waitForSelector('.kpi-strip');
-  // A genuine reload with a non-empty store → the three demo deals seed in
-  // alongside it (page.reload re-executes app.js; a hash change would not).
-  await page.reload({ waitUntil: 'load' });
-  await page.click('#nav-properties');
-  await page.waitForSelector('.lcard');
-  await expect(page.locator('.lcard')).toHaveCount(4);   // the created one + 3 demos
-  for (const name of ['2201 Del Paso Blvd', '88 Capitol Mall', '540 N Street']) {
-    await expect(page.locator('.lcard__name', { hasText: name })).toHaveCount(1);
-  }
-  // Delete one demo, then reload: the seed is one-time, so it does not reappear.
-  page.on('dialog', (d) => d.accept());
-  await page.locator('.lcard', { hasText: '540 N Street' }).locator('.lcard__del').click();
-  await page.waitForTimeout(200);
-  await page.reload({ waitUntil: 'load' });
-  await page.waitForSelector('.lcard');
-  await expect(page.locator('.lcard')).toHaveCount(3);
-  await expect(page.locator('.lcard__name', { hasText: '540 N Street' })).toHaveCount(0);
-  expect(errors).toEqual([]);
-});
+// (S22 demo-seed removed here: the demo deals now seed per-account via the
+//  first-sign-in reconcile (js/account.js) rather than a local boot seed. That
+//  gap-seed + "a deleted deal stays gone" behaviour is covered by the Node unit
+//  test tests/reconcile.test.mjs and the fresh-account seed check in auth.spec.js.)
