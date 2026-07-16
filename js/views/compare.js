@@ -8,40 +8,25 @@ import { el, render } from '../dom.js';
 import * as fmt from '../format.js';
 import { compute, capVerdict, dscrVerdict } from '../model.js';
 
-// Side-by-side metric rows: [label, selector(m), formatter, direction].
-const ROWS = [
-  ['CAP', (m) => m.cap, fmt.percent2, 'up'],
-  ['DSCR', (m) => m.dscr, fmt.ratio, 'up'],
-  ['NOI', (m) => m.noi, fmt.money, 'up'],
-  ['NOI − Debt Service', (m) => m.noiDebtService, fmt.money, 'up'],
-  ['Cash on Cash', (m) => m.cashOnCash, fmt.percent2, 'up'],
-  ['Annual IRR', (m) => m.irr, fmt.percent2, 'up'],
-  ['5Y NPV', (m) => m.npv, fmt.money, 'up'],
-  ['5Y Total Return', (m) => m.totalReturn, fmt.money, 'up'],
-  ['WACC', (m) => m.wacc, fmt.percent2, 'down'],
-  ['Return on Cost', (m) => m.returnOnCost, fmt.percent2, 'up'],
-  ['1% Rule', (m) => m.onePctRule, fmt.money, 'up'],
-  ['All-in cost (equity)', (m) => m.allInCost, fmt.money, 'down'],
-  ['Annual debt service', (m) => m.annualDebt, fmt.money, 'down'],
-  ['Total rent (yr)', (m) => m.totalRent, fmt.money, 'up'],
-];
-
-// Table columns: [label, selector(m, p), formatter, direction]. Asking is
-// context only (no winner). Order mirrors the workbook comparison sheet.
-const COLS = [
+// The single, ordered metric set shared by both layouts: [label, selector(m, p),
+// formatter, direction]. Asking leads (context only — no winner), then the 12
+// dashboard KPIs in KPI-strip order. Direction drives best/worst (up = higher
+// is better; down = lower is better; null = neutral). Kept compact by design —
+// more columns are expected here later.
+const METRICS = [
   ['Asking', (m, p) => p.info.askingPrice, fmt.money, null],
-  ['NOI − Coll. Loss', (m) => m.noiLessCollection, fmt.money, 'up'],
-  ['NOI', (m) => m.noi, fmt.money, 'up'],
-  ['Return on Cost', (m) => m.returnOnCost, fmt.percent2, 'up'],
-  ['Cash on Cash', (m) => m.cashOnCash, fmt.percent2, 'up'],
-  ['1% Rule', (m) => m.onePctRule, fmt.money, 'up'],
-  ['DSCR', (m) => m.dscr, fmt.ratio, 'up'],
-  ['NOI Debt Svc', (m) => m.noiDebtService, fmt.money, 'up'],
   ['CAP', (m) => m.cap, fmt.percent2, 'up'],
+  ['DSCR', (m) => m.dscr, fmt.ratio, 'up'],
+  ['NOI', (m) => m.noi, fmt.money, 'up'],
+  ['NOI − Debt Svc', (m) => m.noiDebtService, fmt.money, 'up'],
+  ['NOI − Coll. Loss', (m) => m.noiLessCollection, fmt.money, 'up'],
+  ['Cash on Cash', (m) => m.cashOnCash, fmt.percent2, 'up'],
   ['Annual IRR', (m) => m.irr, fmt.percent2, 'up'],
   ['5Y NPV', (m) => m.npv, fmt.money, 'up'],
   ['5Y Total Return', (m) => m.totalReturn, fmt.money, 'up'],
   ['WACC', (m) => m.wacc, fmt.percent2, 'down'],
+  ['Return on Cost', (m) => m.returnOnCost, fmt.percent2, 'up'],
+  ['1% Rule', (m) => m.onePctRule, fmt.money, 'up'],
 ];
 
 const fnum = (v) => (v === null || v === undefined || !Number.isFinite(v));
@@ -125,11 +110,11 @@ export function renderCompare(container, ctx) {
   function drawTable() {
     const cols = selected.map((p) => ({ p, m: compute(p) }));
     const head = el('tr', {}, [el('th', { scope: 'col', text: 'Prospect' }),
-      ...COLS.map(([label]) => el('th', { scope: 'col', class: 'num', text: label }))]);
-    const bw = COLS.map(([label, sel, f, dir]) => extremes(cols.map(({ m, p }) => sel(m, p)), dir));
+      ...METRICS.map(([label]) => el('th', { scope: 'col', class: 'num', text: label }))]);
+    const bw = METRICS.map(([label, sel, f, dir]) => extremes(cols.map(({ m, p }) => sel(m, p)), dir));
     const body = cols.map(({ p, m }) => el('tr', {}, [
       el('td', {}, [el('span', { class: 'compare-name', text: p.name || 'Untitled' }), verdictPill(p, m)]),
-      ...COLS.map(([label, sel, f], ci) => {
+      ...METRICS.map(([label, sel, f], ci) => {
         const v = sel(m, p);
         const { best, worst } = bw[ci];
         const cls = 'num' + (fnum(v) ? '' : v === best ? ' cell--best' : v === worst ? ' cell--worst' : '');
@@ -148,8 +133,8 @@ export function renderCompare(container, ctx) {
       ...cols.map(({ p }) => el('th', { scope: 'col', text: p.name || 'Untitled' }))]);
     const verdictRow = el('tr', { class: 'compare-verdict' }, [el('td', { text: 'Vs targets' }),
       ...cols.map(({ p, m }) => el('td', { class: 'num' }, [verdictPill(p, m).firstChild]))]);
-    const rows = ROWS.map(([label, sel, f, dir]) => {
-      const vals = cols.map(({ m }) => sel(m));
+    const rows = METRICS.map(([label, sel, f, dir]) => {
+      const vals = cols.map(({ m, p }) => sel(m, p));
       const { best, worst } = extremes(vals, dir);
       return el('tr', {}, [el('td', { text: label }),
         ...vals.map((v) => el('td', {
