@@ -85,8 +85,10 @@ jobs:
         env:
           EVENT: ${{ github.event_name }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          # Per-project: paths whose changes warrant a browser run.
-          UI_PATHS: '^(index\.html$|\.github/scripts/ui-tests/|\.github/workflows/qa\.yml$)'
+          # Per-project: paths whose changes warrant a browser run. Includes js/
+          # and styles/ so a calc-engine or design change can't skip the S5
+          # fidelity suite (this is a no-backend app — the suite runs fully on CI).
+          UI_PATHS: '^(index\.html$|js/|styles/|\.github/scripts/ui-tests/|\.github/workflows/qa\.yml$)'
         run: |
           # No app yet (no index.html in the repo) → nothing to browser-test.
           # Keeps the scaffold/bootstrap PR clean: skip until the app exists.
@@ -149,11 +151,10 @@ jobs:
           "./$UI_TESTS_DIR/node_modules/.bin/http-server" . -p 8080 --silent &
           sleep 2
 
-      # UI Tests against the local server are non-blocking: the backend API is
-      # unreachable on CI runners, so API-dependent scenarios fail with
-      # "API status: no call" by design. The authoritative UI gate is qa-live.yml.
+      # This is a no-backend, local-first app: the whole Playwright suite (incl.
+      # the S5 calc-fidelity test) runs fully against the bundled http-server, so
+      # the run is a blocking gate — a failure fails the check.
       - name: Run Playwright tests
-        continue-on-error: true
         env:
           APP_URL: http://localhost:8080
           TEST_AUTH_CREDENTIAL: ${{ secrets.TEST_AUTH_CREDENTIAL }}

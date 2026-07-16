@@ -82,10 +82,9 @@ body {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
-  padding: var(--space-3) var(--space-4);
 }
 .card > .eyebrow { display: block; margin-bottom: var(--space-2); }
-.grid { display: grid; gap: 8px; grid-template-columns: repeat(12, 1fr); }
+.grid { display: grid; gap: var(--space-2); grid-template-columns: repeat(12, 1fr); }
 .col-12 { grid-column: span 12; }
 .col-6 { grid-column: span 6; }
 .col-5 { grid-column: span 5; }
@@ -108,7 +107,7 @@ body {
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
   overflow: hidden;
-  margin-bottom: 10px;
+  margin-bottom: var(--space-2);
 }
 .kpi {
   padding: 6px var(--space-2);
@@ -213,18 +212,16 @@ body {
 /* checkbox rows (expense include toggles), two-up grid for density ------------ */
 .check-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--space-4); }
 .check-grid .check-row { min-width: 0; }
-.check-row .amount { flex: none; }
 .check-row {
   display: flex; align-items: center; gap: var(--space-2);
-  min-height: 44px; padding: 0;
+  padding: 0;
 }
 .check-row input[type="checkbox"] {
   width: 24px; height: 24px; accent-color: var(--color-accent); flex: none;
   margin: 0;
 }
 .check-row label { flex: 1; cursor: pointer; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.check-row .amount { font-weight: 700; }
-.check-row--off label, .check-row--off .amount {
+.check-row--off label, .check-row--off .amount-input {
   color: var(--color-text-secondary); text-decoration: line-through;
 }
 .pct { font-size: 10px; color: var(--color-text-secondary); font-weight: 600; margin-left: 2px; }
@@ -324,11 +321,6 @@ body {
   padding: 3px var(--space-2) 0; text-align: center;
   font-size: 10px; color: var(--color-text-secondary); font-weight: 700;
 }
-.chart__value {
-  position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
-  font-size: 10px; font-weight: 700; color: var(--color-text-primary);
-  white-space: nowrap;
-}
 .legend { display: flex; gap: var(--space-4); margin-top: var(--space-1); font-size: 10px; color: var(--color-text-secondary); flex-wrap: wrap; }
 .legend span { display: inline-flex; align-items: center; gap: var(--space-1); }
 .legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
@@ -341,7 +333,6 @@ body {
 .pf-head__lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-secondary); }
 .pf-slider { width: 96px; accent-color: var(--color-accent); cursor: pointer; }
 .chart__group--boundary { border-right: 2px dashed var(--color-border); margin-right: var(--space-2); padding-right: var(--space-2); }
-.chart__xlabels .x--boundary { position: relative; }
 .data-table th.cell--boundary, .data-table td.cell--boundary { border-right: 2px solid var(--color-border-hover); }
 .pf-stats { margin-top: var(--space-1); }
 .pf-stat { display: flex; flex-wrap: wrap; gap: 2px var(--space-3); align-items: baseline; font-size: 11px; color: var(--color-text-secondary); padding: 2px 0; }
@@ -370,15 +361,8 @@ body {
 .notes h3 { font-size: var(--font-sm); margin: var(--space-2) 0 var(--space-1); }
 .notes p { color: var(--color-text-secondary); margin-top: 0; font-size: var(--font-xs); }
 
-/* footer ------------------------------------------------------------------------------ */
-.footer {
-  color: var(--color-text-secondary); font-size: var(--font-xs);
-  text-align: center; padding: var(--space-3) var(--space-4);
-}
-
 /* density on mouse-driven screens — touch keeps 44px targets (iPad rule) */
 @media (pointer: fine) {
-  .check-row { min-height: 30px; }
   .notes summary { min-height: 36px; }
   .switcher__btn { min-height: 36px; min-width: 36px; }
   .topbar__link { min-height: 36px; }
@@ -410,14 +394,12 @@ body {
 @media (pointer: coarse) { .check-row { min-height: 44px; } }
 .check-row .amount-input { flex: none; }
 
-.dash-actions { display: flex; gap: var(--space-2); margin-top: var(--space-2); }
-
 /* deal summary — full-width framed band above the cards (mirrors workbook) */
 .deal-strip {
   display: grid; grid-template-columns: repeat(6, 1fr);
   background: var(--color-surface); border: 1px solid var(--color-border);
   border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
-  overflow: hidden; margin-bottom: 8px;
+  overflow: hidden; margin-bottom: var(--space-2);
 }
 .deal-strip .deal-cell { padding: 5px var(--space-3); border-left: 1px solid var(--color-border); }
 .deal-strip .deal-cell:first-child { border-left: none; }
@@ -481,8 +463,7 @@ body {
   color: var(--color-text-secondary);
 }
 .lcard__del:hover, .lcard__del:focus-visible { background: var(--color-fail-bg); color: var(--color-fail); }
-.lcard__head { padding-right: 22px; }   /* keep the badge clear of the delete control */
-.lcard__head { display: flex; align-items: center; gap: var(--space-3); }
+.lcard__head { display: flex; align-items: center; gap: var(--space-3); padding-right: 22px; }   /* padding keeps the badge clear of the delete control */
 .lcard__mono {
   flex: none; width: 40px; height: 40px; border-radius: var(--radius-sm);
   background: var(--color-navy); color: var(--color-on-navy);

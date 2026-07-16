@@ -1,9 +1,10 @@
 // app.js — hash router + shared state. Wires views to store + model, owns the
 // topbar center slot (switcher/pills or view title), first-run, export/import.
 
-import { el, render, clear, toast } from './dom.js';
+import { el, clear, toast } from './dom.js';
 import * as store from './store.js';
-import { compute, capVerdict, dscrVerdict } from './model.js';
+import * as fmt from './format.js';
+import { capVerdict, dscrVerdict } from './model.js';
 import { sampleProperty, demoProperties } from './sample.js';
 import { renderDashboard } from './views/dashboard.js';
 import { renderList } from './views/list.js';
@@ -14,7 +15,6 @@ const center = document.getElementById('topbar-center');
 const navProps = document.getElementById('nav-properties');
 const navCompare = document.getElementById('nav-compare');
 
-let flushSave = null;   // set in showDashboard; edits persist synchronously on commit, so usually a no-op
 let undoStack = [];     // committed prior states of the property being edited (undo history)
 let redoStack = [];     // states undone and available to redo (cleared by any new edit)
 let historyId = null;   // the property the undo/redo stacks belong to
@@ -66,7 +66,6 @@ function setActiveNav(route) {
 }
 
 function router() {
-  if (flushSave) flushSave();          // commit any pending edit before switching views
   const r = parseHash();
   setActiveNav(r.route);
   if (r.route === 'dashboard') return showDashboard(r.id);
@@ -108,7 +107,6 @@ function showDashboard(id) {
   const props = store.list();
   const idx = props.findIndex((p) => p.id === id);
   const working = deepCopy(saved);
-  flushSave = null;   // edits persist synchronously on commit (see onCommit); nothing is ever pending
 
   // Undo/Redo: each committed edit (a field commits on Enter/blur) pushes the
   // prior state; Undo pops it, Redo replays it. A new edit clears the redo
@@ -156,15 +154,14 @@ function showDashboard(id) {
       if (!store.isStorageOK()) toast("Couldn't save — storage is full or private mode. Export to keep your data.", 'info');
       refreshHistory();
     },
-    markDirty: () => {},   // no-op: commits persist synchronously via onCommit
   });
 }
 
 function fmtSub(p) {
   const parts = [];
-  if (p.info.askingPrice) parts.push('Asking $' + Math.round(p.info.askingPrice).toLocaleString('en-US'));
-  if (p.offer.offerPrice) parts.push('Offer $' + Math.round(p.offer.offerPrice).toLocaleString('en-US'));
-  if (p.info.rentableSF) parts.push(Math.round(p.info.rentableSF).toLocaleString('en-US') + ' SF');
+  if (p.info.askingPrice) parts.push('Asking ' + fmt.money(p.info.askingPrice));
+  if (p.offer.offerPrice) parts.push('Offer ' + fmt.money(p.offer.offerPrice));
+  if (p.info.rentableSF) parts.push(fmt.integer(p.info.rentableSF) + ' SF');
   return parts.join(' · ');
 }
 
@@ -172,8 +169,8 @@ function paintPills(host, m, p) {
   clear(host);
   const cap = capVerdict(m.cap, p.targets.desiredCap);
   const dscr = dscrVerdict(m.dscr, p.targets.desiredDscr);
-  const capTxt = `CAP ${(m.cap * 100).toFixed(2)}% ${cap ? '≥' : '<'} ${(p.targets.desiredCap * 100).toFixed(2)}%`;
-  const dscrTxt = `DSCR ${m.dscr === null ? '—' : m.dscr.toFixed(2)} ${dscr ? '≥' : '<'} ${(+p.targets.desiredDscr).toFixed(2)}`;
+  const capTxt = `CAP ${fmt.percent2(m.cap)} ${cap ? '≥' : '<'} ${fmt.percent2(Number(p.targets.desiredCap))}`;
+  const dscrTxt = `DSCR ${fmt.ratio(m.dscr)} ${dscr ? '≥' : '<'} ${fmt.ratio(Number(p.targets.desiredDscr))}`;
   if (cap !== null) host.appendChild(el('span', { class: 'pill ' + (cap ? 'pill--pass' : 'pill--fail'), text: capTxt }));
   if (dscr !== null) host.appendChild(el('span', { class: 'pill ' + (dscr ? 'pill--pass' : 'pill--fail'), text: dscrTxt }));
 }
@@ -232,7 +229,9 @@ function importData() {
 function refreshBuiltinSample() {
   const fresh = sampleProperty();
   const stored = store.get(fresh.id);
-  if (stored && stored.sampleRev !== fresh.sampleRev) {
+  // Only refresh an OLDER copy (missing sampleRev counts as 0); never overwrite a
+  // stored sample that is newer than what this build ships.
+  if (stored && (stored.sampleRev || 0) < fresh.sampleRev) {
     store.save(fresh);
     toast('Updated the built-in 715 Plumas sample to the latest figures.', 'info');
   }
@@ -256,5 +255,4 @@ if (!store.probe()) toast('Saving is off — private mode or storage full. Expor
 refreshBuiltinSample();
 seedDemos();
 window.addEventListener('hashchange', router);
-window.addEventListener('beforeunload', () => { if (flushSave) flushSave(); });   // don't lose an in-flight edit on close
 router();
