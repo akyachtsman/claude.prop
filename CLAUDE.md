@@ -108,6 +108,7 @@ fine-pointer context; the generic `app.spec.js` covers the mobile viewports).
 | S19 | Amort vs. maturity | Loan carries separate Amort + Maturity terms; when maturity < amort a balloon (remaining balance) is reported (`$725,708 · yr 10`); payment/DSCR/NPV unchanged by maturity (a refinance is cash-neutral) | No balloon shown, or editing maturity changes DSCR/payment |
 | S20 | Stale-sample refresh | A returning visitor's older built-in sample (lower `sampleRev`) auto-updates to the latest figures on boot (offer `$1,300,000`, CAP `5.13%`); user-created deals are never touched | Stale sample survives a reload, or a non-sample property is overwritten |
 | S21 | Undo/redo | Each committed edit is one undo step; the Undo topbar button reverts the last change and Redo replays it; both disarm when empty; typing without committing is not undoable | Undo/Redo missing/stuck-disabled, doesn't revert/replay, or a mid-type change is captured |
+| S22 | Sample set | "Add sample properties" (empty-state + Properties-list actions) loads 715 Plumas plus two contrasting demo deals and jumps to Compare with three rows and best/worst variety; fixed sample ids make re-adding idempotent (no duplicates) | Fewer than 3 rows, no best/worst cells, or re-adding duplicates a property |
 
 ## Reporting Requirements
 Agents write evidence to `.agent-reports/`:
