@@ -124,6 +124,14 @@ test('S8 compare — best/worst highlight and per-column verdict', async ({ page
   await expect(page.locator('.cell--best').first()).toBeVisible();
 });
 
+test('New property defaults — Desired CAP 8% and Desired DSCR 1.25', async ({ page }) => {
+  await page.goto('./', { waitUntil: 'load' });
+  await page.click('button:has-text("Add your first property")');
+  await page.waitForSelector('.kpi-strip');
+  await expect(page.locator('.deal-strip input[aria-label="Desired CAP"]')).toHaveValue('8');
+  await expect(page.locator('input[aria-label="Desired DSCR"]')).toHaveValue('1.25');
+});
+
 test('S9 empty/zero — a zeroed property renders "—", never NaN', async ({ page }) => {
   await page.goto('./', { waitUntil: 'load' });
   await page.click('button:has-text("Add your first property")');

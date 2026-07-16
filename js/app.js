@@ -26,7 +26,7 @@ function blankProperty() {
   return {
     id: store.newId(), schemaVersion: 1, name: 'New property',
     info: { askingPrice: 0, rentableSF: 0, lotSize: '', yearBuilt: '', zoning: '', hvacAge: '', roofAge: '', parking: '', ceilingHeight: '', appraisedValue: 0, apn: '', bedrooms: '', baths: '' },
-    targets: { desiredCap: 0.06, desiredDscr: 1.25 },
+    targets: { desiredCap: 0.08, desiredDscr: 1.25 },
     offer: { offerPrice: 0, fees: 0, improvements: 0 },
     loans: [{ ltv: 0.7, rate: 0.065, termYears: 25, maturityYears: 0, type: 'CONV' }, { ltv: 0, rate: 0.065, termYears: 25, maturityYears: 0, type: 'IO' }],
     tenants: Array.from({ length: 4 }, () => ({ name: '', sf: 0, monthlyIncome: 0, leaseExpires: '', leaseOptions: '' })),
