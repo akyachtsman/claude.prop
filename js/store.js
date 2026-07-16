@@ -3,6 +3,7 @@
 // in-memory if storage is unavailable/corrupt so the app always runs.
 
 const KEY = 'propanalytics.v1';
+const SEED_KEY = 'propanalytics.seed.v1';   // marks the one-time demo seed as done
 const SCHEMA = 1;
 
 let memory = [];        // in-memory mirror / fallback
@@ -47,6 +48,16 @@ function write(list) {
 }
 
 export function isStorageOK() { return storageOK; }
+
+/** One-time demo seed flag: hasSeeded() is true once markSeeded() has run, so a
+ *  seeded demo the user later deletes never reappears. Failures are swallowed —
+ *  a store that can't persist the flag simply re-seeds, which is harmless. */
+export function hasSeeded() {
+  try { return localStorage.getItem(SEED_KEY) != null; } catch (e) { return false; }
+}
+export function markSeeded() {
+  try { localStorage.setItem(SEED_KEY, new Date().toISOString()); } catch (e) { /* ignore */ }
+}
 
 export function list() {
   const l = read();
