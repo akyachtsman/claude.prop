@@ -4,7 +4,7 @@
 import { el, clear, toast } from './dom.js';
 import * as store from './store.js';
 import * as fmt from './format.js';
-import { capVerdict, dscrVerdict } from './model.js';
+import { capVerdict, dscrVerdict, targetCapOf, targetDscrOf } from './model.js';
 import { sampleProperty, demoProperties } from './sample.js';
 import { renderDashboard } from './views/dashboard.js';
 import { renderList } from './views/list.js';
@@ -26,7 +26,7 @@ function blankProperty() {
   return {
     id: store.newId(), schemaVersion: 1, name: 'New property',
     info: { askingPrice: 0, rentableSF: 0, lotSize: '', yearBuilt: '', zoning: '', hvacAge: '', roofAge: '', parking: '', ceilingHeight: '', appraisedValue: 0, apn: '', bedrooms: '', baths: '' },
-    targets: { desiredCap: 0.08, desiredDscr: 1.25 },
+    targets: { desiredCap: 0, desiredDscr: 0 },   // empty by default; pills use the hard-coded benchmark until a Target is set
     offer: { offerPrice: 0, fees: 0, improvements: 0 },
     loans: [{ ltv: 0.7, rate: 0.065, termYears: 25, maturityYears: 0, type: 'CONV' }, { ltv: 0, rate: 0.065, termYears: 25, maturityYears: 0, type: 'IO' }],
     tenants: Array.from({ length: 4 }, () => ({ name: '', sf: 0, monthlyIncome: 0, leaseExpires: '', leaseOptions: '' })),
@@ -182,11 +182,14 @@ function paintPills(host, m, p) {
   clear(host);
   const cap = capVerdict(m.cap, p.targets.desiredCap);
   const dscr = dscrVerdict(m.dscr, p.targets.desiredDscr);
-  // 5-year NPV verdict: accept (pass) when NPV ≥ $0 (break-even cost of capital),
-  // fail when negative. Skipped when NPV isn't a real number (e.g. a zeroed deal).
-  const npvOk = Number.isFinite(m.npv) ? m.npv >= 0 : null;
-  const capTxt = `CAP ${fmt.percent2(m.cap)} ${cap ? '≥' : '<'} ${fmt.percent2(Number(p.targets.desiredCap))}`;
-  const dscrTxt = `DSCR ${fmt.ratio(m.dscr)} ${dscr ? '≥' : '<'} ${fmt.ratio(Number(p.targets.desiredDscr))}`;
+  // 5-year NPV verdict: pass only when NPV > $0 (strictly positive — the deal
+  // beats its cost of capital, not merely breaks even), fail at or below $0.
+  // Matches the dashboard KPI cell's colour rule. Null (no pill) when NPV isn't
+  // a real number (e.g. a zeroed deal).
+  const npvOk = Number.isFinite(m.npv) ? m.npv > 0 : null;
+  // Show the effective benchmark (per-deal Target when set, else the hard-coded default).
+  const capTxt = `CAP ${fmt.percent2(m.cap)} ${cap ? '≥' : '<'} ${fmt.percent2(targetCapOf(p.targets.desiredCap))}`;
+  const dscrTxt = `DSCR ${fmt.ratio(m.dscr)} ${dscr ? '≥' : '<'} ${fmt.ratio(targetDscrOf(p.targets.desiredDscr))}`;
   // No "≥ $0" comparator — the value's sign + pass/fail colour convey it, and it
   // keeps this third pill compact enough for the signed-in topbar.
   const npvTxt = `5Y NPV ${fmt.money(m.npv)}`;

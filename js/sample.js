@@ -18,8 +18,9 @@ export function sampleProperty() {
     schemaVersion: 1,
     // Bumped whenever the built-in sample's figures change, so a stale copy
     // saved in a returning visitor's localStorage auto-refreshes on boot
-    // (see refreshBuiltinSample in app.js). rev 2 = the actual-close rebuild.
-    sampleRev: 2,
+    // (see refreshBuiltinSample in app.js). rev 2 = the actual-close rebuild;
+    // rev 3 = empty Target CAP/DSCR (pills use the hard-coded benchmark).
+    sampleRev: 3,
     name: '715 Plumas St — Commercial',
     createdAt: '2026-07-14T00:00:00.000Z',
     updatedAt: '2026-07-14T00:00:00.000Z',
@@ -29,7 +30,7 @@ export function sampleProperty() {
       ceilingHeight: '—', appraisedValue: 0, apn: '—',
       bedrooms: '—', baths: '—',
     },
-    targets: { desiredCap: 0.08, desiredDscr: 1.25 },
+    targets: { desiredCap: 0, desiredDscr: 0 },
     offer: { offerPrice: 1300000, fees: 0, improvements: 0 },
     loans: [
       // 72.69% LTV → ~$944,970 on the $1.3M price (documented loan $945,000).
@@ -83,7 +84,7 @@ export function demoProperties() {
         zoning: 'M1', hvacAge: '—', roofAge: '4 yr', parking: 'Yard + 18',
         ceilingHeight: '22 ft', appraisedValue: 0, apn: '—', bedrooms: '—', baths: '—',
       },
-      targets: { desiredCap: 0.08, desiredDscr: 1.25 },
+      targets: { desiredCap: 0, desiredDscr: 0 },
       offer: { offerPrice: 1200000, fees: 0, improvements: 0 },
       loans: [{ ltv: 0.65, rate: 0.068, termYears: 25, maturityYears: 10, type: 'CONV' }],
       tenants: [
@@ -111,7 +112,7 @@ export function demoProperties() {
         zoning: 'C3', hvacAge: '6 yr', roofAge: '9 yr', parking: 'Structure',
         ceilingHeight: '9 ft', appraisedValue: 0, apn: '—', bedrooms: '—', baths: '—',
       },
-      targets: { desiredCap: 0.08, desiredDscr: 1.25 },
+      targets: { desiredCap: 0, desiredDscr: 0 },
       offer: { offerPrice: 2400000, fees: 0, improvements: 0 },
       loans: [{ ltv: 0.70, rate: 0.066, termYears: 25, maturityYears: 10, type: 'CONV' }],
       tenants: [
@@ -140,7 +141,7 @@ export function demoProperties() {
         zoning: 'R3', hvacAge: '—', roofAge: '7 yr', parking: '8 spaces',
         ceilingHeight: '8 ft', appraisedValue: 0, apn: '—', bedrooms: '8', baths: '8',
       },
-      targets: { desiredCap: 0.08, desiredDscr: 1.25 },
+      targets: { desiredCap: 0, desiredDscr: 0 },
       offer: { offerPrice: 1050000, fees: 0, improvements: 0 },
       loans: [{ ltv: 0.72, rate: 0.061, termYears: 25, maturityYears: 10, type: 'CONV' }],
       tenants: [

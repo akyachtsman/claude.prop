@@ -180,14 +180,25 @@ export function compute(property) {
   };
 }
 
-/** Pass/fail verdict helpers (label + value, never color alone). */
+/** Hard-coded verdict benchmarks: the pass/fail bar the pills always check
+ *  against. A per-deal Target (targets.desiredCap/desiredDscr) overrides only
+ *  when the user sets one (> 0); otherwise these defaults apply — so the Target
+ *  field can start empty without the pills losing their benchmark. */
+export const BENCHMARK_CAP = 0.08;
+export const BENCHMARK_DSCR = 1.25;
+/** Effective benchmark = the per-deal target when set (> 0), else the default. */
+export function targetCapOf(targetCap) { return num(targetCap) > 0 ? num(targetCap) : BENCHMARK_CAP; }
+export function targetDscrOf(targetDscr) { return num(targetDscr) > 0 ? num(targetDscr) : BENCHMARK_DSCR; }
+
+/** Pass/fail verdict helpers (label + value, never color alone). Null only when
+ *  the metric itself is unavailable (a zeroed deal), so a pill hides then. */
 export function capVerdict(cap, targetCap) {
-  if (cap === null || !Number.isFinite(num(targetCap))) return null;
-  return cap >= num(targetCap);
+  if (cap === null) return null;
+  return cap >= targetCapOf(targetCap);
 }
 export function dscrVerdict(dscr, targetDscr) {
-  if (dscr === null || !Number.isFinite(num(targetDscr))) return null;
-  return dscr >= num(targetDscr);
+  if (dscr === null) return null;
+  return dscr >= targetDscrOf(targetDscr);
 }
 export function onePctVerdict(onePctRule) {
   if (onePctRule === null || onePctRule === undefined) return null;

@@ -4,7 +4,7 @@
 
 import { el, render } from '../dom.js';
 import * as fmt from '../format.js';
-import { compute, capVerdict, dscrVerdict, onePctVerdict } from '../model.js';
+import { compute, capVerdict, dscrVerdict, onePctVerdict, targetCapOf, targetDscrOf } from '../model.js';
 import { NOTES } from '../notes.js';
 
 const DEBOUNCE = 120;
@@ -162,9 +162,9 @@ export function renderDashboard(container, ctx) {
   // KPI strip — def = [label, valueFn, valueClassFn, noteFn, formula].
   // `formula` drives the hover/focus popup (mirrors workbook-model.md / model.js).
   const KPI_DEFS = [
-    ['CAP', (m) => fmt.percent2(m.cap), (m) => verdictClass(capVerdict(m.cap, prop.targets.desiredCap)), () => `target ${fmt.percent2(prop.targets.desiredCap)}`,
+    ['CAP', (m) => fmt.percent2(m.cap), (m) => verdictClass(capVerdict(m.cap, prop.targets.desiredCap)), () => `target ${fmt.percent2(targetCapOf(prop.targets.desiredCap))}`,
       'NOI ÷ Offer Price'],
-    ['DSCR', (m) => fmt.ratio(m.dscr), (m) => verdictClass(dscrVerdict(m.dscr, prop.targets.desiredDscr)), () => `target ${fmt.ratio(prop.targets.desiredDscr)}`,
+    ['DSCR', (m) => fmt.ratio(m.dscr), (m) => verdictClass(dscrVerdict(m.dscr, prop.targets.desiredDscr)), () => `target ${fmt.ratio(targetDscrOf(prop.targets.desiredDscr))}`,
       '(Rent − collection loss − included expenses) ÷ annual debt service'],
     ['NOI', (m) => fmt.money(m.noi), null, () => 'per year',
       'Total rent − included expenses'],
@@ -264,15 +264,27 @@ export function renderDashboard(container, ctx) {
     dealCell('All-In Cost', allInSummaryCell, true),
     dealCell('Fees', offerField('fees', 'Fees')),
     dealCell('Improvement', offerField('improvements', 'Improvements')),
-    // Target = the benchmark the verdict pills compare against (default 8% / 1.25).
+    // Target = an optional per-deal override of the verdict benchmark. It starts
+    // empty (|| null renders 0 as blank); the pills fall back to the hard-coded
+    // benchmark (8% / 1.25) until the user sets one here, which then overrides it.
     // Editing it moves the pill bar only — never the offer (that's goal-seek's job).
-    dealCell('Target CAP', fieldPercent(prop.targets.desiredCap, (v) => { prop.targets.desiredCap = v; onEdit(); }, { label: 'Target CAP' })),
-    dealCell('Target DSCR', fieldNum(prop.targets.desiredDscr, (v) => { prop.targets.desiredDscr = v; onEdit(); }, { label: 'Target DSCR', step: '0.01' })),
+    dealCell('Target CAP', fieldPercent(prop.targets.desiredCap || null, (v) => { prop.targets.desiredCap = v; onEdit(); }, { label: 'Target CAP' })),
+    dealCell('Target DSCR', fieldNum(prop.targets.desiredDscr || null, (v) => { prop.targets.desiredDscr = v; onEdit(); }, { label: 'Target DSCR', step: '0.01' })),
   ]);
   const infoCard = card('Property Info', 'col-3', [
     el('div', { class: 'form-grid form-grid--3' }, infoDefs.map(([label, key, type]) =>
       labeledField(label, type === 'num'
-        ? fieldNum(prop.info[key], (v) => { prop.info[key] = v; onEdit(); }, { label })
+        ? fieldNum(prop.info[key], (v) => {
+            prop.info[key] = v;
+            // Workbook onEdit parity: editing Asking Price seeds the Offer Price to
+            // it (the offer's starting point), syncing every bound offer input. The
+            // Target benchmark and the transient goal-seek inputs are left alone.
+            if (key === 'askingPrice') {
+              prop.offer.offerPrice = v;
+              offerInputs.offerPrice.forEach((n) => { n.value = String(v); });
+            }
+            onEdit();
+          }, { label })
         : fieldText(prop.info[key], (v) => { prop.info[key] = v; onEdit(); }, { label })))),
   ]);
 
