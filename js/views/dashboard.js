@@ -272,7 +272,17 @@ export function renderDashboard(container, ctx) {
   const infoCard = card('Property Info', 'col-3', [
     el('div', { class: 'form-grid form-grid--3' }, infoDefs.map(([label, key, type]) =>
       labeledField(label, type === 'num'
-        ? fieldNum(prop.info[key], (v) => { prop.info[key] = v; onEdit(); }, { label })
+        ? fieldNum(prop.info[key], (v) => {
+            prop.info[key] = v;
+            // Workbook onEdit parity: editing Asking Price seeds the Offer Price to
+            // it (the offer's starting point), syncing every bound offer input. The
+            // Target benchmark and the transient goal-seek inputs are left alone.
+            if (key === 'askingPrice') {
+              prop.offer.offerPrice = v;
+              offerInputs.offerPrice.forEach((n) => { n.value = String(v); });
+            }
+            onEdit();
+          }, { label })
         : fieldText(prop.info[key], (v) => { prop.info[key] = v; onEdit(); }, { label })))),
   ]);
 

@@ -263,6 +263,18 @@ test('S15 goal-seek — the blank solve inputs back-solve the offer without touc
   await expect(page.locator('input[aria-label="Solve offer for DSCR"]')).toHaveValue('');
 });
 
+test('Asking price seeds the offer — editing Asking Price sets Offer Price to it (workbook parity)', async ({ page }) => {
+  await loadSample(page);
+  const offer = page.locator('.deal-strip input[aria-label="Offer price"]');
+  const targetCap = page.locator('.deal-strip input[aria-label="Target CAP"]');
+  // Editing Asking Price (Property Info) seeds the Offer Price to the same value…
+  await setField(page, 'input[aria-label="Asking"]', '1450000');
+  await expect(offer).toHaveValue('1450000');
+  // …the CAP recomputes off the new offer, and the Target benchmark is untouched.
+  await expect.poll(async () => (await kpis(page))['CAP']).not.toBe('—');
+  await expect(targetCap).toHaveValue('8');
+});
+
 test('S16 change marker — affected values get a corner marker on edit, not on load or inert edits', async ({ page }) => {
   await loadSample(page);
   const marked = page.locator('.flash');                   // .flash renders the corner-fold marker
