@@ -232,10 +232,11 @@ test('S14 pro-forma horizon — slider extends to 10 years with a boundary and 1
 test('S15 desired CAP/DSCR goal-seek — typing a target back-solves the offer price', async ({ page }) => {
   await loadSample(page);
   const offer = page.locator('.deal-strip input[aria-label="Offer price"]');
-  // Desired CAP entered as a percent (8 = 8%) → offer = NOI ÷ 0.08 = 832,837; CAP reads 8.00%
-  await setField(page, '.deal-strip input[aria-label="Desired CAP"]', '8');
-  await expect(offer).toHaveValue('832837');
-  await expect.poll(async () => (await kpis(page))['CAP']).toBe('8.00%');
+  // Desired CAP entered as a percent (6 = 6%; differs from the 8% default so it
+  // registers as a change) → offer = NOI ÷ 0.06 = 1,110,450; CAP reads 6.00%
+  await setField(page, '.deal-strip input[aria-label="Desired CAP"]', '6');
+  await expect(offer).toHaveValue('1110450');
+  await expect.poll(async () => (await kpis(page))['CAP']).toBe('6.00%');
   // Desired DSCR 1.4 → offer back-solves through the loan (PV ÷ LTV) to 775,560; DSCR reads 1.40
   await setField(page, '.deal-strip input[aria-label="Desired DSCR"]', '1.4');
   await expect(offer).toHaveValue('775560');
