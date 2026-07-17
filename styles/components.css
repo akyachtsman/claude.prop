@@ -451,17 +451,6 @@ body {
 }
 .deal-cell--accent .deal-cell__val { background: var(--gen-shade); }
 @media (pointer: coarse) { .deal-cell__val { min-height: 44px; } }
-/* Goal-seek: blank one-shot inputs under Offer Price — type a target CAP/DSCR to
-   back-solve the offer. Kept compact so the deal band stays one row on desktop. */
-.offer-cell { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.solve-row { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
-.solve-row__lead, .solve-row__item {
-  font-size: 10px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.03em; color: var(--color-text-secondary); white-space: nowrap;
-}
-.solve-row__item { display: inline-flex; align-items: center; gap: 3px; }
-.deal-strip .input--solve { min-height: 22px; width: 54px; padding: 1px var(--space-1); font-size: 11px; }
-@media (pointer: coarse) { .deal-strip .input--solve { min-height: 44px; font-size: 16px; } }
 /* percentage entry — number input with a trailing % sign */
 .input-pct { display: flex; align-items: center; gap: 4px; width: 100%; }
 .input-pct .input { flex: 1; min-width: 0; }

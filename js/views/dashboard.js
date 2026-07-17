@@ -4,7 +4,7 @@
 
 import { el, render } from '../dom.js';
 import * as fmt from '../format.js';
-import { compute, capVerdict, dscrVerdict, onePctVerdict, targetCapOf, targetDscrOf, BENCHMARK_CAP, BENCHMARK_DSCR } from '../model.js';
+import { compute, capVerdict, dscrVerdict, onePctVerdict, BENCHMARK_CAP, BENCHMARK_DSCR } from '../model.js';
 import { NOTES } from '../notes.js';
 
 const DEBOUNCE = 120;
@@ -140,31 +140,12 @@ export function renderDashboard(container, ctx) {
       offerInputs.offerPrice.forEach((n) => { n.value = String(v); });
     }
   }
-  // Goal-seek inputs live blank beneath Offer Price and are one-shot: typing a
-  // target CAP (percent) or DSCR back-solves the offer that achieves it, then the
-  // field clears — the solved offer is the result. These never set the Target
-  // benchmark (that drives the pills) and nothing about them persists.
-  function solveField(kind, label, isPct) {
-    const input = el('input', {
-      class: 'input input--solve', type: 'number', inputmode: 'decimal',
-      step: isPct ? '0.1' : '0.01', value: '', placeholder: '—', 'aria-label': label,
-    });
-    input.addEventListener('change', () => {
-      if (input.value !== '') {
-        const raw = parseFloat(input.value);
-        if (Number.isFinite(raw) && raw > 0) { goalSeekOffer(kind, isPct ? raw / 100 : raw); onEdit(); }
-      }
-      input.value = '';    // transient — the offer holds the result; the field resets to blank
-    });
-    return input;
-  }
-
   // KPI strip — def = [label, valueFn, valueClassFn, noteFn, formula].
   // `formula` drives the hover/focus popup (mirrors workbook-model.md / model.js).
   const KPI_DEFS = [
-    ['CAP', (m) => fmt.percent2(m.cap), (m) => verdictClass(capVerdict(m.cap, prop.targets.desiredCap)), () => `target ${fmt.percent2(targetCapOf(prop.targets.desiredCap))}`,
+    ['CAP', (m) => fmt.percent2(m.cap), (m) => verdictClass(capVerdict(m.cap)), () => `benchmark ${fmt.percent2(BENCHMARK_CAP)}`,
       'NOI ÷ Offer Price'],
-    ['DSCR', (m) => fmt.ratio(m.dscr), (m) => verdictClass(dscrVerdict(m.dscr, prop.targets.desiredDscr)), () => `target ${fmt.ratio(targetDscrOf(prop.targets.desiredDscr))}`,
+    ['DSCR', (m) => fmt.ratio(m.dscr), (m) => verdictClass(dscrVerdict(m.dscr)), () => `benchmark ${fmt.ratio(BENCHMARK_DSCR)}`,
       '(Rent − collection loss − included expenses) ÷ annual debt service'],
     ['NOI', (m) => fmt.money(m.noi), null, () => 'per year',
       'Total rent − included expenses'],
@@ -246,36 +227,21 @@ export function renderDashboard(container, ctx) {
   // & Debt card; All-In Cost derived. Built here, mounted in render() below.
   const allInSummaryCell = el('div', { class: 'deal-cell__val' });
   out.allInCells.push(allInSummaryCell);
-  // Offer Price cell carries the blank goal-seek controls: "solve offer → CAP/DSCR".
-  const offerCell = el('div', { class: 'offer-cell' }, [
-    offerField('offerPrice', 'Offer price'),
-    el('div', { class: 'solve-row' }, [
-      el('span', { class: 'solve-row__lead', text: 'solve offer →' }),
-      el('span', { class: 'solve-row__item' }, [
-        el('span', { text: 'CAP' }), solveField('cap', 'Solve offer for CAP', true), el('span', { text: '%' }),
-      ]),
-      el('span', { class: 'solve-row__item' }, [
-        el('span', { text: 'DSCR' }), solveField('dscr', 'Solve offer for DSCR', false),
-      ]),
-    ]),
-  ]);
-  // A Target reads as "set" only when it's a real override — non-zero AND not
-  // equal to the default benchmark (legacy deals stored the old 8% / 1.25 default).
-  const capOverride = (prop.targets.desiredCap && prop.targets.desiredCap !== BENCHMARK_CAP) ? prop.targets.desiredCap : null;
-  const dscrOverride = (prop.targets.desiredDscr && prop.targets.desiredDscr !== BENCHMARK_DSCR) ? prop.targets.desiredDscr : null;
+  // Target CAP/DSCR is a GOAL-SEEK: typing a value back-solves the offer price so
+  // the ACTUAL CAP/DSCR becomes that number (CAP = NOI÷offer, DSCR via PV(loan)÷LTV).
+  // It never touches the verdict pills — those check the fixed benchmark. The field
+  // shows a value only when it's a real goal-seek target: blank when unset (0) or
+  // merely equal to the benchmark (so a legacy deal that stored the old 8% / 1.25
+  // default reads as empty, not as a target the user set).
+  const capTarget = (prop.targets.desiredCap && prop.targets.desiredCap !== BENCHMARK_CAP) ? prop.targets.desiredCap : null;
+  const dscrTarget = (prop.targets.desiredDscr && prop.targets.desiredDscr !== BENCHMARK_DSCR) ? prop.targets.desiredDscr : null;
   const dealStrip = el('div', { class: 'deal-strip', 'aria-label': 'Deal summary' }, [
-    dealCell('Offer Price', offerCell),
+    dealCell('Offer Price', offerField('offerPrice', 'Offer price')),
     dealCell('All-In Cost', allInSummaryCell, true),
     dealCell('Fees', offerField('fees', 'Fees')),
     dealCell('Improvement', offerField('improvements', 'Improvements')),
-    // Target = an optional per-deal override of the verdict benchmark. The field
-    // shows a value only when it's a GENUINE override — blank when unset (0) or
-    // merely equal to the default benchmark, so a legacy deal that stored the old
-    // 8% / 1.25 default (or a value typed equal to it) reads as empty, not as a
-    // target the user set. The pills fall back to the hard-coded benchmark until a
-    // real override is entered. Editing it moves the pill bar only — never the offer.
-    dealCell('Target CAP', fieldPercent(capOverride, (v) => { prop.targets.desiredCap = v; onEdit(); }, { label: 'Target CAP' })),
-    dealCell('Target DSCR', fieldNum(dscrOverride, (v) => { prop.targets.desiredDscr = v; onEdit(); }, { label: 'Target DSCR', step: '0.01' })),
+    dealCell('Target CAP', fieldPercent(capTarget, (v) => { prop.targets.desiredCap = v; goalSeekOffer('cap', v); onEdit(); }, { label: 'Target CAP' })),
+    dealCell('Target DSCR', fieldNum(dscrTarget, (v) => { prop.targets.desiredDscr = v; goalSeekOffer('dscr', v); onEdit(); }, { label: 'Target DSCR', step: '0.01' })),
   ]);
   const infoCard = card('Property Info', 'col-3', [
     el('div', { class: 'form-grid form-grid--3' }, infoDefs.map(([label, key, type]) =>
@@ -283,8 +249,7 @@ export function renderDashboard(container, ctx) {
         ? fieldNum(prop.info[key], (v) => {
             prop.info[key] = v;
             // Workbook onEdit parity: editing Asking Price seeds the Offer Price to
-            // it (the offer's starting point), syncing every bound offer input. The
-            // Target benchmark and the transient goal-seek inputs are left alone.
+            // it (the offer's starting point), syncing every bound offer input.
             if (key === 'askingPrice') {
               prop.offer.offerPrice = v;
               offerInputs.offerPrice.forEach((n) => { n.value = String(v); });

@@ -12,11 +12,11 @@ function monogram(name) {
 }
 
 function badge(prop, m) {
-  const cap = capVerdict(m.cap, prop.targets.desiredCap);
-  const dscr = dscrVerdict(m.dscr, prop.targets.desiredDscr);
-  if (cap === null && dscr === null) return el('span', { class: 'pill', text: 'No targets' });
+  const cap = capVerdict(m.cap);
+  const dscr = dscrVerdict(m.dscr);
+  if (cap === null && dscr === null) return el('span', { class: 'pill', text: 'No verdict' });
   const pass = cap !== false && dscr !== false && (cap !== null || dscr !== null);
-  return el('span', { class: 'pill ' + (pass ? 'pill--pass' : 'pill--fail'), text: pass ? 'Meets targets' : 'Below targets' });
+  return el('span', { class: 'pill ' + (pass ? 'pill--pass' : 'pill--fail'), text: pass ? 'Meets benchmark' : 'Below benchmark' });
 }
 
 export function renderList(container, ctx) {
