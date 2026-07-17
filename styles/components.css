@@ -39,8 +39,9 @@ body {
   color: var(--color-on-navy); text-decoration: none; white-space: nowrap;
 }
 .topbar__brand svg { flex: none; }
-.switcher { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.switcher { display: flex; align-items: center; gap: var(--space-2); }
 .switcher__btn {
+  flex: none;                         /* arrows keep their size — never shrink or overflow */
   font: inherit; font-weight: 700; color: var(--color-on-navy);
   background: var(--color-navy-soft); border: none; cursor: pointer;
   min-width: 44px; min-height: 44px; border-radius: var(--radius-sm);
@@ -48,15 +49,24 @@ body {
   transition: background 0.15s ease;
 }
 .switcher__btn:hover, .switcher__btn:focus-visible { background: var(--color-accent); }
-.switcher__title { min-width: 0; }
+/* Cap + truncate the title so the switcher yields width to the verdict pills
+   instead of pushing them into the nav (full name is in the deal card + list). */
+.switcher__title { flex: 0 1 auto; min-width: 0; max-width: 130px; }
 .switcher__title h1 {
   margin: 0; font-size: var(--font-lg); font-weight: 800; line-height: 1.2;
   color: var(--color-on-navy); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .switcher__title .sub {
-  font-size: var(--font-xs); color: var(--color-on-navy-muted); white-space: nowrap;
+  display: block; font-size: var(--font-xs); color: var(--color-on-navy-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+/* The switcher title/subtitle truncate (min-width:0 lives on the title, not the
+   whole switcher) so the prev/next buttons keep their size and a third verdict
+   pill never collides with them. */
 .topbar__pills { display: flex; gap: var(--space-2); flex-wrap: nowrap; }
+/* Compact the topbar verdict pills so all three (CAP, DSCR, 5Y NPV) fit the
+   signed-in row without crowding the nav. */
+.topbar__pills .pill { font-size: 11px; padding: 2px 7px; }
 .topbar__nav { margin-left: auto; display: flex; gap: var(--space-1); }
 .topbar__link {
   color: var(--color-on-navy); text-decoration: none;
@@ -370,7 +380,7 @@ body {
 }
 
 /* app views (dashboard editable, list, compare) ------------------------- */
-.topbar__center { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-4); }
+.topbar__center { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-2); }
 .topbar__viewtitle { font-weight: 800; font-size: var(--font-lg); color: var(--color-on-navy); }
 .topbar__link { background: transparent; border: none; font: inherit; cursor: pointer; }
 
@@ -561,7 +571,7 @@ body {
 .account { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
 .account__email {
   font-size: var(--font-sm); color: var(--color-on-navy-muted);
-  max-width: 16ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  max-width: 7ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .account__btn { white-space: nowrap; }
 
