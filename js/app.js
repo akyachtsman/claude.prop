@@ -4,7 +4,7 @@
 import { el, clear, toast } from './dom.js';
 import * as store from './store.js';
 import * as fmt from './format.js';
-import { capVerdict, dscrVerdict, targetCapOf, targetDscrOf } from './model.js';
+import { capVerdict, dscrVerdict, BENCHMARK_CAP, BENCHMARK_DSCR } from './model.js';
 import { sampleProperty, demoProperties } from './sample.js';
 import { renderDashboard } from './views/dashboard.js';
 import { renderList } from './views/list.js';
@@ -180,16 +180,16 @@ function fmtSub(p) {
 
 function paintPills(host, m, p) {
   clear(host);
-  const cap = capVerdict(m.cap, p.targets.desiredCap);
-  const dscr = dscrVerdict(m.dscr, p.targets.desiredDscr);
+  const cap = capVerdict(m.cap);
+  const dscr = dscrVerdict(m.dscr);
   // 5-year NPV verdict: pass only when NPV > $0 (strictly positive — the deal
   // beats its cost of capital, not merely breaks even), fail at or below $0.
   // Matches the dashboard KPI cell's colour rule. Null (no pill) when NPV isn't
   // a real number (e.g. a zeroed deal).
   const npvOk = Number.isFinite(m.npv) ? m.npv > 0 : null;
-  // Show the effective benchmark (per-deal Target when set, else the hard-coded default).
-  const capTxt = `CAP ${fmt.percent2(m.cap)} ${cap ? '≥' : '<'} ${fmt.percent2(targetCapOf(p.targets.desiredCap))}`;
-  const dscrTxt = `DSCR ${fmt.ratio(m.dscr)} ${dscr ? '≥' : '<'} ${fmt.ratio(targetDscrOf(p.targets.desiredDscr))}`;
+  // Pills check the FIXED benchmark, not the deal's Target (that's a goal-seek).
+  const capTxt = `CAP ${fmt.percent2(m.cap)} ${cap ? '≥' : '<'} ${fmt.percent2(BENCHMARK_CAP)}`;
+  const dscrTxt = `DSCR ${fmt.ratio(m.dscr)} ${dscr ? '≥' : '<'} ${fmt.ratio(BENCHMARK_DSCR)}`;
   // No "≥ $0" comparator — the value's sign + pass/fail colour convey it, and it
   // keeps this third pill compact enough for the signed-in topbar.
   const npvTxt = `5Y NPV ${fmt.money(m.npv)}`;

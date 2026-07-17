@@ -134,17 +134,14 @@ test('S8 compare — best/worst highlight and per-column verdict', async ({ page
   await expect(page.locator('.cell--best').first()).toBeVisible();
 });
 
-test('New property defaults — Target CAP / DSCR start empty; goal-seek blank', async ({ page }) => {
+test('New property defaults — Target CAP / DSCR start empty', async ({ page }) => {
   await page.goto('./', { waitUntil: 'load' });
   await page.click('button:has-text("Add your first property")');
   await page.waitForSelector('.kpi-strip');
   // Target starts EMPTY — a pre-filled value would read as a target the user set.
-  // The pills fall back to the hard-coded 8% / 1.25 benchmark until one is entered.
+  // Target is a goal-seek (moves the offer); the pills check the fixed 8% / 1.25.
   await expect(page.locator('.deal-strip input[aria-label="Target CAP"]')).toHaveValue('');
   await expect(page.locator('input[aria-label="Target DSCR"]')).toHaveValue('');
-  // The goal-seek inputs are separate and start blank — nothing was solved yet.
-  await expect(page.locator('input[aria-label="Solve offer for CAP"]')).toHaveValue('');
-  await expect(page.locator('input[aria-label="Solve offer for DSCR"]')).toHaveValue('');
 });
 
 test('S9 empty/zero — a zeroed property renders "—", never NaN', async ({ page }) => {
@@ -244,24 +241,17 @@ test('S14 pro-forma horizon — slider extends to 10 years with a boundary and 1
   await expect(stats).toHaveCount(1);
 });
 
-test('S15 goal-seek — the blank solve inputs back-solve the offer without touching the Target benchmark', async ({ page }) => {
+test('S15 goal-seek — typing Target CAP/DSCR back-solves the offer so the ACTUAL metric hits it', async ({ page }) => {
   await loadSample(page);
   const offer = page.locator('.deal-strip input[aria-label="Offer price"]');
-  const targetCap = page.locator('.deal-strip input[aria-label="Target CAP"]');
-  const solveCap = page.locator('input[aria-label="Solve offer for CAP"]');
-  // Solve CAP entered as a percent (6 = 6%) → offer = NOI ÷ 0.06 = 1,110,450; CAP reads 6.00%
-  await setField(page, 'input[aria-label="Solve offer for CAP"]', '6');
+  // Target CAP 6% → offer = NOI ÷ 0.06 = 1,110,450; the ACTUAL CAP becomes 6.00%.
+  await setField(page, '.deal-strip input[aria-label="Target CAP"]', '6');
   await expect(offer).toHaveValue('1110450');
   await expect.poll(async () => (await kpis(page))['CAP']).toBe('6.00%');
-  // The solve input is one-shot: it clears back to blank, and the Target field
-  // (an optional override) stays empty — the goal-seek never sets a benchmark.
-  await expect(solveCap).toHaveValue('');
-  await expect(targetCap).toHaveValue('');
-  // Solve DSCR 1.4 → offer back-solves through the loan (PV ÷ LTV) to 775,560; DSCR reads 1.40
-  await setField(page, 'input[aria-label="Solve offer for DSCR"]', '1.4');
+  // Target DSCR 1.4 → offer back-solves through the loan (PV ÷ LTV) to 775,560; DSCR reads 1.40.
+  await setField(page, '.deal-strip input[aria-label="Target DSCR"]', '1.4');
   await expect(offer).toHaveValue('775560');
   await expect.poll(async () => (await kpis(page))['DSCR']).toBe('1.40');
-  await expect(page.locator('input[aria-label="Solve offer for DSCR"]')).toHaveValue('');
 });
 
 test('Asking price seeds the offer — editing Asking Price sets Offer Price to it (workbook parity)', async ({ page }) => {
@@ -276,28 +266,29 @@ test('Asking price seeds the offer — editing Asking Price sets Offer Price to 
   await expect(targetCap).toHaveValue('');
 });
 
-test('Verdict benchmark is hard-coded 8% / 1.25 with the Target empty; a Target overrides it', async ({ page }) => {
+test('Pills check the FIXED 8% / 1.25 benchmark — a Target goal-seek moves actual CAP but not the bar', async ({ page }) => {
   await loadSample(page);
-  // Target field empty, yet the CAP pill still checks against the hard-coded 8.00%.
-  await expect(page.locator('.deal-strip input[aria-label="Target CAP"]')).toHaveValue('');
   const capPill = page.locator('.topbar__pills .pill').nth(0);
-  await expect(capPill).toContainText('< 8.00%');          // sample CAP 5.13% < 8% benchmark
+  // Sample CAP 5.13% vs the fixed 8% benchmark → fail.
+  await expect(capPill).toContainText('< 8.00%');
   await expect(capPill).toHaveClass(/pill--fail/);
-  // Setting a Target overrides the benchmark: a 5% target makes the 5.13% CAP pass.
+  // Target CAP is a goal-seek: 5% moves the ACTUAL CAP to 5.00%, but the pill still
+  // checks the fixed 8.00% benchmark (not the Target) — so it stays fail at 5% < 8%.
   await setField(page, '.deal-strip input[aria-label="Target CAP"]', '5');
-  await expect(capPill).toContainText('≥ 5.00%');
-  await expect(capPill).toHaveClass(/pill--pass/);
+  await expect.poll(async () => (await kpis(page))['CAP']).toBe('5.00%');
+  await expect(capPill).toContainText('CAP 5.00% < 8.00%');
+  await expect(capPill).toHaveClass(/pill--fail/);
 });
 
 test('A Target equal to the benchmark reads as unset — renders empty on reload (legacy 8%/1.25 deals)', async ({ page }) => {
   await loadSample(page);
   const targetCap = page.locator('.deal-strip input[aria-label="Target CAP"]');
-  // Type a Target equal to the default benchmark and commit (mirrors a legacy deal
-  // that stored the old 8% default). It shows while the input stays mounted…
+  // Type a Target equal to the benchmark and commit (mirrors a legacy deal that
+  // stored the old 8% default). It shows while the input stays mounted…
   await setField(page, '.deal-strip input[aria-label="Target CAP"]', '8');
   await expect(targetCap).toHaveValue('8');
   // …but on reload it re-renders from the stored value (0.08 === benchmark) as blank,
-  // so it never reads as a target the user set — while the pill still checks 8.00%.
+  // so a legacy default never reads as a goal-seek target the user set.
   await page.reload();
   await page.waitForSelector('.kpi-strip');
   await expect(page.locator('.deal-strip input[aria-label="Target CAP"]')).toHaveValue('');

@@ -43,13 +43,13 @@ function extremes(vals, dir) {
 }
 
 function verdictPill(p, m) {
-  const cap = capVerdict(m.cap, p.targets.desiredCap);
-  const dscr = dscrVerdict(m.dscr, p.targets.desiredDscr);
+  const cap = capVerdict(m.cap);
+  const dscr = dscrVerdict(m.dscr);
   const none = cap === null && dscr === null;
   const pass = cap !== false && dscr !== false && (cap !== null || dscr !== null);
   return el('span', { class: 'compare-verdict' }, [el('span', {
     class: 'pill ' + (none ? '' : pass ? 'pill--pass' : 'pill--fail'),
-    text: none ? 'No targets' : pass ? 'Meets' : 'Below',
+    text: none ? '—' : pass ? 'Meets' : 'Below',
   })]);
 }
 
