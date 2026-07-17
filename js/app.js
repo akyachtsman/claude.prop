@@ -182,9 +182,11 @@ function paintPills(host, m, p) {
   clear(host);
   const cap = capVerdict(m.cap, p.targets.desiredCap);
   const dscr = dscrVerdict(m.dscr, p.targets.desiredDscr);
-  // 5-year NPV verdict: accept (pass) when NPV ≥ $0 (break-even cost of capital),
-  // fail when negative. Skipped when NPV isn't a real number (e.g. a zeroed deal).
-  const npvOk = Number.isFinite(m.npv) ? m.npv >= 0 : null;
+  // 5-year NPV verdict: pass only when NPV > $0 (strictly positive — the deal
+  // beats its cost of capital, not merely breaks even), fail at or below $0.
+  // Matches the dashboard KPI cell's colour rule. Null (no pill) when NPV isn't
+  // a real number (e.g. a zeroed deal).
+  const npvOk = Number.isFinite(m.npv) ? m.npv > 0 : null;
   // Show the effective benchmark (per-deal Target when set, else the hard-coded default).
   const capTxt = `CAP ${fmt.percent2(m.cap)} ${cap ? '≥' : '<'} ${fmt.percent2(targetCapOf(p.targets.desiredCap))}`;
   const dscrTxt = `DSCR ${fmt.ratio(m.dscr)} ${dscr ? '≥' : '<'} ${fmt.ratio(targetDscrOf(p.targets.desiredDscr))}`;
