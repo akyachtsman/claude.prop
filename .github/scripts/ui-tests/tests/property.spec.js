@@ -134,12 +134,16 @@ test('S8 compare — best/worst highlight and per-column verdict', async ({ page
   await expect(page.locator('.cell--best').first()).toBeVisible();
 });
 
-test('New property defaults — Desired CAP 8% and Desired DSCR 1.25', async ({ page }) => {
+test('New property defaults — Target CAP 8% / Target DSCR 1.25; goal-seek blank', async ({ page }) => {
   await page.goto('./', { waitUntil: 'load' });
   await page.click('button:has-text("Add your first property")');
   await page.waitForSelector('.kpi-strip');
-  await expect(page.locator('.deal-strip input[aria-label="Desired CAP"]')).toHaveValue('8');
-  await expect(page.locator('input[aria-label="Desired DSCR"]')).toHaveValue('1.25');
+  // The Target benchmark (drives the verdict pills) keeps its 8% / 1.25 defaults.
+  await expect(page.locator('.deal-strip input[aria-label="Target CAP"]')).toHaveValue('8');
+  await expect(page.locator('input[aria-label="Target DSCR"]')).toHaveValue('1.25');
+  // The goal-seek inputs are separate and start blank — nothing was solved yet.
+  await expect(page.locator('input[aria-label="Solve offer for CAP"]')).toHaveValue('');
+  await expect(page.locator('input[aria-label="Solve offer for DSCR"]')).toHaveValue('');
 });
 
 test('S9 empty/zero — a zeroed property renders "—", never NaN', async ({ page }) => {
@@ -239,18 +243,24 @@ test('S14 pro-forma horizon — slider extends to 10 years with a boundary and 1
   await expect(stats).toHaveCount(1);
 });
 
-test('S15 desired CAP/DSCR goal-seek — typing a target back-solves the offer price', async ({ page }) => {
+test('S15 goal-seek — the blank solve inputs back-solve the offer without touching the Target benchmark', async ({ page }) => {
   await loadSample(page);
   const offer = page.locator('.deal-strip input[aria-label="Offer price"]');
-  // Desired CAP entered as a percent (6 = 6%; differs from the 8% default so it
-  // registers as a change) → offer = NOI ÷ 0.06 = 1,110,450; CAP reads 6.00%
-  await setField(page, '.deal-strip input[aria-label="Desired CAP"]', '6');
+  const targetCap = page.locator('.deal-strip input[aria-label="Target CAP"]');
+  const solveCap = page.locator('input[aria-label="Solve offer for CAP"]');
+  // Solve CAP entered as a percent (6 = 6%) → offer = NOI ÷ 0.06 = 1,110,450; CAP reads 6.00%
+  await setField(page, 'input[aria-label="Solve offer for CAP"]', '6');
   await expect(offer).toHaveValue('1110450');
   await expect.poll(async () => (await kpis(page))['CAP']).toBe('6.00%');
-  // Desired DSCR 1.4 → offer back-solves through the loan (PV ÷ LTV) to 775,560; DSCR reads 1.40
-  await setField(page, '.deal-strip input[aria-label="Desired DSCR"]', '1.4');
+  // The solve input is one-shot: it clears back to blank, and the Target benchmark
+  // (which the verdict pills compare against) is untouched at its 8% default.
+  await expect(solveCap).toHaveValue('');
+  await expect(targetCap).toHaveValue('8');
+  // Solve DSCR 1.4 → offer back-solves through the loan (PV ÷ LTV) to 775,560; DSCR reads 1.40
+  await setField(page, 'input[aria-label="Solve offer for DSCR"]', '1.4');
   await expect(offer).toHaveValue('775560');
   await expect.poll(async () => (await kpis(page))['DSCR']).toBe('1.40');
+  await expect(page.locator('input[aria-label="Solve offer for DSCR"]')).toHaveValue('');
 });
 
 test('S16 change marker — affected values get a corner marker on edit, not on load or inert edits', async ({ page }) => {
