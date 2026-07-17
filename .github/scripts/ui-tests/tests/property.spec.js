@@ -78,6 +78,16 @@ test('S5 calc fidelity — sample deal KPIs match the actual-close fixture', asy
   expect(errors).toEqual([]);
 });
 
+test('Header pills include the 5-year NPV verdict after CAP and DSCR', async ({ page }) => {
+  await loadSample(page);
+  const pills = page.locator('.topbar__pills .pill');
+  await expect(pills).toHaveCount(3);
+  // order: CAP, DSCR, then 5Y NPV
+  await expect(pills.nth(2)).toContainText('5Y NPV');
+  await expect(pills.nth(2)).toContainText('-$29,512');   // sample's negative NPV
+  await expect(pills.nth(2)).toHaveClass(/pill--fail/);   // negative → fail
+});
+
 test('S6 commit recalc — KPIs update when a field commits (Enter/blur), not mid-type', async ({ page }) => {
   await loadSample(page);
   const before = (await kpis(page))['CAP'];              // 5.13%

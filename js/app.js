@@ -125,8 +125,8 @@ function showDashboard(id) {
   // on undo/redo, and reset when you switch to a different property.
   if (historyId !== id) { undoStack = []; redoStack = []; historyId = id; }
   committedState = deepCopy(saved);
-  const undoBtn = el('button', { class: 'topbar__link topbar__action', type: 'button', 'aria-label': 'Undo last change', text: 'Undo', onclick: () => undo(id) });
-  const redoBtn = el('button', { class: 'topbar__link topbar__action', type: 'button', 'aria-label': 'Redo change', text: 'Redo', onclick: () => redo(id) });
+  const undoBtn = el('button', { class: 'topbar__link topbar__action', type: 'button', 'aria-label': 'Undo last change', title: 'Undo', text: '↶', onclick: () => undo(id) });
+  const redoBtn = el('button', { class: 'topbar__link topbar__action', type: 'button', 'aria-label': 'Redo change', title: 'Redo', text: '↷', onclick: () => redo(id) });
   const refreshHistory = () => { undoBtn.disabled = undoStack.length === 0; redoBtn.disabled = redoStack.length === 0; };
   refreshHistory();
 
@@ -182,10 +182,17 @@ function paintPills(host, m, p) {
   clear(host);
   const cap = capVerdict(m.cap, p.targets.desiredCap);
   const dscr = dscrVerdict(m.dscr, p.targets.desiredDscr);
+  // 5-year NPV verdict: accept (pass) when NPV ≥ $0 (break-even cost of capital),
+  // fail when negative. Skipped when NPV isn't a real number (e.g. a zeroed deal).
+  const npvOk = Number.isFinite(m.npv) ? m.npv >= 0 : null;
   const capTxt = `CAP ${fmt.percent2(m.cap)} ${cap ? '≥' : '<'} ${fmt.percent2(Number(p.targets.desiredCap))}`;
   const dscrTxt = `DSCR ${fmt.ratio(m.dscr)} ${dscr ? '≥' : '<'} ${fmt.ratio(Number(p.targets.desiredDscr))}`;
+  // No "≥ $0" comparator — the value's sign + pass/fail colour convey it, and it
+  // keeps this third pill compact enough for the signed-in topbar.
+  const npvTxt = `5Y NPV ${fmt.money(m.npv)}`;
   if (cap !== null) host.appendChild(el('span', { class: 'pill ' + (cap ? 'pill--pass' : 'pill--fail'), text: capTxt }));
   if (dscr !== null) host.appendChild(el('span', { class: 'pill ' + (dscr ? 'pill--pass' : 'pill--fail'), text: dscrTxt }));
+  if (npvOk !== null) host.appendChild(el('span', { class: 'pill ' + (npvOk ? 'pill--pass' : 'pill--fail'), text: npvTxt }));
 }
 
 // ── actions ────────────────────────────────────────────────────────────
