@@ -140,6 +140,24 @@ export function renderDashboard(container, ctx) {
       offerInputs.offerPrice.forEach((n) => { n.value = String(v); });
     }
   }
+  // Goal-seek inputs live blank beneath Offer Price and are one-shot: typing a
+  // target CAP (percent) or DSCR back-solves the offer that achieves it, then the
+  // field clears — the solved offer is the result. These never set the Target
+  // benchmark (that drives the pills) and nothing about them persists.
+  function solveField(kind, label, isPct) {
+    const input = el('input', {
+      class: 'input input--solve', type: 'number', inputmode: 'decimal',
+      step: isPct ? '0.1' : '0.01', value: '', placeholder: '—', 'aria-label': label,
+    });
+    input.addEventListener('change', () => {
+      if (input.value !== '') {
+        const raw = parseFloat(input.value);
+        if (Number.isFinite(raw) && raw > 0) { goalSeekOffer(kind, isPct ? raw / 100 : raw); onEdit(); }
+      }
+      input.value = '';    // transient — the offer holds the result; the field resets to blank
+    });
+    return input;
+  }
 
   // KPI strip — def = [label, valueFn, valueClassFn, noteFn, formula].
   // `formula` drives the hover/focus popup (mirrors workbook-model.md / model.js).
@@ -228,13 +246,28 @@ export function renderDashboard(container, ctx) {
   // & Debt card; All-In Cost derived. Built here, mounted in render() below.
   const allInSummaryCell = el('div', { class: 'deal-cell__val' });
   out.allInCells.push(allInSummaryCell);
+  // Offer Price cell carries the blank goal-seek controls: "solve offer → CAP/DSCR".
+  const offerCell = el('div', { class: 'offer-cell' }, [
+    offerField('offerPrice', 'Offer price'),
+    el('div', { class: 'solve-row' }, [
+      el('span', { class: 'solve-row__lead', text: 'solve offer →' }),
+      el('span', { class: 'solve-row__item' }, [
+        el('span', { text: 'CAP' }), solveField('cap', 'Solve offer for CAP', true), el('span', { text: '%' }),
+      ]),
+      el('span', { class: 'solve-row__item' }, [
+        el('span', { text: 'DSCR' }), solveField('dscr', 'Solve offer for DSCR', false),
+      ]),
+    ]),
+  ]);
   const dealStrip = el('div', { class: 'deal-strip', 'aria-label': 'Deal summary' }, [
-    dealCell('Offer Price', offerField('offerPrice', 'Offer price')),
+    dealCell('Offer Price', offerCell),
     dealCell('All-In Cost', allInSummaryCell, true),
     dealCell('Fees', offerField('fees', 'Fees')),
     dealCell('Improvement', offerField('improvements', 'Improvements')),
-    dealCell('Desired CAP', fieldPercent(prop.targets.desiredCap, (v) => { prop.targets.desiredCap = v; goalSeekOffer('cap', v); onEdit(); }, { label: 'Desired CAP' })),
-    dealCell('Desired DSCR', fieldNum(prop.targets.desiredDscr, (v) => { prop.targets.desiredDscr = v; goalSeekOffer('dscr', v); onEdit(); }, { label: 'Desired DSCR', step: '0.01' })),
+    // Target = the benchmark the verdict pills compare against (default 8% / 1.25).
+    // Editing it moves the pill bar only — never the offer (that's goal-seek's job).
+    dealCell('Target CAP', fieldPercent(prop.targets.desiredCap, (v) => { prop.targets.desiredCap = v; onEdit(); }, { label: 'Target CAP' })),
+    dealCell('Target DSCR', fieldNum(prop.targets.desiredDscr, (v) => { prop.targets.desiredDscr = v; onEdit(); }, { label: 'Target DSCR', step: '0.01' })),
   ]);
   const infoCard = card('Property Info', 'col-3', [
     el('div', { class: 'form-grid form-grid--3' }, infoDefs.map(([label, key, type]) =>
