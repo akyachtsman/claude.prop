@@ -63,10 +63,32 @@ body {
 /* The switcher title/subtitle truncate (min-width:0 lives on the title, not the
    whole switcher) so the prev/next buttons keep their size and a third verdict
    pill never collides with them. */
-.topbar__pills { display: flex; gap: var(--space-2); flex-wrap: nowrap; }
+/* Tight rows (≤1600, incl. the 1440 one-screen target): the auto left margin
+   floats the pills into the middle of the space between the (left) switcher and
+   the (right, also margin-left:auto) undo/redo actions. The row is nearly full
+   at 1440, so this is the widest the pills can sit without crowding the nav.
+   Wide rows get true topbar centering — see the min-width:1600 rule below. */
+.topbar__pills { display: flex; gap: var(--space-2); flex-wrap: nowrap; margin-left: auto; }
 /* Compact the topbar verdict pills so all three (CAP, DSCR, 5Y NPV) fit the
    signed-in row without crowding the nav. */
 .topbar__pills .pill { font-size: 11px; padding: 2px 7px; }
+/* Wide rows (the owner's full-screen ≥1600 target): pin the pills to the true
+   center of the topbar — not merely the middle of the switcher↔actions gap,
+   which reads left-of-center because the nav on the right is heavy. Absolute
+   positioning takes the pills out of the center's flex flow, so the switcher
+   stays left and the undo/redo actions float right (their own margin-left:auto)
+   with no gap left behind. Because .topbar's horizontal padding is symmetric,
+   left:50% + translateX(-50%) lands on the true window midline. 1600 is the
+   width at which a centered 3-pill block clears both the switcher and the
+   actions/nav; below it the in-flow rule above keeps the 1440 one-screen target
+   collision-free. */
+@media (min-width: 1600px) {
+  .topbar { position: relative; }
+  .topbar__pills {
+    position: absolute; left: 50%; top: 0; bottom: 0;
+    transform: translateX(-50%); align-items: center; margin: 0;
+  }
+}
 .topbar__nav { margin-left: auto; display: flex; gap: var(--space-1); }
 .topbar__link {
   color: var(--color-on-navy); text-decoration: none;
