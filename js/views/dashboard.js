@@ -4,7 +4,7 @@
 
 import { el, render } from '../dom.js';
 import * as fmt from '../format.js';
-import { compute, capVerdict, dscrVerdict, onePctVerdict, targetCapOf, targetDscrOf } from '../model.js';
+import { compute, capVerdict, dscrVerdict, onePctVerdict, targetCapOf, targetDscrOf, BENCHMARK_CAP, BENCHMARK_DSCR } from '../model.js';
 import { NOTES } from '../notes.js';
 
 const DEBOUNCE = 120;
@@ -259,17 +259,23 @@ export function renderDashboard(container, ctx) {
       ]),
     ]),
   ]);
+  // A Target reads as "set" only when it's a real override — non-zero AND not
+  // equal to the default benchmark (legacy deals stored the old 8% / 1.25 default).
+  const capOverride = (prop.targets.desiredCap && prop.targets.desiredCap !== BENCHMARK_CAP) ? prop.targets.desiredCap : null;
+  const dscrOverride = (prop.targets.desiredDscr && prop.targets.desiredDscr !== BENCHMARK_DSCR) ? prop.targets.desiredDscr : null;
   const dealStrip = el('div', { class: 'deal-strip', 'aria-label': 'Deal summary' }, [
     dealCell('Offer Price', offerCell),
     dealCell('All-In Cost', allInSummaryCell, true),
     dealCell('Fees', offerField('fees', 'Fees')),
     dealCell('Improvement', offerField('improvements', 'Improvements')),
-    // Target = an optional per-deal override of the verdict benchmark. It starts
-    // empty (|| null renders 0 as blank); the pills fall back to the hard-coded
-    // benchmark (8% / 1.25) until the user sets one here, which then overrides it.
-    // Editing it moves the pill bar only — never the offer (that's goal-seek's job).
-    dealCell('Target CAP', fieldPercent(prop.targets.desiredCap || null, (v) => { prop.targets.desiredCap = v; onEdit(); }, { label: 'Target CAP' })),
-    dealCell('Target DSCR', fieldNum(prop.targets.desiredDscr || null, (v) => { prop.targets.desiredDscr = v; onEdit(); }, { label: 'Target DSCR', step: '0.01' })),
+    // Target = an optional per-deal override of the verdict benchmark. The field
+    // shows a value only when it's a GENUINE override — blank when unset (0) or
+    // merely equal to the default benchmark, so a legacy deal that stored the old
+    // 8% / 1.25 default (or a value typed equal to it) reads as empty, not as a
+    // target the user set. The pills fall back to the hard-coded benchmark until a
+    // real override is entered. Editing it moves the pill bar only — never the offer.
+    dealCell('Target CAP', fieldPercent(capOverride, (v) => { prop.targets.desiredCap = v; onEdit(); }, { label: 'Target CAP' })),
+    dealCell('Target DSCR', fieldNum(dscrOverride, (v) => { prop.targets.desiredDscr = v; onEdit(); }, { label: 'Target DSCR', step: '0.01' })),
   ]);
   const infoCard = card('Property Info', 'col-3', [
     el('div', { class: 'form-grid form-grid--3' }, infoDefs.map(([label, key, type]) =>

@@ -289,6 +289,21 @@ test('Verdict benchmark is hard-coded 8% / 1.25 with the Target empty; a Target 
   await expect(capPill).toHaveClass(/pill--pass/);
 });
 
+test('A Target equal to the benchmark reads as unset — renders empty on reload (legacy 8%/1.25 deals)', async ({ page }) => {
+  await loadSample(page);
+  const targetCap = page.locator('.deal-strip input[aria-label="Target CAP"]');
+  // Type a Target equal to the default benchmark and commit (mirrors a legacy deal
+  // that stored the old 8% default). It shows while the input stays mounted…
+  await setField(page, '.deal-strip input[aria-label="Target CAP"]', '8');
+  await expect(targetCap).toHaveValue('8');
+  // …but on reload it re-renders from the stored value (0.08 === benchmark) as blank,
+  // so it never reads as a target the user set — while the pill still checks 8.00%.
+  await page.reload();
+  await page.waitForSelector('.kpi-strip');
+  await expect(page.locator('.deal-strip input[aria-label="Target CAP"]')).toHaveValue('');
+  await expect(page.locator('.topbar__pills .pill').nth(0)).toContainText('8.00%');
+});
+
 test('S16 change marker — affected values get a corner marker on edit, not on load or inert edits', async ({ page }) => {
   await loadSample(page);
   const marked = page.locator('.flash');                   // .flash renders the corner-fold marker
