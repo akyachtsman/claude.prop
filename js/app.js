@@ -190,9 +190,8 @@ function paintPills(host, m, p) {
   // Pills check the FIXED benchmark, not the deal's Target (that's a goal-seek).
   const capTxt = `CAP ${fmt.percent2(m.cap)} ${cap ? '≥' : '<'} ${fmt.percent2(BENCHMARK_CAP)}`;
   const dscrTxt = `DSCR ${fmt.ratio(m.dscr)} ${dscr ? '≥' : '<'} ${fmt.ratio(BENCHMARK_DSCR)}`;
-  // No "≥ $0" comparator — the value's sign + pass/fail colour convey it, and it
-  // keeps this third pill compact enough for the signed-in topbar.
-  const npvTxt = `5Y NPV ${fmt.money(m.npv)}`;
+  // Show the > $0 benchmark explicitly, matching the CAP/DSCR pills' "≥ target" form.
+  const npvTxt = `5Y NPV ${fmt.money(m.npv)} ${npvOk ? '>' : '≤'} $0`;
   if (cap !== null) host.appendChild(el('span', { class: 'pill ' + (cap ? 'pill--pass' : 'pill--fail'), text: capTxt }));
   if (dscr !== null) host.appendChild(el('span', { class: 'pill ' + (dscr ? 'pill--pass' : 'pill--fail'), text: dscrTxt }));
   if (npvOk !== null) host.appendChild(el('span', { class: 'pill ' + (npvOk ? 'pill--pass' : 'pill--fail'), text: npvTxt }));
