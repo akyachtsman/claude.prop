@@ -82,9 +82,10 @@ test('Header pills include the 5-year NPV verdict after CAP and DSCR', async ({ 
   await loadSample(page);
   const pills = page.locator('.topbar__pills .pill');
   await expect(pills).toHaveCount(3);
-  // order: CAP, DSCR, then 5Y NPV
+  // order: CAP, DSCR, then 5Y NPV — with the explicit "> $0" benchmark shown.
   await expect(pills.nth(2)).toContainText('5Y NPV');
   await expect(pills.nth(2)).toContainText('-$29,512');   // sample's negative NPV
+  await expect(pills.nth(2)).toContainText('≤ $0');       // fails the > $0 benchmark
   await expect(pills.nth(2)).toHaveClass(/pill--fail/);   // negative → fail
 });
 
@@ -280,19 +281,16 @@ test('Pills check the FIXED 8% / 1.25 benchmark — a Target goal-seek moves act
   await expect(capPill).toHaveClass(/pill--fail/);
 });
 
-test('A Target equal to the benchmark reads as unset — renders empty on reload (legacy 8%/1.25 deals)', async ({ page }) => {
+test('Target is a transient goal-seek — always renders empty on reload, never a stored default', async ({ page }) => {
   await loadSample(page);
-  const targetCap = page.locator('.deal-strip input[aria-label="Target CAP"]');
-  // Type a Target equal to the benchmark and commit (mirrors a legacy deal that
-  // stored the old 8% default). It shows while the input stays mounted…
-  await setField(page, '.deal-strip input[aria-label="Target CAP"]', '8');
-  await expect(targetCap).toHaveValue('8');
-  // …but on reload it re-renders from the stored value (0.08 === benchmark) as blank,
-  // so a legacy default never reads as a goal-seek target the user set.
+  await expect(page.locator('.deal-strip input[aria-label="Target CAP"]')).toHaveValue('');   // empty on load
+  // Goal-seeking to 9% moves the ACTUAL CAP, but the field is never a saved setting…
+  await setField(page, '.deal-strip input[aria-label="Target CAP"]', '9');
+  await expect.poll(async () => (await kpis(page))['CAP']).toBe('9.00%');
+  // …so after a reload it renders empty again — no value ever reads as a default.
   await page.reload();
   await page.waitForSelector('.kpi-strip');
   await expect(page.locator('.deal-strip input[aria-label="Target CAP"]')).toHaveValue('');
-  await expect(page.locator('.topbar__pills .pill').nth(0)).toContainText('8.00%');
 });
 
 test('S16 change marker — affected values get a corner marker on edit, not on load or inert edits', async ({ page }) => {

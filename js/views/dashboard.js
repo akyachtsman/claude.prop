@@ -227,21 +227,19 @@ export function renderDashboard(container, ctx) {
   // & Debt card; All-In Cost derived. Built here, mounted in render() below.
   const allInSummaryCell = el('div', { class: 'deal-cell__val' });
   out.allInCells.push(allInSummaryCell);
-  // Target CAP/DSCR is a GOAL-SEEK: typing a value back-solves the offer price so
-  // the ACTUAL CAP/DSCR becomes that number (CAP = NOI÷offer, DSCR via PV(loan)÷LTV).
-  // It never touches the verdict pills — those check the fixed benchmark. The field
-  // shows a value only when it's a real goal-seek target: blank when unset (0) or
-  // merely equal to the benchmark (so a legacy deal that stored the old 8% / 1.25
-  // default reads as empty, not as a target the user set).
-  const capTarget = (prop.targets.desiredCap && prop.targets.desiredCap !== BENCHMARK_CAP) ? prop.targets.desiredCap : null;
-  const dscrTarget = (prop.targets.desiredDscr && prop.targets.desiredDscr !== BENCHMARK_DSCR) ? prop.targets.desiredDscr : null;
+  // Target CAP/DSCR is a GOAL-SEEK ACTION, not a stored setting: typing a value
+  // back-solves the offer price so the ACTUAL CAP/DSCR becomes that number
+  // (CAP = NOI÷offer, DSCR via PV(loan)÷LTV). It always renders EMPTY on load — a
+  // deal never carries a "target" to redisplay (any stored value is ignored) — so
+  // a value never reads as a default the user didn't set. The verdict pills check
+  // the fixed benchmark, independent of this field.
   const dealStrip = el('div', { class: 'deal-strip', 'aria-label': 'Deal summary' }, [
     dealCell('Offer Price', offerField('offerPrice', 'Offer price')),
     dealCell('All-In Cost', allInSummaryCell, true),
     dealCell('Fees', offerField('fees', 'Fees')),
     dealCell('Improvement', offerField('improvements', 'Improvements')),
-    dealCell('Target CAP', fieldPercent(capTarget, (v) => { prop.targets.desiredCap = v; goalSeekOffer('cap', v); onEdit(); }, { label: 'Target CAP' })),
-    dealCell('Target DSCR', fieldNum(dscrTarget, (v) => { prop.targets.desiredDscr = v; goalSeekOffer('dscr', v); onEdit(); }, { label: 'Target DSCR', step: '0.01' })),
+    dealCell('Target CAP', fieldPercent(null, (v) => { goalSeekOffer('cap', v); onEdit(); }, { label: 'Target CAP' })),
+    dealCell('Target DSCR', fieldNum(null, (v) => { goalSeekOffer('dscr', v); onEdit(); }, { label: 'Target DSCR', step: '0.01' })),
   ]);
   const infoCard = card('Property Info', 'col-3', [
     el('div', { class: 'form-grid form-grid--3' }, infoDefs.map(([label, key, type]) =>
