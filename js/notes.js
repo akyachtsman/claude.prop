@@ -13,15 +13,15 @@ export const NOTES = [
   },
   {
     title: 'CAP & IRR',
-    body: 'NOTE: Given a constant CAP rate, the IRR will also remain constant, given any combination of NOI and purchase price.',
+    body: 'NOTE: Given a constant CAP rate, the IRR will also remain constant across any combination of NOI and purchase price that holds that cap — all else equal — because NOI and price scale together and IRR is scale-invariant. (This does not mean two deals with the same cap but different leverage, NOI growth, or hold period share an IRR.)',
   },
   {
     title: 'NPV',
-    body: "NOTE: NPV is the difference between the present value of all cash flows over the project's duration, discounted by our WACC.",
+    body: "NOTE: NPV is the present value of all future cash flows over the project's duration, minus the initial investment, discounted by our WACC.",
   },
   {
     title: 'Positive NPV',
-    body: "NOTE: A positive NPV indicates that the project's returns exceed that of our WACC and IRR WILL be greater than WACC, making it a worthwhile investment and you should accept the project.",
+    body: "NOTE: For a conventional deal (one up-front outflow followed by inflows), a positive NPV indicates that the project's returns exceed that of our WACC and IRR WILL be greater than WACC, making it a worthwhile investment and you should accept the project.",
   },
   {
     title: 'NPV implies IRR > WACC',
