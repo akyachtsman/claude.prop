@@ -380,7 +380,7 @@ body {
 }
 
 /* app views (dashboard editable, list, compare) ------------------------- */
-.topbar__center { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: var(--space-2); }
+.topbar__center { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-2); }
 .topbar__viewtitle { font-weight: 800; font-size: var(--font-lg); color: var(--color-on-navy); }
 .topbar__link { background: transparent; border: none; font: inherit; cursor: pointer; }
 
@@ -546,7 +546,7 @@ body {
 .toast--success { background: var(--color-pass); }
 
 /* top-bar actions (Save/Delete relocated from the dashboard body) */
-.topbar__actions { display: flex; gap: var(--space-1); margin-left: var(--space-4); }
+.topbar__actions { display: flex; gap: var(--space-1); margin-left: auto; }
 .topbar__action { background: var(--color-navy-soft); }
 .topbar__action:hover, .topbar__action:focus-visible { background: var(--color-accent); }
 .topbar__action:disabled { opacity: 0.4; cursor: default; background: var(--color-navy-soft); }
