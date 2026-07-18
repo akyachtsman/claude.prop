@@ -267,22 +267,27 @@ test('Asking price seeds the offer — editing Asking Price sets Offer Price to 
   await expect(targetCap).toHaveValue('');
 });
 
-test('Estimated expense defaults — a blank tax & insurance seed once from offer × 0.012 on a new deal', async ({ page }) => {
+test('Estimated expense defaults — tax = offer×0.012, insurance = SF × property-type rate; per-key seed + recompute + overwrite-lock', async ({ page }) => {
   await page.goto('./', { waitUntil: 'load' });
   await page.click('button:has-text("Add your first property")');
   await page.waitForSelector('.kpi-strip');
-  // A brand-new deal has blank ($0) estimated tax & insurance. Setting the offer
-  // (here via Asking → Offer) fills them once to offer × 0.012 — the workbook default.
+  const ins = page.locator('input[aria-label="Insurance amount"]');
+  const tax = page.locator('input[aria-label="Property taxes amount"]');
+  // Insurance scales with the building. Entering SF at the default Commercial (0.80)
+  // fills $8,000; changing the type RECOMPUTES the still-auto estimate.
+  await setField(page, 'input[aria-label="Rentable SF"]', '10000');
+  await expect(ins).toHaveValue('8000');
+  await page.selectOption('select[aria-label="Type"]', 'Warehouse');   // 10000 × 0.30
+  await expect(ins).toHaveValue('3000');
+  // Tax scales with price and is seeded per-key: setting the offer fills tax only,
+  // never disturbing the insurance estimate.
   await setField(page, 'input[aria-label="Asking"]', '1000000');
-  await expect(page.locator('input[aria-label="Property taxes amount"]')).toHaveValue('12000');
-  await expect(page.locator('input[aria-label="Insurance amount"]')).toHaveValue('12000');
-  // The seed only ever fills a BLANK field. Once filled, changing the offer never
-  // re-seeds (so a fixture's real figure or a typed actual is never overwritten):
-  // overwrite tax, bump the offer — both hold at their current values.
-  await setField(page, 'input[aria-label="Property taxes amount"]', '5000');
-  await setField(page, 'input[aria-label="Asking"]', '2000000');
-  await expect(page.locator('input[aria-label="Property taxes amount"]')).toHaveValue('5000');
-  await expect(page.locator('input[aria-label="Insurance amount"]')).toHaveValue('12000');
+  await expect(tax).toHaveValue('12000');
+  await expect(ins).toHaveValue('3000');                               // untouched by the offer edit
+  // A manual entry takes ownership — a later type change never overwrites it.
+  await setField(page, 'input[aria-label="Insurance amount"]', '4444');
+  await page.selectOption('select[aria-label="Type"]', 'Office');
+  await expect(ins).toHaveValue('4444');
 });
 
 test('Pills check the FIXED 8% / 1.25 benchmark — a Target goal-seek moves actual CAP but not the bar', async ({ page }) => {
