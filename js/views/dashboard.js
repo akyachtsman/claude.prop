@@ -102,7 +102,7 @@ export function renderDashboard(container, ctx) {
     const input = fieldNum(prop.offer[key], (v) => {
       prop.offer[key] = v;
       offerInputs[key].forEach((n) => { if (n !== input) n.value = input.value; });
-      if (key === 'offerPrice') seedFormulaExpenses();   // re-seed estimated tax/insurance off the new offer
+      if (key === 'offerPrice') seedFormulaExpenses(['taxes']);   // offer drives the tax estimate only
       onEdit();
     }, { label });
     offerInputs[key].push(input);
@@ -111,13 +111,14 @@ export function renderDashboard(container, ctx) {
 
   // Estimated expense defaults. Tax scales with price (offer × 0.012); insurance
   // scales with the building — rentableSF × a $/SF rate keyed to the Property Type
-  // (a rough pre-quote ballpark). seedFormulaExpenses fills a BLANK estimated
-  // tax/insurance the first time its inputs are set (offer for tax; SF/type for
-  // insurance). Guarded on amount === 0 so it only ever fills an unset field — a
-  // real fixture figure or a typed actual is never overwritten, no matter its
-  // `estimated` flag or a returning cloud copy — and only fills once the estimate
-  // is > 0. Goal-seek moves the offer WITHOUT re-seeding (sets the input value
-  // directly, firing no change event), so it stays exact.
+  // (a rough pre-quote ballpark). seedFormulaExpenses(keys) fills/refreshes ONLY the
+  // expenses whose driver just changed (offer/Asking → taxes; SF/type → insurance),
+  // so an SF edit never disturbs a goal-sought offer's taxes. It fills a blank
+  // estimate OR re-computes one WE generated (`seeded`) when its driver moves — but
+  // a fixture's real figure or a typed actual (seeded !== true) is never touched,
+  // regardless of the `estimated` flag or a returning cloud copy. Goal-seek moves
+  // the offer WITHOUT calling this (sets the input value directly, firing no change
+  // event), so it stays exact.
   const INSURANCE_RATE = {        // $/SF/yr by property type
     Office: 0.65, Retail: 1.00, Industrial: 0.70, Warehouse: 0.30,
     Multifamily: 1.00, Residential: 1.00, Commercial: 0.80,
@@ -131,12 +132,13 @@ export function renderDashboard(container, ctx) {
     return 0;
   }
   const expAmountNodes = [];
-  function seedFormulaExpenses() {
+  function seedFormulaExpenses(keys) {
     expAmountNodes.forEach(({ e, input }) => {
-      if (e.estimated && (e.key === 'taxes' || e.key === 'insurance') && (Number(e.amount) || 0) === 0) {
-        const v = estimateExpense(e.key);
-        if (v > 0) { e.amount = v; input.value = String(v); }
-      }
+      if (!keys.includes(e.key) || !e.estimated) return;
+      // Only fill a blank, or re-fill a value WE seeded — never a real/typed figure.
+      if ((Number(e.amount) || 0) !== 0 && !e.seeded) return;
+      const v = estimateExpense(e.key);
+      if (v > 0) { e.amount = v; e.seeded = true; input.value = String(v); }
     });
   }
   function dealCell(label, control, accent) {
@@ -280,7 +282,7 @@ export function renderDashboard(container, ctx) {
       // Property Type drives the insurance estimate — re-seed a blank insurance on change.
       if (type === 'select') {
         return labeledField(label, fieldSelect(prop.info[key] || 'Commercial', PROPERTY_TYPES,
-          (v) => { prop.info[key] = v; seedFormulaExpenses(); onEdit(); }, label));
+          (v) => { prop.info[key] = v; seedFormulaExpenses(['insurance']); onEdit(); }, label));
       }
       if (type === 'num') {
         return labeledField(label, fieldNum(prop.info[key], (v) => {
@@ -292,7 +294,8 @@ export function renderDashboard(container, ctx) {
             offerInputs.offerPrice.forEach((n) => { n.value = String(v); });
           }
           // Asking→Offer feeds the tax estimate; rentable SF feeds the insurance estimate.
-          if (key === 'askingPrice' || key === 'rentableSF') seedFormulaExpenses();
+          if (key === 'askingPrice') seedFormulaExpenses(['taxes']);
+          if (key === 'rentableSF') seedFormulaExpenses(['insurance']);
           onEdit();
         }, { label }));
       }
@@ -348,7 +351,7 @@ export function renderDashboard(container, ctx) {
     expPctNodes.push({ pct, i });
     const amount = fieldNum(e.amount, (v) => {
       e.amount = v;
-      if (e.key === 'taxes' || e.key === 'insurance') e.estimated = false;   // a manual entry overwrites the formula estimate
+      if (e.key === 'taxes' || e.key === 'insurance') { e.estimated = false; e.seeded = false; }   // a manual entry owns the value
       onEdit();
     }, { label: e.label + ' amount', estimate: e.estimated });
     amount.classList.add('amount-input');

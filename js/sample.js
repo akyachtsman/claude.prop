@@ -19,8 +19,10 @@ export function sampleProperty() {
     // Bumped whenever the built-in sample's figures change, so a stale copy
     // saved in a returning visitor's localStorage auto-refreshes on boot
     // (see refreshBuiltinSample in app.js). rev 2 = the actual-close rebuild;
-    // rev 3 = empty Target CAP/DSCR (pills use the hard-coded benchmark).
-    sampleRev: 3,
+    // rev 3 = empty Target CAP/DSCR (pills use the hard-coded benchmark);
+    // rev 4 = propertyType added (Retail). (Local refresh only; cloud copies
+    // keep the Commercial fallback until re-seeded — cosmetic, insurance is actual.)
+    sampleRev: 4,
     name: '715 Plumas St — Commercial',
     createdAt: '2026-07-14T00:00:00.000Z',
     updatedAt: '2026-07-14T00:00:00.000Z',
