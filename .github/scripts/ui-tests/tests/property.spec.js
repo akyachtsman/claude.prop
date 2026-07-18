@@ -267,6 +267,24 @@ test('Asking price seeds the offer — editing Asking Price sets Offer Price to 
   await expect(targetCap).toHaveValue('');
 });
 
+test('Estimated expense defaults — a blank tax & insurance seed once from offer × 0.012 on a new deal', async ({ page }) => {
+  await page.goto('./', { waitUntil: 'load' });
+  await page.click('button:has-text("Add your first property")');
+  await page.waitForSelector('.kpi-strip');
+  // A brand-new deal has blank ($0) estimated tax & insurance. Setting the offer
+  // (here via Asking → Offer) fills them once to offer × 0.012 — the workbook default.
+  await setField(page, 'input[aria-label="Asking"]', '1000000');
+  await expect(page.locator('input[aria-label="Property taxes amount"]')).toHaveValue('12000');
+  await expect(page.locator('input[aria-label="Insurance amount"]')).toHaveValue('12000');
+  // The seed only ever fills a BLANK field. Once filled, changing the offer never
+  // re-seeds (so a fixture's real figure or a typed actual is never overwritten):
+  // overwrite tax, bump the offer — both hold at their current values.
+  await setField(page, 'input[aria-label="Property taxes amount"]', '5000');
+  await setField(page, 'input[aria-label="Asking"]', '2000000');
+  await expect(page.locator('input[aria-label="Property taxes amount"]')).toHaveValue('5000');
+  await expect(page.locator('input[aria-label="Insurance amount"]')).toHaveValue('12000');
+});
+
 test('Pills check the FIXED 8% / 1.25 benchmark — a Target goal-seek moves actual CAP but not the bar', async ({ page }) => {
   await loadSample(page);
   const capPill = page.locator('.topbar__pills .pill').nth(0);

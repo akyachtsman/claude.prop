@@ -102,10 +102,31 @@ export function renderDashboard(container, ctx) {
     const input = fieldNum(prop.offer[key], (v) => {
       prop.offer[key] = v;
       offerInputs[key].forEach((n) => { if (n !== input) n.value = input.value; });
+      if (key === 'offerPrice') seedFormulaExpenses();   // re-seed estimated tax/insurance off the new offer
       onEdit();
     }, { label });
     offerInputs[key].push(input);
     return input;
+  }
+
+  // Estimated expense defaults: fill a BLANK estimated tax/insurance from the offer
+  // (amount = offer × 0.012) the first time the user sets the offer (direct edit or
+  // Asking→Offer) — the workbook default for a fresh deal. Guarded on amount === 0
+  // so it only ever fills an unset field: a real fixture figure (the sample/demos'
+  // actual tax) or a typed value is never overwritten — no matter its `estimated`
+  // flag or whether a returning cloud copy predates the seed. Goal-seek moves the
+  // offer WITHOUT re-seeding (it sets the input value directly, firing no change
+  // event), so it stays exact.
+  const ESTIMATE_RATE = { taxes: 0.012, insurance: 0.012 };
+  const expAmountNodes = [];
+  function seedFormulaExpenses() {
+    const offer = Number(prop.offer.offerPrice) || 0;
+    expAmountNodes.forEach(({ e, input }) => {
+      if (e.estimated && ESTIMATE_RATE[e.key] != null && (Number(e.amount) || 0) === 0) {
+        e.amount = Math.round(offer * ESTIMATE_RATE[e.key]);
+        input.value = String(e.amount);
+      }
+    });
   }
   function dealCell(label, control, accent) {
     return el('div', { class: 'deal-cell' + (accent ? ' deal-cell--accent' : '') }, [
@@ -251,6 +272,7 @@ export function renderDashboard(container, ctx) {
             if (key === 'askingPrice') {
               prop.offer.offerPrice = v;
               offerInputs.offerPrice.forEach((n) => { n.value = String(v); });
+              seedFormulaExpenses();
             }
             onEdit();
           }, { label })
@@ -303,8 +325,13 @@ export function renderDashboard(container, ctx) {
     chk.addEventListener('change', () => { e.included = chk.checked; rowEl.className = 'check-row' + (chk.checked ? '' : ' check-row--off'); onEdit(); });
     const pct = el('span', { class: 'pct' });
     expPctNodes.push({ pct, i });
-    const amount = fieldNum(e.amount, (v) => { e.amount = v; onEdit(); }, { label: e.label + ' amount', estimate: e.estimated });
+    const amount = fieldNum(e.amount, (v) => {
+      e.amount = v;
+      if (ESTIMATE_RATE[e.key] != null) e.estimated = false;   // a manual entry overwrites the formula estimate
+      onEdit();
+    }, { label: e.label + ' amount', estimate: e.estimated });
     amount.classList.add('amount-input');
+    expAmountNodes.push({ e, input: amount });
     const rowEl = el('div', { class: 'check-row' + (e.included ? '' : ' check-row--off') }, [
       chk,
       el('label', { for: 'exp-' + e.key }, [e.label + (e.estimated ? '* ' : ' '), pct]),
