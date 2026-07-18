@@ -31,8 +31,8 @@ function blankProperty() {
     loans: [{ ltv: 0.7, rate: 0.065, termYears: 25, maturityYears: 0, type: 'CONV' }, { ltv: 0, rate: 0.065, termYears: 25, maturityYears: 0, type: 'IO' }],
     tenants: Array.from({ length: 4 }, () => ({ name: '', sf: 0, monthlyIncome: 0, leaseExpires: '', leaseOptions: '' })),
     expenses: [
-      { key: 'insurance', label: 'Insurance', amount: 0, included: true, estimated: true },
-      { key: 'taxes', label: 'Property taxes', amount: 0, included: true, estimated: true },
+      { key: 'insurance', label: 'Insurance', amount: 0, included: true, estimated: true, useDefault: true },
+      { key: 'taxes', label: 'Property taxes', amount: 0, included: true, estimated: true, useDefault: true },
       { key: 'cam', label: 'CAM', amount: 0, included: false, estimated: false },
       { key: 'hoa', label: 'HOA', amount: 0, included: false, estimated: false },
       { key: 'utilities', label: 'Utilities', amount: 0, included: true, estimated: false },

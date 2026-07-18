@@ -267,25 +267,43 @@ test('Asking price seeds the offer — editing Asking Price sets Offer Price to 
   await expect(targetCap).toHaveValue('');
 });
 
-test('Estimated expense defaults — tax = offer×0.012, insurance = SF × property-type rate; per-key seed + recompute + overwrite-lock', async ({ page }) => {
+test('Use-default toggle — tax = offer×0.012, insurance = SF × property-type rate; checked fills the formula, cleared zeroes, typed value locks', async ({ page }) => {
   await page.goto('./', { waitUntil: 'load' });
   await page.click('button:has-text("Add your first property")');
   await page.waitForSelector('.kpi-strip');
   const ins = page.locator('input[aria-label="Insurance amount"]');
   const tax = page.locator('input[aria-label="Property taxes amount"]');
+  const insCell = page.locator('.exp-cell', { has: page.locator('input[aria-label="Insurance amount"]') });
+  const insDefault = insCell.locator('input[aria-label="Use default Insurance"]');
+  const insFormula = insCell.locator('.exp-default__formula');
+  // A fresh property opts into the default: the toggle is checked and the formula
+  // shows in a tiny font.
+  await expect(insDefault).toBeChecked();
   // Insurance scales with the building. Entering SF at the default Commercial (0.80)
-  // fills $8,000; changing the type RECOMPUTES the still-auto estimate.
+  // fills $8,000; the formula text reflects the live rate.
   await setField(page, 'input[aria-label="Rentable SF"]', '10000');
   await expect(ins).toHaveValue('8000');
+  await expect(insFormula).toHaveText('= SF × $0.80/SF');
+  // Changing the type RECOMPUTES the still-default estimate and its formula text.
   await page.selectOption('select[aria-label="Type"]', 'Warehouse');   // 10000 × 0.30
   await expect(ins).toHaveValue('3000');
-  // Tax scales with price and is seeded per-key: setting the offer fills tax only,
+  await expect(insFormula).toHaveText('= SF × $0.30/SF');
+  // Tax is a separate default keyed to price: setting the offer fills tax only,
   // never disturbing the insurance estimate.
   await setField(page, 'input[aria-label="Asking"]', '1000000');
   await expect(tax).toHaveValue('12000');
   await expect(ins).toHaveValue('3000');                               // untouched by the offer edit
-  // A manual entry takes ownership — a later type change never overwrites it.
+  // Clearing the toggle zeroes the field…
+  await insDefault.uncheck();
+  await expect(ins).toHaveValue('0');
+  await expect(insFormula).toHaveText('');
+  // …and re-checking refills it from the live formula (Warehouse 0.30 × 10000).
+  await insDefault.check();
+  await expect(ins).toHaveValue('3000');
+  // A typed figure is the user's own actual: it clears the toggle and a later type
+  // change never overwrites it.
   await setField(page, 'input[aria-label="Insurance amount"]', '4444');
+  await expect(insDefault).not.toBeChecked();
   await page.selectOption('select[aria-label="Type"]', 'Office');
   await expect(ins).toHaveValue('4444');
 });

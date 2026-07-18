@@ -257,6 +257,18 @@ body {
   color: var(--color-text-secondary); text-decoration: line-through;
 }
 .pct { font-size: 10px; color: var(--color-text-secondary); font-weight: 600; margin-left: 2px; }
+.check-grid .exp-cell { min-width: 0; display: flex; flex-direction: column; }
+/* "use default" toggle under tax/insurance — checked pre-fills the formula estimate,
+   cleared zeroes the field; formula shown in a tiny font. */
+.exp-default {
+  display: flex; align-items: center; gap: 4px;
+  margin-left: 32px; font-size: 9px; color: var(--color-text-secondary);
+  line-height: 1.3; cursor: pointer; white-space: nowrap; min-width: 0;
+}
+.exp-default input[type="checkbox"] {
+  width: 13px; height: 13px; accent-color: var(--color-accent); flex: none; margin: 0;
+}
+.exp-default__formula { font-style: italic; overflow: hidden; text-overflow: ellipsis; }
 
 /* data tables ------------------------------------------------------------------ */
 .table-wrap { overflow-x: auto; }
