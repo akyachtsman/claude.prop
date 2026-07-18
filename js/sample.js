@@ -25,7 +25,7 @@ export function sampleProperty() {
     createdAt: '2026-07-14T00:00:00.000Z',
     updatedAt: '2026-07-14T00:00:00.000Z',
     info: {
-      askingPrice: 1350000, rentableSF: 11562, lotSize: '18,731 sf', yearBuilt: 1940,
+      propertyType: 'Retail', askingPrice: 1350000, rentableSF: 11562, lotSize: '18,731 sf', yearBuilt: 1940,
       zoning: 'C1', hvacAge: '1 yr', roofAge: '—', parking: '—',
       ceilingHeight: '—', appraisedValue: 0, apn: '—',
       bedrooms: '—', baths: '—',
@@ -80,7 +80,7 @@ export function demoProperties() {
       id: 'demo-2201-del-paso', schemaVersion: 1,
       name: '2201 Del Paso Blvd — Industrial', createdAt: at, updatedAt: at,
       info: {
-        askingPrice: 1250000, rentableSF: 14200, lotSize: '1.1 ac', yearBuilt: 1978,
+        propertyType: 'Industrial', askingPrice: 1250000, rentableSF: 14200, lotSize: '1.1 ac', yearBuilt: 1978,
         zoning: 'M1', hvacAge: '—', roofAge: '4 yr', parking: 'Yard + 18',
         ceilingHeight: '22 ft', appraisedValue: 0, apn: '—', bedrooms: '—', baths: '—',
       },
@@ -108,7 +108,7 @@ export function demoProperties() {
       id: 'demo-88-capitol-mall', schemaVersion: 1,
       name: '88 Capitol Mall — Office', createdAt: at, updatedAt: at,
       info: {
-        askingPrice: 2500000, rentableSF: 12500, lotSize: '0.4 ac', yearBuilt: 2002,
+        propertyType: 'Office', askingPrice: 2500000, rentableSF: 12500, lotSize: '0.4 ac', yearBuilt: 2002,
         zoning: 'C3', hvacAge: '6 yr', roofAge: '9 yr', parking: 'Structure',
         ceilingHeight: '9 ft', appraisedValue: 0, apn: '—', bedrooms: '—', baths: '—',
       },
@@ -137,7 +137,7 @@ export function demoProperties() {
       id: 'demo-540-n-street', schemaVersion: 1,
       name: '540 N Street — Apartments', createdAt: at, updatedAt: at,
       info: {
-        askingPrice: 1075000, rentableSF: 5200, lotSize: '7,000 sf', yearBuilt: 1962,
+        propertyType: 'Multifamily', askingPrice: 1075000, rentableSF: 5200, lotSize: '7,000 sf', yearBuilt: 1962,
         zoning: 'R3', hvacAge: '—', roofAge: '7 yr', parking: '8 spaces',
         ceilingHeight: '8 ft', appraisedValue: 0, apn: '—', bedrooms: '8', baths: '8',
       },
