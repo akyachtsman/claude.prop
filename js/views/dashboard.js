@@ -6,20 +6,29 @@ import { el, render } from '../dom.js';
 import * as fmt from '../format.js';
 import { compute, capVerdict, dscrVerdict, onePctVerdict, BENCHMARK_CAP, BENCHMARK_DSCR } from '../model.js';
 import { NOTES } from '../notes.js';
+import { commitNumericInput } from '../mathinput.js';
 
 const DEBOUNCE = 120;
 
 // ── small field builders ───────────────────────────────────────────────
 function fieldNum(value, onChange, opts = {}) {
+  // `type=text` (not `number`) so an arithmetic expression can be typed — the
+  // browser's number input would reject "2+2" outright. `inputmode=decimal`
+  // keeps the numeric keypad on touch.
   const input = el('input', {
     class: 'input' + (opts.estimate ? ' input--estimate' : ''),
-    type: 'number', step: opts.step || 'any', inputmode: 'decimal',
+    type: 'text', inputmode: 'decimal', autocomplete: 'off',
     value: value ?? '', 'aria-label': opts.label || '',
   });
   // Commit on `change` (fires on Enter or blur), not on every keystroke, so the
   // dashboard recomputes once the field is finished — and each edit is one
-  // atomic, undoable step.
-  input.addEventListener('change', () => onChange(input.value === '' ? 0 : parseFloat(input.value)));
+  // atomic, undoable step. An expression is evaluated and the field shows the
+  // result (Excel-style), so what's stored and what's displayed always match.
+  input.addEventListener('change', () => {
+    const { value: v, display } = commitNumericInput(input.value);
+    input.value = display;
+    onChange(v);
+  });
   return input;
 }
 function fieldText(value, onChange, opts = {}) {
@@ -33,13 +42,19 @@ function fieldPercent(value, onChange, opts = {}) {
   const shown = fmt.percentInput(value);
   const wrap = el('span', { class: 'input-pct' }, [
     el('input', {
-      class: 'input', type: 'number', step: opts.step || '0.1', inputmode: 'decimal',
+      class: 'input', type: 'text', inputmode: 'decimal', autocomplete: 'off',
       value: shown, 'aria-label': opts.label || '',
     }),
     el('span', { class: 'input-pct__sign', text: '%' }),
   ]);
   const input = wrap.firstChild;
-  input.addEventListener('change', () => onChange(input.value === '' ? 0 : parseFloat(input.value) / 100));
+  // The user types/reads percent; an expression evaluates in percent terms
+  // (e.g. `5+0.5` → 5.5%) before the decimal is stored.
+  input.addEventListener('change', () => {
+    const { value: v, display } = commitNumericInput(input.value);
+    input.value = display;
+    onChange(display === '' ? 0 : v / 100);
+  });
   return wrap;
 }
 function fieldDate(value, onChange, opts = {}) {

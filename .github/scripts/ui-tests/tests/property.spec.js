@@ -308,6 +308,25 @@ test('Use-default toggle — tax = offer×0.012, insurance = SF × property-type
   await expect(ins).toHaveValue('4444');
 });
 
+test('Formula entry — an arithmetic expression in a numeric field evaluates on commit (Excel-style)', async ({ page }) => {
+  await loadSample(page);
+  const offer = page.locator('.deal-strip input[aria-label="Offer price"]');
+  const tax = page.locator('input[aria-label="Property taxes amount"]');
+  const rate = page.locator('input[aria-label="Loan 1 rate"]');
+  // A dollar field: the expression is replaced by its result and drives the model.
+  await setField(page, '.deal-strip input[aria-label="Offer price"]', '1300000/2');
+  await expect(offer).toHaveValue('650000');
+  await expect.poll(async () => (await kpis(page))['CAP']).not.toContain('NaN');
+  await setField(page, 'input[aria-label="Property taxes amount"]', '2+2');
+  await expect(tax).toHaveValue('4');
+  // A percent field evaluates in percent terms (5 + 0.5 → 5.5%).
+  await setField(page, 'input[aria-label="Loan 1 rate"]', '5+0.5');
+  await expect(rate).toHaveValue('5.5');
+  // Plain numbers still commit unchanged.
+  await setField(page, '.deal-strip input[aria-label="Offer price"]', '1300000');
+  await expect(offer).toHaveValue('1300000');
+});
+
 test('Pills check the FIXED 8% / 1.25 benchmark — a Target goal-seek moves actual CAP but not the bar', async ({ page }) => {
   await loadSample(page);
   const capPill = page.locator('.topbar__pills .pill').nth(0);
