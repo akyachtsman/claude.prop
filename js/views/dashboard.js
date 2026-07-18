@@ -109,18 +109,20 @@ export function renderDashboard(container, ctx) {
     return input;
   }
 
-  // Estimated expense defaults: while an expense stays in "estimated" mode, its
-  // amount is seeded from the offer (tax + insurance = offer × 0.012) whenever the
-  // user SETS the offer (direct edit or Asking→Offer) — the workbook default for a
-  // fresh deal. A manual edit of the field overwrites it (drops estimated), so a
-  // typed actual is never clobbered; goal-seek moves the offer WITHOUT re-seeding
-  // (it sets the input value directly, firing no change event), keeping it exact.
+  // Estimated expense defaults: fill a BLANK estimated tax/insurance from the offer
+  // (amount = offer × 0.012) the first time the user sets the offer (direct edit or
+  // Asking→Offer) — the workbook default for a fresh deal. Guarded on amount === 0
+  // so it only ever fills an unset field: a real fixture figure (the sample/demos'
+  // actual tax) or a typed value is never overwritten — no matter its `estimated`
+  // flag or whether a returning cloud copy predates the seed. Goal-seek moves the
+  // offer WITHOUT re-seeding (it sets the input value directly, firing no change
+  // event), so it stays exact.
   const ESTIMATE_RATE = { taxes: 0.012, insurance: 0.012 };
   const expAmountNodes = [];
   function seedFormulaExpenses() {
     const offer = Number(prop.offer.offerPrice) || 0;
     expAmountNodes.forEach(({ e, input }) => {
-      if (e.estimated && ESTIMATE_RATE[e.key] != null) {
+      if (e.estimated && ESTIMATE_RATE[e.key] != null && (Number(e.amount) || 0) === 0) {
         e.amount = Math.round(offer * ESTIMATE_RATE[e.key]);
         input.value = String(e.amount);
       }

@@ -19,10 +19,8 @@ export function sampleProperty() {
     // Bumped whenever the built-in sample's figures change, so a stale copy
     // saved in a returning visitor's localStorage auto-refreshes on boot
     // (see refreshBuiltinSample in app.js). rev 2 = the actual-close rebuild;
-    // rev 3 = empty Target CAP/DSCR (pills use the hard-coded benchmark);
-    // rev 4 = property taxes marked actual (real reassessment, not the
-    // offer×0.012 estimate — that seeds only new deals).
-    sampleRev: 4,
+    // rev 3 = empty Target CAP/DSCR (pills use the hard-coded benchmark).
+    sampleRev: 3,
     name: '715 Plumas St — Commercial',
     createdAt: '2026-07-14T00:00:00.000Z',
     updatedAt: '2026-07-14T00:00:00.000Z',
@@ -48,7 +46,7 @@ export function sampleProperty() {
     ],
     expenses: [
       { key: 'insurance', label: 'Insurance', amount: 9073, included: true, estimated: false },
-      { key: 'taxes', label: 'Property taxes', amount: 14300, included: true, estimated: false },
+      { key: 'taxes', label: 'Property taxes', amount: 14300, included: true, estimated: true },
       { key: 'hoa', label: 'HOA', amount: 0, included: true, estimated: false },
       { key: 'utilities', label: 'Utilities', amount: 0, included: true, estimated: false },
       { key: 'management', label: 'Management', amount: 4500, included: false, estimated: false },
@@ -95,7 +93,7 @@ export function demoProperties() {
       ],
       expenses: [
         { key: 'insurance', label: 'Insurance', amount: 6000, included: true, estimated: false },
-        { key: 'taxes', label: 'Property taxes', amount: 13200, included: true, estimated: false },
+        { key: 'taxes', label: 'Property taxes', amount: 13200, included: true, estimated: true },
         { key: 'hoa', label: 'HOA', amount: 0, included: true, estimated: false },
         { key: 'utilities', label: 'Utilities', amount: 0, included: true, estimated: false },
         { key: 'management', label: 'Management', amount: 5700, included: false, estimated: true },
@@ -124,7 +122,7 @@ export function demoProperties() {
       ],
       expenses: [
         { key: 'insurance', label: 'Insurance', amount: 12000, included: true, estimated: false },
-        { key: 'taxes', label: 'Property taxes', amount: 26400, included: true, estimated: false },
+        { key: 'taxes', label: 'Property taxes', amount: 26400, included: true, estimated: true },
         { key: 'hoa', label: 'HOA', amount: 0, included: true, estimated: false },
         { key: 'utilities', label: 'Utilities', amount: 9600, included: true, estimated: true },
         { key: 'management', label: 'Management', amount: 9720, included: false, estimated: true },
@@ -154,7 +152,7 @@ export function demoProperties() {
       ],
       expenses: [
         { key: 'insurance', label: 'Insurance', amount: 5200, included: true, estimated: false },
-        { key: 'taxes', label: 'Property taxes', amount: 11550, included: true, estimated: false },
+        { key: 'taxes', label: 'Property taxes', amount: 11550, included: true, estimated: true },
         { key: 'hoa', label: 'HOA', amount: 0, included: true, estimated: false },
         { key: 'utilities', label: 'Utilities', amount: 4800, included: true, estimated: true },
         { key: 'management', label: 'Management', amount: 5700, included: false, estimated: true },
