@@ -111,14 +111,13 @@ export function renderDashboard(container, ctx) {
 
   // Estimated expense defaults. Tax scales with price (offer × 0.012); insurance
   // scales with the building — rentableSF × a $/SF rate keyed to the Property Type
-  // (a rough pre-quote ballpark). seedFormulaExpenses(keys) fills/refreshes ONLY the
-  // expenses whose driver just changed (offer/Asking → taxes; SF/type → insurance),
-  // so an SF edit never disturbs a goal-sought offer's taxes. It fills a blank
-  // estimate OR re-computes one WE generated (`seeded`) when its driver moves — but
-  // a fixture's real figure or a typed actual (seeded !== true) is never touched,
-  // regardless of the `estimated` flag or a returning cloud copy. Goal-seek moves
-  // the offer WITHOUT calling this (sets the input value directly, firing no change
-  // event), so it stays exact.
+  // (a rough pre-quote ballpark). Each defaultable row (tax, insurance) has a
+  // "use default" toggle: when it's on (e.useDefault), seedFormulaExpenses(keys)
+  // recomputes that row when its driver just changed (offer/Asking → taxes;
+  // SF/type → insurance), so an SF edit never disturbs a goal-sought offer's taxes.
+  // A row with the toggle off holds whatever the user typed (or a fixture's real
+  // figure) and is never touched. Goal-seek moves the offer WITHOUT calling this
+  // (sets the input value directly, firing no change event), so it stays exact.
   const INSURANCE_RATE = {        // $/SF/yr by property type
     Office: 0.65, Retail: 1.00, Industrial: 0.70, Warehouse: 0.30,
     Multifamily: 1.00, Residential: 1.00, Commercial: 0.80,
@@ -133,12 +132,12 @@ export function renderDashboard(container, ctx) {
   }
   const expAmountNodes = [];
   function seedFormulaExpenses(keys) {
-    expAmountNodes.forEach(({ e, input }) => {
-      if (!keys.includes(e.key) || !e.estimated) return;
-      // Only fill a blank, or re-fill a value WE seeded — never a real/typed figure.
-      if ((Number(e.amount) || 0) !== 0 && !e.seeded) return;
-      const v = estimateExpense(e.key);
-      if (v > 0) { e.amount = v; e.seeded = true; input.value = String(v); }
+    // Recompute only the rows whose "use default" toggle is on and whose driver
+    // just changed — a typed actual (useDefault false) is never touched.
+    expAmountNodes.forEach(({ e, input, sync }) => {
+      if (!keys.includes(e.key) || !e.useDefault) return;
+      e.amount = estimateExpense(e.key); e.seeded = true; input.value = String(e.amount);
+      if (sync) sync();   // insurance formula text tracks the live property-type rate
     });
   }
   function dealCell(label, control, accent) {
@@ -344,24 +343,62 @@ export function renderDashboard(container, ctx) {
 
   // Expenses --------------------------------------------------------------
   const expPctNodes = [];
+  const DEFAULTABLE = { taxes: true, insurance: true };   // rows carrying a formula default
+  // Tiny human formula shown next to the "use default" toggle. Insurance reflects
+  // the live property-type rate; tax is a flat share of the offer.
+  function defaultFormula(key) {
+    if (key === 'taxes') return 'Offer × 1.2%';
+    if (key === 'insurance') {
+      const rate = INSURANCE_RATE[prop.info.propertyType] ?? INSURANCE_RATE.Commercial;
+      return `SF × $${rate.toFixed(2)}/SF`;
+    }
+    return '';
+  }
   const expRows = prop.expenses.map((e, i) => {
+    let syncDefault = null;   // assigned below for tax/insurance; refreshes the toggle + formula text
     const chk = el('input', { type: 'checkbox', id: 'exp-' + e.key, checked: e.included ? true : null, 'aria-label': e.label + ' include in NOI' });
     chk.addEventListener('change', () => { e.included = chk.checked; rowEl.className = 'check-row' + (chk.checked ? '' : ' check-row--off'); onEdit(); });
     const pct = el('span', { class: 'pct' });
     expPctNodes.push({ pct, i });
     const amount = fieldNum(e.amount, (v) => {
       e.amount = v;
-      if (e.key === 'taxes' || e.key === 'insurance') { e.estimated = false; e.seeded = false; }   // a manual entry owns the value
+      // A typed figure is the user's own actual: it clears the default toggle so a
+      // later driver change never overwrites it.
+      if (DEFAULTABLE[e.key]) { e.useDefault = false; e.seeded = false; if (syncDefault) syncDefault(); }
       onEdit();
-    }, { label: e.label + ' amount', estimate: e.estimated });
+    }, { label: e.label + ' amount' });
     amount.classList.add('amount-input');
-    expAmountNodes.push({ e, input: amount });
     const rowEl = el('div', { class: 'check-row' + (e.included ? '' : ' check-row--off') }, [
       chk,
-      el('label', { for: 'exp-' + e.key }, [e.label + (e.estimated ? '* ' : ' '), pct]),
+      el('label', { for: 'exp-' + e.key }, [e.label + ' ', pct]),
       amount,
     ]);
-    return rowEl;
+    if (!DEFAULTABLE[e.key]) { expAmountNodes.push({ e, input: amount }); return el('div', { class: 'exp-cell' }, [rowEl]); }
+
+    // Tax & insurance: a small "use default" checkbox. Checked pre-fills the
+    // estimate (recomputed when its driver moves) and shows the formula in a tiny
+    // font; cleared zeroes the field. Both sit on white like every other input.
+    if (e.useDefault === undefined) e.useDefault = !!e.seeded;   // migrate the legacy seeded flag
+    const dchk = el('input', { type: 'checkbox', checked: e.useDefault ? true : null, 'aria-label': 'Use default ' + e.label });
+    const formula = el('span', { class: 'exp-default__formula' });
+    syncDefault = () => {
+      dchk.checked = !!e.useDefault;
+      formula.textContent = e.useDefault ? '= ' + defaultFormula(e.key) : '';
+    };
+    dchk.addEventListener('change', () => {
+      e.useDefault = dchk.checked;
+      if (dchk.checked) { e.amount = estimateExpense(e.key); e.seeded = true; }
+      else { e.amount = 0; e.seeded = false; }
+      amount.value = String(e.amount);
+      syncDefault();
+      onEdit();
+    });
+    syncDefault();
+    expAmountNodes.push({ e, input: amount, sync: syncDefault });
+    return el('div', { class: 'exp-cell' }, [
+      rowEl,
+      el('label', { class: 'exp-default' }, [dchk, 'use default', formula]),
+    ]);
   });
   out.totalInclCell = el('dd', {});
   const expenseCard = card('Expenses (yr) — included in NOI', 'col-4', [
@@ -369,7 +406,7 @@ export function renderDashboard(container, ctx) {
     el('dl', { class: 'facts facts--1col' }, [
       el('div', {}, [el('dt', { text: 'Total incl. (feeds NOI) / all cat.' }), out.totalInclCell]),
     ]),
-    el('p', { class: 'fineprint', text: '* estimated default · % = share of NOI' }),
+    el('p', { class: 'fineprint', text: '% = share of NOI' }),
   ]);
 
   // Offer & debt service --------------------------------------------------
