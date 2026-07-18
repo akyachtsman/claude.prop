@@ -358,8 +358,10 @@ export function renderDashboard(container, ctx) {
     let syncDefault = null;   // assigned below for tax/insurance; refreshes the toggle + formula text
     const chk = el('input', { type: 'checkbox', id: 'exp-' + e.key, checked: e.included ? true : null, 'aria-label': e.label + ' include in NOI' });
     chk.addEventListener('change', () => { e.included = chk.checked; rowEl.className = 'check-row' + (chk.checked ? '' : ' check-row--off'); onEdit(); });
-    const pct = el('span', { class: 'pct' });
-    expPctNodes.push({ pct, i });
+    // Share-of-NOI badge — omitted on the defaultable rows (tax/insurance), where
+    // it carries no meaning for the owner.
+    const labelKids = [e.label + ' '];
+    if (!DEFAULTABLE[e.key]) { const pct = el('span', { class: 'pct' }); expPctNodes.push({ pct, i }); labelKids.push(pct); }
     const amount = fieldNum(e.amount, (v) => {
       e.amount = v;
       // A typed figure is the user's own actual: it clears the default toggle so a
@@ -370,7 +372,7 @@ export function renderDashboard(container, ctx) {
     amount.classList.add('amount-input');
     const rowEl = el('div', { class: 'check-row' + (e.included ? '' : ' check-row--off') }, [
       chk,
-      el('label', { for: 'exp-' + e.key }, [e.label + ' ', pct]),
+      el('label', { for: 'exp-' + e.key }, labelKids),
       amount,
     ]);
     if (!DEFAULTABLE[e.key]) { expAmountNodes.push({ e, input: amount }); return el('div', { class: 'exp-cell' }, [rowEl]); }
