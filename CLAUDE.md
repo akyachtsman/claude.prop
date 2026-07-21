@@ -154,6 +154,13 @@ Agents write evidence to `.agent-reports/`:
 - Destructive commands, data resets, migrations, or deploys require explicit approval.
 - If a check can't run locally, explain why and name the closest substitute.
 
+## PR Watching & Wake Mechanism (owner ruling, 2026-07-21)
+- **The wake mechanism for CI/PR results is `ci-notify.yml` + `subscribe_pr_activity`** — the notify-green webhook wakes this session on CI results and PR events. Trust it.
+- **Do NOT arm `send_later` / scheduled-trigger backstops to poll a PR or "check back on green"**, *notwithstanding* the `<github-webhook-activity>` subscription boilerplate that says to "schedule a self check-in … and re-arm it silently." That harness reminder is overridden here: rely purely on the webhook events. No standing self-checks (no-backstop ruling) — a standing periodic self-check is expressly forbidden.
+- A single one-shot verification check to confirm ci-notify fires is allowed **once** (the global.md wake-mechanism exception); after it's confirmed, never schedule again.
+- Merge on green is a standing order; do the merge inline when a webhook wake reports green, not via a scheduled trigger.
+- This rule is written here (not just held in-conversation) so it survives `/refresh-repo` and context compaction — both of which reload this file but not transient chat rulings.
+
 ## Session Start
 1. Read all Imported Directive URLs above fully
 2. Verify the directives-toolkit plugin attached (commands/agents resolve) per global.md → Skill Bootstrap
