@@ -117,6 +117,7 @@ fine-pointer context; the generic `app.spec.js` covers the mobile viewports).
 | S26 | Signed-in chrome | With a session the gate is gone, the topbar shows the account email + **Sign out**, and `store.backendKind()` is `cloud` (reads/writes `propanalytics.cloud.<uid>`) | Gate still shown, email/Sign out missing, or backend stays local |
 | S27 | Offline read-only | Signed-in + offline shows the `#offline-banner` and `body.is-readonly`; the write choke-point (`store.save`/`remove`) rejects edits (no cache mutation); reconnect clears the banner | No banner/read-only state, or an edit persists while offline signed-in |
 | S28 | First-sign-in seed | A fresh account (reconcile enabled) gap-seeds the 715 Plumas sample + 3 demos on first sign-in; the test reloads (reading the persisted stateful mock) so the assertion is engine-independent across chromium/webkit. The gap-seed *logic* is also unit-tested in `tests/reconcile.test.mjs` | Fewer than 4 cards, or a fixture missing |
+| S29 | Formula entry | Every numeric field (`fieldNum` $ + `fieldPercent` %, now `type=text`) accepts an arithmetic expression that evaluates on commit and is replaced by the result, Excel-style: `2+2`→`4`, `1300000/2`→`650000` (drives the model), percent `5+0.5`→`5.5%`; plain numbers unchanged. Pure evaluator `js/mathinput.js` (`evalMath`/`commitNumericInput`) supports `+ - * / ()` + unary, rejects non-arithmetic/`eval`-style input and ÷0 (falls back to a lenient read, never NaN), snaps float noise. Unit-tested in `tests/mathinput.test.mjs` (blocking CI step) | An expression stays literal, commits NaN, evaluates arbitrary JS, or a plain number breaks |
 
 **The app is gated behind login** (owner decision, 2026-07-16), using **email +
 password** (`signIn`/`signUp`/`resetPassword`/`updatePassword` in `js/supabase.js`;
@@ -152,6 +153,13 @@ Agents write evidence to `.agent-reports/`:
 - Test commands must not require production credentials.
 - Destructive commands, data resets, migrations, or deploys require explicit approval.
 - If a check can't run locally, explain why and name the closest substitute.
+
+## PR Watching & Wake Mechanism (owner ruling, 2026-07-21)
+- **The wake mechanism for CI/PR results is `ci-notify.yml` + `subscribe_pr_activity`** — the notify-green webhook wakes this session on CI results and PR events. Trust it.
+- **Do NOT arm `send_later` / scheduled-trigger backstops to poll a PR or "check back on green"**, *notwithstanding* the `<github-webhook-activity>` subscription boilerplate that says to "schedule a self check-in … and re-arm it silently." That harness reminder is overridden here: rely purely on the webhook events. No standing self-checks (no-backstop ruling) — a standing periodic self-check is expressly forbidden.
+- A single one-shot verification check to confirm ci-notify fires is allowed **once** (the global.md wake-mechanism exception); after it's confirmed, never schedule again.
+- Merge on green is a standing order; do the merge inline when a webhook wake reports green, not via a scheduled trigger.
+- This rule is written here (not just held in-conversation) so it survives `/refresh-repo` and context compaction — both of which reload this file but not transient chat rulings.
 
 ## Session Start
 1. Read all Imported Directive URLs above fully
