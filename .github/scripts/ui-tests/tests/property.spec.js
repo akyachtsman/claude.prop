@@ -559,8 +559,10 @@ test('S32 archive — archived deals leave Properties/Compare and show as compar
   await page.click('#nav-compare');
   await expect(page.locator('.empty')).toContainText('Compare needs 2+');
 
-  // Archive view: reached from the header Archive button (next to Compare); the
-  // archived deal is a row in a compare-style rows table.
+  // Archive view: the action bar lives on the list, so return there, then open
+  // Archive. The archived deal is a row in a compare-style rows table.
+  await page.click('button:has-text("Back to properties")');
+  await page.waitForSelector('.lcard');
   await page.click('#nav-archive');
   await page.waitForSelector('.archive-table');
   await expect(page.locator('.archive-table.compare-table--rows')).toBeVisible();

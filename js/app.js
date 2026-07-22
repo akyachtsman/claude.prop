@@ -97,29 +97,30 @@ function router() {
 
 // ── views ────────────────────────────────────────────────────────────────
 // The header action bar — Compare / Archive / New / Import — lives in the topbar
-// on the list-type views (list, compare, archive), where the center slot is
-// otherwise empty. It is deliberately NOT shown on the dashboard, whose center
-// already carries the switcher + verdict pills + undo/redo (adding four buttons
-// there overflows the mobile topbar — the S4/S21 failure mode). The active view's
-// button is highlighted.
-function fillTopbarActions(route) {
+// on the Properties LIST view, where the center slot is otherwise empty — it is
+// the list's toolbar. It is NOT shown on the dashboard (its center already carries
+// the switcher + verdict pills + undo/redo — four more buttons overflow the mobile
+// topbar, the S4/S21 failure mode), nor on the compare/archive drill-downs (those
+// are reached FROM the list and return via their own "Back to properties" — keeping
+// the bar off them preserves a strict, unwindable back-navigation model).
+function fillTopbarActions() {
   clear(center);
   const n = store.list().filter(isArchived).length;
-  const act = (label, onClick, on, id) => {
-    const b = el('button', { class: 'btn btn--ghost topbar__act' + (on ? ' topbar__act--on' : ''), type: 'button', onclick: onClick, text: label });
+  const act = (label, onClick, id) => {
+    const b = el('button', { class: 'btn btn--ghost topbar__act', type: 'button', onclick: onClick, text: label });
     if (id) b.id = id;
     return b;
   };
   center.appendChild(el('div', { class: 'topbar__actbar' }, [
-    act('Compare', () => navigate('#/compare'), route === 'compare', 'nav-compare'),
-    act(n > 0 ? `Archive (${n})` : 'Archive', () => navigate('#/archive'), route === 'archive', 'nav-archive'),
-    act('+ New property', createNew, false),
+    act('Compare', () => navigate('#/compare'), 'nav-compare'),
+    act(n > 0 ? `Archive (${n})` : 'Archive', () => navigate('#/archive'), 'nav-archive'),
+    act('+ New property', createNew),
     el('button', { class: 'btn btn--primary topbar__act', type: 'button', onclick: openImport, text: 'Import a listing' }),
   ]));
 }
 
 function showList() {
-  fillTopbarActions('list');
+  fillTopbarActions();
   renderList(view, {
     list: () => store.list().filter(isActive),   // archived deals live in the Archive view only
     open: (id) => navigate('#/p/' + encodeURIComponent(id)),
@@ -146,7 +147,8 @@ function showList() {
 }
 
 function showArchive() {
-  fillTopbarActions('archive');
+  clear(center);
+  center.appendChild(el('span', { class: 'topbar__viewtitle', text: 'Archive' }));
   renderArchive(view, {
     archived: () => store.list().filter(isArchived),
     open: (id) => navigate('#/p/' + encodeURIComponent(id)),
@@ -167,7 +169,8 @@ function showArchive() {
 }
 
 function showCompare(ids) {
-  fillTopbarActions('compare');
+  clear(center);
+  center.appendChild(el('span', { class: 'topbar__viewtitle', text: 'Compare' }));
   renderCompare(view, {
     list: () => store.list().filter(isActive), compareIds: ids,   // archived deals excluded from Compare
     goList: () => navigate('#/'),
@@ -301,7 +304,9 @@ function openImport() {
   const status = el('p', { class: 'modal__status' });
   const importBtn = el('button', { class: 'btn btn--primary', type: 'button', text: 'Import' });
   const blankBtn = el('button', { class: 'btn btn--ghost', type: 'button', text: 'Start blank instead' });
+  const closeBtn = el('button', { class: 'modal__close', type: 'button', 'aria-label': 'Close', title: 'Close', text: '×' });
   const panel = el('div', { class: 'modal__panel import-modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Add a property from a listing' }, [
+    closeBtn,
     el('h2', { class: 'modal__title', text: 'Add a property from a listing' }),
     el('p', { class: 'modal__body', text: 'Paste a Crexi URL, or LoopNet page source — the details, photos, and figures come in automatically.' }),
     input, status,
@@ -309,6 +314,7 @@ function openImport() {
   ]);
   const overlay = el('div', { class: 'modal__overlay' }, [panel]);
   const close = () => { document.removeEventListener('keydown', onKey); overlay.remove(); };
+  closeBtn.addEventListener('click', close);
   const onKey = (e) => { if (e.key === 'Escape') close(); };
   const busy = (on) => { importBtn.disabled = on; importBtn.textContent = on ? 'Importing…' : 'Import'; };
   const finish = (property) => {
