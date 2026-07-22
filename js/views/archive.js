@@ -84,12 +84,13 @@ export function renderArchive(container, ctx) {
       // Name + verdict + the R/× actions all on ONE line in the sticky-left column.
       el('td', {}, [
         el('div', { class: 'archive-prospect' }, [
-          el('button', { class: 'compare-name archive-name', type: 'button', title: 'Open', onclick: () => ctx.open(p.id), text: p.name || 'Untitled' }),
-          verdictPill(p, m),
+          // Actions lead the row (R restore, × permanent delete), then the name + verdict.
           el('div', { class: 'archive-actions' }, [
             el('button', { class: 'btn btn--ghost btn--sm archive-restore', type: 'button', 'aria-label': `Restore ${p.name || 'property'}`, title: 'Restore to Properties', onclick: () => ctx.restore(p), text: 'R' }),
             el('button', { class: 'btn btn--ghost btn--sm archive-del', type: 'button', 'aria-label': `Delete ${p.name || 'property'}`, title: 'Permanently delete', onclick: () => ctx.remove(p), text: '×' }),
           ]),
+          el('button', { class: 'compare-name archive-name', type: 'button', title: 'Open', onclick: () => ctx.open(p.id), text: p.name || 'Untitled' }),
+          verdictPill(p, m),
         ]),
       ]),
       ...METRICS.map(([label, sel, f], ci) => {
