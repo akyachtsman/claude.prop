@@ -64,8 +64,8 @@ jobs:
       # Node-native tests for the storage layer (backend swap, offline
       # choke-point, first-sign-in upload/dedup). Browser-free — shims
       # localStorage/navigator — so they run in the blocking gate.
-      - name: Unit tests (store + reconcile + mathinput)
-        run: node --test tests/store.test.mjs tests/reconcile.test.mjs tests/mathinput.test.mjs
+      - name: Unit tests (store + reconcile + mathinput + media)
+        run: node --test tests/store.test.mjs tests/reconcile.test.mjs tests/mathinput.test.mjs tests/media.test.mjs
 
   ui-changes:
     name: Detect UI-relevant changes

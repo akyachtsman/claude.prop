@@ -2,11 +2,12 @@
 // live recompute, KPI strip, 5yr pro-forma, expense toggles, methodology.
 // Inputs stay mounted (focus preserved); only output nodes refresh on edit.
 
-import { el, render } from '../dom.js';
+import { el, clear, render, toast } from '../dom.js';
 import * as fmt from '../format.js';
 import { compute, capVerdict, dscrVerdict, onePctVerdict, BENCHMARK_CAP, BENCHMARK_DSCR } from '../model.js';
 import { NOTES } from '../notes.js';
 import { commitNumericInput } from '../mathinput.js';
+import { parsePhotoUrls, normalizeMedia } from '../media.js';
 
 const DEBOUNCE = 120;
 
@@ -72,6 +73,7 @@ function fieldSelect(value, options, onChange, label) {
 // ── main render ─────────────────────────────────────────────────────────
 export function renderDashboard(container, ctx) {
   const prop = ctx.property;               // working copy (mutable)
+  prop.media = normalizeMedia(prop.media); // photos: string[] of validated image URLs (default [])
   const out = {};                          // output nodes we refresh
   let timer = null;
   let firstPaint = true;                   // suppress change-flash on initial render
@@ -291,7 +293,19 @@ export function renderDashboard(container, ctx) {
     dealCell('Target CAP', fieldPercent(null, (v) => { goalSeekOffer('cap', v); onEdit(); }, { label: 'Target CAP' })),
     dealCell('Target DSCR', fieldNum(null, (v) => { goalSeekOffer('dscr', v); onEdit(); }, { label: 'Target DSCR', step: '0.01' })),
   ]);
-  const infoCard = card('Property Info', 'col-3', [
+  // Photos button — lives in the Property Info card header (not the top bar, so
+  // the mobile top bar can't overflow; and in an existing header row, so it adds
+  // no dashboard height). Opens the gallery modal (hoisted below).
+  const photosBtn = el('button', { class: 'photos-btn', type: 'button', title: 'Photos' });
+  function refreshPhotosBtn() {
+    const n = prop.media.photos.length;
+    photosBtn.textContent = '▦ ' + n;
+    photosBtn.setAttribute('aria-label', `Photos (${n})`);
+  }
+  refreshPhotosBtn();
+  photosBtn.addEventListener('click', openGallery);
+  const infoCard = el('section', { class: 'card col-3', 'aria-label': 'Property Info' }, [
+    el('div', { class: 'card__head' }, [el('span', { class: 'eyebrow', text: 'Property Info' }), photosBtn]),
     el('div', { class: 'form-grid form-grid--3' }, infoDefs.map(([label, key, type]) => {
       // Property Type drives the insurance estimate — re-seed a blank insurance on change.
       if (type === 'select') {
@@ -508,9 +522,77 @@ export function renderDashboard(container, ctx) {
   ]);
   const rightStack = el('div', { class: 'col-3 stack' }, [assumeCard, methodCard]);
 
+  function openGallery() {
+    const grid = el('div', { class: 'gallery__grid' });
+    function renderThumbs() {
+      clear(grid);
+      if (!prop.media.photos.length) {
+        grid.appendChild(el('p', { class: 'gallery__empty', text: 'No photos yet — paste image URLs below to add them.' }));
+        return;
+      }
+      prop.media.photos.forEach((url, i) => {
+        const img = el('img', { class: 'gallery__img', loading: 'lazy', alt: `Photo ${i + 1}`, src: url });
+        img.addEventListener('click', () => openLightbox(i));
+        const del = el('button', { class: 'gallery__del', type: 'button', 'aria-label': `Remove photo ${i + 1}`, text: '×' });
+        del.addEventListener('click', () => { prop.media.photos.splice(i, 1); renderThumbs(); refreshPhotosBtn(); onEdit(); });
+        grid.appendChild(el('figure', { class: 'gallery__cell' }, [img, del]));
+      });
+    }
+    const ta = el('textarea', { class: 'input gallery__ta', rows: '2', 'aria-label': 'Add photo URLs', placeholder: 'Paste image URLs — one per line…' });
+    const addBtn = el('button', { class: 'btn btn--primary', type: 'button', text: 'Add photos' });
+    addBtn.addEventListener('click', () => {
+      const seen = new Set(prop.media.photos);
+      const fresh = parsePhotoUrls(ta.value).filter((u) => !seen.has(u));
+      if (!fresh.length) { toast('No new valid image URLs found', 'info'); return; }
+      prop.media.photos.push(...fresh);
+      ta.value = '';
+      renderThumbs(); refreshPhotosBtn(); onEdit();
+      toast(`Added ${fresh.length} photo${fresh.length > 1 ? 's' : ''}`, 'success');
+    });
+    const closeBtn = el('button', { class: 'btn btn--ghost', type: 'button', text: 'Done' });
+    const panel = el('div', { class: 'modal__panel gallery', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Property photos' }, [
+      el('div', { class: 'gallery__head' }, [el('h2', { class: 'modal__title', text: 'Photos' }), closeBtn]),
+      grid,
+      el('div', { class: 'gallery__add' }, [ta, addBtn]),
+    ]);
+    const overlay = el('div', { class: 'modal__overlay' }, [panel]);
+    const close = () => { document.removeEventListener('keydown', onKey); overlay.remove(); };
+    // Ignore Escape while the full-size lightbox is up — that layer owns the key,
+    // so one Escape closes the lightbox only, not the gallery beneath it.
+    const onKey = (e) => { if (e.key === 'Escape' && !document.querySelector('.lightbox')) close(); };
+    closeBtn.addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    document.addEventListener('keydown', onKey);
+    renderThumbs();
+    document.body.appendChild(overlay);
+    ta.focus();
+  }
+
+  // Full-size viewer with keyboard/arrow navigation.
+  function openLightbox(start) {
+    let idx = start;
+    const img = el('img', { class: 'lightbox__img', alt: '' });
+    const cap = el('div', { class: 'lightbox__cap' });
+    const paint = () => { img.src = prop.media.photos[idx]; cap.textContent = `${idx + 1} / ${prop.media.photos.length}`; };
+    const step = (d) => { const n = prop.media.photos.length; idx = (idx + d + n) % n; paint(); };
+    const prev = el('button', { class: 'lightbox__nav', type: 'button', 'aria-label': 'Previous photo', text: '‹' });
+    const next = el('button', { class: 'lightbox__nav', type: 'button', 'aria-label': 'Next photo', text: '›' });
+    prev.addEventListener('click', (e) => { e.stopPropagation(); step(-1); });
+    next.addEventListener('click', (e) => { e.stopPropagation(); step(1); });
+    const box = el('div', { class: 'lightbox', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Photo viewer' }, [prev, img, next, cap]);
+    const close = () => { document.removeEventListener('keydown', onKey); box.remove(); };
+    const onKey = (e) => { if (e.key === 'Escape') close(); else if (e.key === 'ArrowLeft') step(-1); else if (e.key === 'ArrowRight') step(1); };
+    box.addEventListener('click', (e) => { if (e.target === box) close(); });
+    document.addEventListener('keydown', onKey);
+    paint();
+    document.body.appendChild(box);
+  }
+
   // Actions — rendered into the top bar (keeps the dashboard one-screen) ----
-  // Top-bar actions are just the edit-history controls now — edits auto-save on
-  // commit (no Save), and Delete lives on each Properties-list card.
+  // Top-bar actions are just the edit-history controls (kept lean so the mobile
+  // top bar never overflows). Edits auto-save on commit (no Save), and Delete
+  // lives on each Properties-list card. The Photos button lives in the Property
+  // Info card header instead.
   if (ctx.actionsHost) {
     render(ctx.actionsHost, [
       ...(ctx.undoButton ? [ctx.undoButton] : []),

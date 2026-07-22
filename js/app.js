@@ -42,6 +42,7 @@ function blankProperty() {
       { key: 'cleaning', label: 'Cleaning', amount: 0, included: false, estimated: false },
     ],
     assumptions: { minOppCostEquity: 0.15, taxRate: 0.28, collectionLoss: 0.05, cashflowAppr: 0.02, capitalAppr: 0.02 },
+    media: { photos: [] },   // image URLs shown in the Photos gallery
   };
 }
 
