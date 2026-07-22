@@ -558,10 +558,13 @@ body {
    a button (reopens the deal) that reads like the compare name. */
 .archive-name { display: block; background: none; border: none; padding: 0; cursor: pointer; text-align: left; text-decoration: underline; text-decoration-color: transparent; }
 .archive-name:hover, .archive-name:focus-visible { text-decoration-color: currentColor; }
-.archive-table .archive-actions { display: flex; gap: 6px; margin-top: 6px; }
+.archive-table .archive-actions { display: flex; gap: 6px; margin-top: 6px; flex-wrap: nowrap; }
 .btn--sm { min-height: 30px; padding: 4px var(--space-3); font-size: var(--font-xs); }
-.archive-del { color: var(--color-text-secondary); font-size: 16px; padding: 4px 10px; }
+/* R (restore) + × (permanent delete): equal compact squares, always on one row */
+.archive-restore, .archive-del { flex: none; width: 30px; min-width: 30px; padding: 0; justify-content: center; font-weight: 800; }
+.archive-del { color: var(--color-text-secondary); font-size: 18px; }
 .archive-del:hover, .archive-del:focus-visible { border-color: var(--color-fail); color: var(--color-fail); background: var(--color-fail-bg); }
+.archive-restore:hover, .archive-restore:focus-visible { border-color: var(--color-accent); color: var(--color-accent); }
 /* sortable column headers: the whole header is a button; a caret shows the
    active sort (a faint ↕ appears on hover for the rest, signalling it's sortable) */
 .compare-table th.th-sort { padding: 0; }

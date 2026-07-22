@@ -577,7 +577,7 @@ test('S32 archive — archived deals leave Properties/Compare and show as compar
   await expect(page.locator('.archive-name')).toContainText('New property');
 
   // Restore → the row leaves the archive (now empty); it's active again on Properties.
-  await page.click('.archive-table button:has-text("Restore")');
+  await page.click('.archive-table .archive-restore');
   await expect(page.locator('.empty')).toContainText('No archived properties');
   await page.click('#nav-properties');
   await page.waitForSelector('.lcard');

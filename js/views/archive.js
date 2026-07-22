@@ -84,9 +84,11 @@ export function renderArchive(container, ctx) {
       el('td', {}, [
         el('button', { class: 'compare-name archive-name', type: 'button', title: 'Open', onclick: () => ctx.open(p.id), text: p.name || 'Untitled' }),
         verdictPill(p, m),
+        // Two compact icon buttons on one line: R restores to Properties, × is a
+        // permanent delete.
         el('div', { class: 'archive-actions' }, [
-          el('button', { class: 'btn btn--ghost btn--sm', type: 'button', onclick: () => ctx.restore(p), text: 'Restore' }),
-          el('button', { class: 'btn btn--ghost btn--sm archive-del', type: 'button', 'aria-label': `Delete ${p.name || 'property'}`, title: 'Delete', onclick: () => ctx.remove(p), text: '×' }),
+          el('button', { class: 'btn btn--ghost btn--sm archive-restore', type: 'button', 'aria-label': `Restore ${p.name || 'property'}`, title: 'Restore to Properties', onclick: () => ctx.restore(p), text: 'R' }),
+          el('button', { class: 'btn btn--ghost btn--sm archive-del', type: 'button', 'aria-label': `Delete ${p.name || 'property'}`, title: 'Permanently delete', onclick: () => ctx.remove(p), text: '×' }),
         ]),
       ]),
       ...METRICS.map(([label, sel, f], ci) => {
