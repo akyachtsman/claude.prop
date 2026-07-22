@@ -9,12 +9,19 @@ import { sampleProperty, demoProperties } from './sample.js';
 import { renderDashboard } from './views/dashboard.js';
 import { renderList } from './views/list.js';
 import { renderCompare } from './views/compare.js';
+import { renderArchive } from './views/archive.js';
 import { classifyImportInput, parseLoopNetHtml } from './importparse.js';
 
 const view = document.getElementById('view');
 const center = document.getElementById('topbar-center');
 const navProps = document.getElementById('nav-properties');
 const navCompare = document.getElementById('nav-compare');
+
+// Active vs. archived split. `archived: true` hides a property from the
+// Properties list, Compare, and the dashboard switcher; it lives on only in the
+// Archive view until restored. Absent/false = active (fixtures have no flag).
+const isActive = (p) => !p.archived;
+const isArchived = (p) => !!p.archived;
 
 let account = null;     // the (dynamically imported) account layer; null if auth infra failed to load
 let undoStack = [];     // committed prior states of the property being edited (undo history)
@@ -25,7 +32,7 @@ let committedState = null;   // the current committed state, in memory (drives u
 // ── blank property factory (for "+ New") ────────────────────────────────
 function blankProperty() {
   return {
-    id: store.newId(), schemaVersion: 1, name: 'New property',
+    id: store.newId(), schemaVersion: 1, name: 'New property', archived: false,
     info: { propertyType: 'Commercial', askingPrice: 0, rentableSF: 0, lotSize: '', yearBuilt: '', zoning: '', hvacAge: '', roofAge: '', parking: '', ceilingHeight: '', appraisedValue: 0, apn: '', bedrooms: '', baths: '', subtype: '', broker: '', source: '', photosLink: '', description: '' },
     targets: { desiredCap: 0, desiredDscr: 0 },   // empty by default; pills use the hard-coded benchmark until a Target is set
     offer: { offerPrice: 0, fees: 0, improvements: 0 },
@@ -58,12 +65,15 @@ function parseHash() {
     const ids = new URLSearchParams(q).get('ids');
     return { route: 'compare', ids: ids ? ids.split(',') : null };
   }
+  if (h.startsWith('archive')) return { route: 'archive' };
   return { route: 'list' };
 }
 
 function navigate(hash) { location.hash = hash; }
 
 function setActiveNav(route) {
+  // Archive has no topbar link (it would overflow the mobile topbar — S4/S21);
+  // it's reached from the Properties list-head, so it counts as the list route.
   navProps.classList.toggle('topbar__link--active', route !== 'compare');
   navCompare.classList.toggle('topbar__link--active', route === 'compare');
 }
@@ -83,6 +93,7 @@ function router() {
   setActiveNav(r.route);
   if (r.route === 'dashboard') return showDashboard(r.id);
   if (r.route === 'compare') return showCompare(r.ids);
+  if (r.route === 'archive') return showArchive();
   return showList();
 }
 
@@ -91,12 +102,21 @@ function showList() {
   clear(center);
   center.appendChild(el('span', { class: 'topbar__viewtitle', text: 'Properties' }));
   renderList(view, {
-    list: store.list,
+    list: () => store.list().filter(isActive),   // archived deals live in the Archive view only
     open: (id) => navigate('#/p/' + encodeURIComponent(id)),
     newProperty: createNew,
     importUrl: openImport,
     loadSample: loadSample,
     goCompare: () => navigate('#/compare'),
+    goArchive: () => navigate('#/archive'),
+    archivedCount: () => store.list().filter(isArchived).length,
+    // Archive: hide from the list without deleting. A no-op if the write is
+    // rejected (offline); otherwise re-render the list in place.
+    archive: (p) => {
+      if (!store.save({ ...p, archived: true })) return;
+      toast('Archived.', 'info');
+      showList();
+    },
     remove: (p) => {
       if (!confirm(`This will permanently delete "${p.name || 'this property'}".`)) return;
       if (!store.remove(p.id)) return;   // offline reject (store toasts) — leave the card
@@ -106,11 +126,33 @@ function showList() {
   });
 }
 
+function showArchive() {
+  clear(center);
+  center.appendChild(el('span', { class: 'topbar__viewtitle', text: 'Archive' }));
+  renderArchive(view, {
+    archived: () => store.list().filter(isArchived),
+    open: (id) => navigate('#/p/' + encodeURIComponent(id)),
+    goList: () => navigate('#/'),
+    // Restore: clear the flag and drop back to the list. Re-render in place.
+    restore: (p) => {
+      if (!store.save({ ...p, archived: false })) return;
+      toast('Restored to Properties.', 'success');
+      showArchive();
+    },
+    remove: (p) => {
+      if (!confirm(`This will permanently delete "${p.name || 'this property'}".`)) return;
+      if (!store.remove(p.id)) return;
+      toast('Deleted.', 'info');
+      showArchive();
+    },
+  });
+}
+
 function showCompare(ids) {
   clear(center);
   center.appendChild(el('span', { class: 'topbar__viewtitle', text: 'Compare' }));
   renderCompare(view, {
-    list: store.list, compareIds: ids,
+    list: () => store.list().filter(isActive), compareIds: ids,   // archived deals excluded from Compare
     goList: () => navigate('#/'),
   });
 }
@@ -118,7 +160,9 @@ function showCompare(ids) {
 function showDashboard(id) {
   const saved = store.get(id);
   if (!saved) { toast('That property no longer exists.', 'info'); navigate('#/'); return; }
-  const props = store.list();
+  // The switcher cycles active properties only; keep the current one addressable
+  // even if it's archived (e.g. opened straight from the Archive view).
+  const props = store.list().filter((p) => isActive(p) || p.id === id);
   const idx = props.findIndex((p) => p.id === id);
   const working = deepCopy(saved);
 
@@ -253,9 +297,17 @@ function openImport() {
   const finish = (property) => {
     const saved = store.save(property);
     if (!saved) { busy(false); return; }             // offline reject (store toasts)
-    close();
-    toast('Imported from listing.', 'success');
-    navigate('#/p/' + encodeURIComponent(saved.id));
+    // Confirm success in the still-open modal, then open the property after a
+    // brief beat so the "import successful" message registers before the switch.
+    importBtn.disabled = true;
+    importBtn.textContent = 'Imported';
+    status.className = 'modal__status modal__status--ok';
+    status.textContent = '✓ Import successful — opening the property…';
+    toast('Import successful.', 'success');
+    setTimeout(() => {
+      close();
+      navigate('#/p/' + encodeURIComponent(saved.id));
+    }, 1000);
   };
   async function doImport() {
     const raw = input.value.trim();

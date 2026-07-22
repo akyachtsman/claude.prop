@@ -13,7 +13,7 @@ import { compute, capVerdict, dscrVerdict } from '../model.js';
 // dashboard KPIs in KPI-strip order. Direction drives best/worst (up = higher
 // is better; down = lower is better; null = neutral). Kept compact by design —
 // more columns are expected here later.
-const METRICS = [
+export const METRICS = [
   ['Asking', (m, p) => p.info.askingPrice, fmt.money, null],
   ['CAP', (m) => m.cap, fmt.percent2, 'up'],
   ['DSCR', (m) => m.dscr, fmt.ratio, 'up'],
@@ -29,10 +29,10 @@ const METRICS = [
   ['1% Rule', (m) => m.onePctRule, fmt.money, 'up'],
 ];
 
-const fnum = (v) => (v === null || v === undefined || !Number.isFinite(v));
+export const fnum = (v) => (v === null || v === undefined || !Number.isFinite(v));
 
 // Best/worst value for a set given a direction; null when it can't be decided.
-function extremes(vals, dir) {
+export function extremes(vals, dir) {
   if (!dir) return { best: null, worst: null };
   const finite = vals.filter((v) => !fnum(v));
   if (finite.length < 2) return { best: null, worst: null };
@@ -42,7 +42,7 @@ function extremes(vals, dir) {
   return { best, worst };
 }
 
-function verdictPill(p, m) {
+export function verdictPill(p, m) {
   const cap = capVerdict(m.cap);
   const dscr = dscrVerdict(m.dscr);
   const none = cap === null && dscr === null;

@@ -376,6 +376,7 @@ test('S31 import — one box takes a Crexi URL (server) or LoopNet page source (
   // (c) a Crexi URL imports via the (stubbed) Edge Function and opens the property
   await page.fill(box, 'https://www.crexi.com/properties/2606773/california-3091-marysville-boulevard');
   await page.click('.modal__actions button:has-text("Import")');
+  await expect(page.locator('.modal__status--ok')).toContainText(/import successful/i);   // confirmed before the detail screen
   await page.waitForSelector('.kpi-strip');
   await expect(page.locator('button[aria-label^="Photos"]')).toContainText('2');
   await page.click('button[aria-label="Listing details"]');
@@ -533,3 +534,55 @@ test('DELETE — a property is removed from its Properties-list card, with confi
 //  first-sign-in reconcile (js/account.js) rather than a local boot seed. That
 //  gap-seed + "a deleted deal stays gone" behaviour is covered by the Node unit
 //  test tests/reconcile.test.mjs and the fresh-account seed check in auth.spec.js.)
+
+test('S32 archive — archived deals leave Properties/Compare and show as compare-style rows; restore returns them', async ({ page }) => {
+  const errors = watchErrors(page);
+  await loadSample(page);                                   // 715 Plumas (active)
+  await page.goto('./', { waitUntil: 'load' });
+  await page.click('button:has-text("+ New property")');    // a 2nd active deal
+  await page.waitForSelector('.kpi-strip');
+  await page.goto('./', { waitUntil: 'load' });
+  await page.waitForSelector('.lcard');
+  await expect(page.locator('.lcard')).toHaveCount(2);
+
+  // Archive the "New property" card → it leaves the Properties list.
+  await page.click('button[aria-label="Archive New property"]');
+  await expect(page.locator('.lcard')).toHaveCount(1);
+  await expect(page.locator('.lcard__name')).toContainText('715 Plumas');
+  await expect(page.locator('.list-head__actions button:has-text("Archive (1)")')).toBeVisible();
+
+  // Archived deals are excluded from Compare (1 active left → the needs-2+ state).
+  await page.click('#nav-compare');
+  await expect(page.locator('.empty')).toContainText('Compare needs 2+');
+
+  // Archive view: reached from the list-head Archive button (next to Compare);
+  // the archived deal is a row in a compare-style rows table.
+  await page.click('#nav-properties');
+  await page.waitForSelector('.lcard');
+  await page.click('.list-head__actions button:has-text("Archive (1)")');
+  await page.waitForSelector('.archive-table');
+  await expect(page.locator('.archive-table.compare-table--rows')).toBeVisible();
+  await expect(page.locator('.archive-table tbody tr')).toHaveCount(1);
+  await expect(page.locator('.archive-name')).toContainText('New property');
+
+  // Restore → the row leaves the archive (now empty); it's active again on Properties.
+  await page.click('.archive-table button:has-text("Restore")');
+  await expect(page.locator('.empty')).toContainText('No archived properties');
+  await page.click('#nav-properties');
+  await page.waitForSelector('.lcard');
+  await expect(page.locator('.lcard')).toHaveCount(2);
+  await expect(page.locator('.list-head__actions button:has-text("Archive (")')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test('S32b archive persists across reload — an archived deal stays out of the list', async ({ page }) => {
+  await loadSample(page);
+  await page.goto('./', { waitUntil: 'load' });
+  await page.waitForSelector('.lcard');
+  await page.click('button[aria-label^="Archive 715 Plumas"]');
+  await expect(page.locator('.lcard')).toHaveCount(0);       // only deal archived → empty list
+  await page.reload({ waitUntil: 'load' });
+  // Still archived after reload (auto-saved): the list is empty, the Archive entry remains.
+  await expect(page.locator('.lcard')).toHaveCount(0);
+  await expect(page.locator('.empty__actions button:has-text("Archive (1)")')).toBeVisible();
+});
