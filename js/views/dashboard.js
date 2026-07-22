@@ -273,6 +273,9 @@ export function renderDashboard(container, ctx) {
     ['HVAC', 'hvacAge', 'text'], ['Roof', 'roofAge', 'text'],
     ['Parking', 'parking', 'text'], ['Ceiling', 'ceilingHeight', 'text'],
     ['APN', 'apn', 'text'],
+    // Listing descriptors captured verbatim from a source listing (free text).
+    ['Subtype', 'subtype', 'text'], ['Tenancy', 'tenancy', 'text'],
+    ['Stories', 'stories', 'text'], ['Opp Zone', 'oppZone', 'text'],
   ];
   // Deal summary — full-width band ABOVE the cards, mirroring the workbook's
   // Offer/All-In/Fees/Improvement header row. Editable, synced with the Offer
