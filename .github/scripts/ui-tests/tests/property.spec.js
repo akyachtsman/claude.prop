@@ -113,6 +113,10 @@ test('S8 compare — best/worst highlight and per-column verdict', async ({ page
   await page.click('button:has-text("+ New property")');
   await page.waitForSelector('.kpi-strip');
   await setField(page, 'input[aria-label="Offer price"]', '250000');   // auto-saved on commit
+  // Compare lives in the header action bar (list-type views only), so return to
+  // the list first, then open Compare from the header.
+  await page.click('#nav-properties');
+  await page.waitForSelector('.lcard');
   await page.click('#nav-compare');
   await page.waitForSelector('.compare-table');
   // default layout is the spreadsheet-style table: one row per property
@@ -545,21 +549,19 @@ test('S32 archive — archived deals leave Properties/Compare and show as compar
   await page.waitForSelector('.lcard');
   await expect(page.locator('.lcard')).toHaveCount(2);
 
-  // Archive the "New property" card → it leaves the Properties list.
+  // Archive the "New property" card via its footer Archive button → it leaves the list.
   await page.click('button[aria-label="Archive New property"]');
   await expect(page.locator('.lcard')).toHaveCount(1);
   await expect(page.locator('.lcard__name')).toContainText('715 Plumas');
-  await expect(page.locator('.list-head__actions button:has-text("Archive (1)")')).toBeVisible();
+  await expect(page.locator('#nav-archive')).toContainText('Archive (1)');   // header count updates
 
   // Archived deals are excluded from Compare (1 active left → the needs-2+ state).
   await page.click('#nav-compare');
   await expect(page.locator('.empty')).toContainText('Compare needs 2+');
 
-  // Archive view: reached from the list-head Archive button (next to Compare);
-  // the archived deal is a row in a compare-style rows table.
-  await page.click('#nav-properties');
-  await page.waitForSelector('.lcard');
-  await page.click('.list-head__actions button:has-text("Archive (1)")');
+  // Archive view: reached from the header Archive button (next to Compare); the
+  // archived deal is a row in a compare-style rows table.
+  await page.click('#nav-archive');
   await page.waitForSelector('.archive-table');
   await expect(page.locator('.archive-table.compare-table--rows')).toBeVisible();
   await expect(page.locator('.archive-table tbody tr')).toHaveCount(1);
@@ -571,7 +573,7 @@ test('S32 archive — archived deals leave Properties/Compare and show as compar
   await page.click('#nav-properties');
   await page.waitForSelector('.lcard');
   await expect(page.locator('.lcard')).toHaveCount(2);
-  await expect(page.locator('.list-head__actions button:has-text("Archive (")')).toHaveCount(0);
+  await expect(page.locator('#nav-archive')).toHaveText('Archive');   // count gone (0 archived)
   expect(errors).toEqual([]);
 });
 
@@ -582,7 +584,8 @@ test('S32b archive persists across reload — an archived deal stays out of the 
   await page.click('button[aria-label^="Archive 715 Plumas"]');
   await expect(page.locator('.lcard')).toHaveCount(0);       // only deal archived → empty list
   await page.reload({ waitUntil: 'load' });
-  // Still archived after reload (auto-saved): the list is empty, the Archive entry remains.
+  // Still archived after reload (auto-saved): the list is empty, the header Archive
+  // entry keeps its count.
   await expect(page.locator('.lcard')).toHaveCount(0);
-  await expect(page.locator('.empty__actions button:has-text("Archive (1)")')).toBeVisible();
+  await expect(page.locator('#nav-archive')).toContainText('Archive (1)');
 });

@@ -15,7 +15,6 @@ import { classifyImportInput, parseLoopNetHtml } from './importparse.js';
 const view = document.getElementById('view');
 const center = document.getElementById('topbar-center');
 const navProps = document.getElementById('nav-properties');
-const navCompare = document.getElementById('nav-compare');
 
 // Active vs. archived split. `archived: true` hides a property from the
 // Properties list, Compare, and the dashboard switcher; it lives on only in the
@@ -72,10 +71,9 @@ function parseHash() {
 function navigate(hash) { location.hash = hash; }
 
 function setActiveNav(route) {
-  // Archive has no topbar link (it would overflow the mobile topbar — S4/S21);
-  // it's reached from the Properties list-head, so it counts as the list route.
-  navProps.classList.toggle('topbar__link--active', route !== 'compare');
-  navCompare.classList.toggle('topbar__link--active', route === 'compare');
+  // Compare/Archive now live in the header action bar (fillTopbarActions), which
+  // owns their active state. The only static nav link left is Properties (home).
+  navProps.classList.toggle('topbar__link--active', route !== 'compare' && route !== 'archive');
 }
 
 function router() {
@@ -98,9 +96,30 @@ function router() {
 }
 
 // ── views ────────────────────────────────────────────────────────────────
-function showList() {
+// The header action bar — Compare / Archive / New / Import — lives in the topbar
+// on the list-type views (list, compare, archive), where the center slot is
+// otherwise empty. It is deliberately NOT shown on the dashboard, whose center
+// already carries the switcher + verdict pills + undo/redo (adding four buttons
+// there overflows the mobile topbar — the S4/S21 failure mode). The active view's
+// button is highlighted.
+function fillTopbarActions(route) {
   clear(center);
-  center.appendChild(el('span', { class: 'topbar__viewtitle', text: 'Properties' }));
+  const n = store.list().filter(isArchived).length;
+  const act = (label, onClick, on, id) => {
+    const b = el('button', { class: 'btn btn--ghost topbar__act' + (on ? ' topbar__act--on' : ''), type: 'button', onclick: onClick, text: label });
+    if (id) b.id = id;
+    return b;
+  };
+  center.appendChild(el('div', { class: 'topbar__actbar' }, [
+    act('Compare', () => navigate('#/compare'), route === 'compare', 'nav-compare'),
+    act(n > 0 ? `Archive (${n})` : 'Archive', () => navigate('#/archive'), route === 'archive', 'nav-archive'),
+    act('+ New property', createNew, false),
+    el('button', { class: 'btn btn--primary topbar__act', type: 'button', onclick: openImport, text: 'Import a listing' }),
+  ]));
+}
+
+function showList() {
+  fillTopbarActions('list');
   renderList(view, {
     list: () => store.list().filter(isActive),   // archived deals live in the Archive view only
     open: (id) => navigate('#/p/' + encodeURIComponent(id)),
@@ -127,8 +146,7 @@ function showList() {
 }
 
 function showArchive() {
-  clear(center);
-  center.appendChild(el('span', { class: 'topbar__viewtitle', text: 'Archive' }));
+  fillTopbarActions('archive');
   renderArchive(view, {
     archived: () => store.list().filter(isArchived),
     open: (id) => navigate('#/p/' + encodeURIComponent(id)),
@@ -149,8 +167,7 @@ function showArchive() {
 }
 
 function showCompare(ids) {
-  clear(center);
-  center.appendChild(el('span', { class: 'topbar__viewtitle', text: 'Compare' }));
+  fillTopbarActions('compare');
   renderCompare(view, {
     list: () => store.list().filter(isActive), compareIds: ids,   // archived deals excluded from Compare
     goList: () => navigate('#/'),

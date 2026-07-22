@@ -29,9 +29,10 @@ function badge(prop, m) {
 
 export function renderList(container, ctx) {
   const props = ctx.list();
-  const archiveCount = ctx.archivedCount ? ctx.archivedCount() : 0;
 
   if (props.length === 0) {
+    // Compare / Archive / New / Import live in the header; the empty state keeps
+    // the first-run onboarding CTAs (including "Load sample", which is here only).
     render(container, [el('div', { class: 'empty' }, [
       el('h2', { text: 'No properties yet' }),
       el('p', { text: 'Add a property to underwrite it against your own CAP and DSCR targets, or load a sample deal to explore.' }),
@@ -39,9 +40,6 @@ export function renderList(container, ctx) {
         el('button', { class: 'btn btn--primary', type: 'button', onclick: () => ctx.importUrl(), text: 'Import a listing' }),
         el('button', { class: 'btn btn--ghost', type: 'button', onclick: () => ctx.newProperty(), text: 'Add your first property' }),
         el('button', { class: 'btn btn--ghost', type: 'button', onclick: () => ctx.loadSample(), text: 'Load sample deal' }),
-        ...(archiveCount > 0
-          ? [el('button', { class: 'btn btn--ghost', type: 'button', onclick: () => ctx.goArchive(), text: `Archive (${archiveCount})` })]
-          : []),
       ]),
     ])]);
     return;
@@ -54,7 +52,8 @@ export function renderList(container, ctx) {
       el('span', { class: 'lcard__kpi-val', text: val }),
     ]);
     // The card is a container: a full-area "open" button (a button can't nest a
-    // button, so Delete is a sibling) plus a corner Delete control.
+    // button) over the head + KPIs, plus a footer with the Archive / Delete
+    // actions as siblings (each an explicit, labelled control on the card).
     return el('div', { class: 'lcard' }, [
       el('button', { class: 'lcard__open', type: 'button', 'aria-label': `Open ${prop.name || 'property'}`, onclick: () => ctx.open(prop.id) }, [
         el('div', { class: 'lcard__head' }, [
@@ -71,25 +70,18 @@ export function renderList(container, ctx) {
           kpi('NOI', fmt.moneyCompact(m.noi)), kpi('CoC', fmt.percent2(m.cashOnCash)),
         ]),
       ]),
-      // Decorative "opens" cue — pointer-events:none so clicks fall through to
-      // the open button beneath it.
-      el('span', { class: 'lcard__go', 'aria-hidden': 'true', text: '›' }),
-      el('div', { class: 'lcard__tools' }, [
-        el('button', { class: 'lcard__tool', type: 'button', 'aria-label': `Archive ${prop.name || 'property'}`, title: 'Archive', onclick: () => ctx.archive(prop), text: '⤓' }),
-        el('button', { class: 'lcard__tool lcard__del', type: 'button', 'aria-label': `Delete ${prop.name || 'property'}`, title: 'Delete', onclick: () => ctx.remove(prop), text: '×' }),
+      el('div', { class: 'lcard__foot' }, [
+        el('button', { class: 'lcard__act', type: 'button', 'aria-label': `Archive ${prop.name || 'property'}`, title: 'Archive this property', onclick: () => ctx.archive(prop), text: 'Archive' }),
+        el('button', { class: 'lcard__act lcard__del', type: 'button', 'aria-label': `Delete ${prop.name || 'property'}`, title: 'Delete this property', onclick: () => ctx.remove(prop), text: 'Delete' }),
       ]),
     ]);
   });
 
   render(container, [
+    // The primary actions (Compare / Archive / New / Import) now live in the
+    // topbar header (fillTopbarActions), not in this frame.
     el('div', { class: 'list-head' }, [
       el('h1', { text: 'Properties' }),
-      el('div', { class: 'list-head__actions' }, [
-        el('button', { class: 'btn btn--ghost', type: 'button', onclick: () => ctx.goCompare(), text: 'Compare' }),
-        el('button', { class: 'btn btn--ghost', type: 'button', onclick: () => ctx.goArchive(), text: archiveCount > 0 ? `Archive (${archiveCount})` : 'Archive' }),
-        el('button', { class: 'btn btn--ghost', type: 'button', onclick: () => ctx.newProperty(), text: '+ New property' }),
-        el('button', { class: 'btn btn--primary', type: 'button', onclick: () => ctx.importUrl(), text: 'Import a listing' }),
-      ]),
     ]),
     el('div', { class: 'lcard-grid' }, cards),
   ]);

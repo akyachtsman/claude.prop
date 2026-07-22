@@ -33,8 +33,13 @@ This project's look is its own — established at kickoff via `/design-intake`
 
 ## Application Architecture
 Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
-- `index.html` — app shell: top bar (brand + property switcher + verdict pills +
-  nav/Save/Delete) and `<main id="view">`; loads `js/app.js`.
+- `index.html` — app shell: top bar (brand + property switcher/verdict pills on
+  the dashboard, or the **header action bar** — Compare · Archive · + New · Import
+  a listing — on the list-type views + static nav: Properties · Export · Import ·
+  account) and `<main id="view">`; loads `js/app.js`. The action bar is built by
+  `app.js` `fillTopbarActions()` and shown on list/compare/archive only (never the
+  dashboard, whose center is already full — a 4-button add there overflows the
+  mobile topbar, the S4/S21 failure mode).
 - `js/model.js` — **pure calc engine** (the fidelity core): `compute(property)`
   → all 12 KPIs + 5-year pro-forma. Mirrors `specs/property-dashboard/workbook-model.md`
   with the two owner-approved corrections. No DOM/storage — unit-testable.
@@ -53,10 +58,12 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
 - `js/views/archive.js` — the Archive view: archived deals (`prop.archived === true`)
   rendered as rows in the **exact** Compare "Table" layout (reuses `METRICS`,
   `extremes`, `verdictPill`, `fnum` exported from `compare.js`), plus a per-row
-  Restore/Delete action column. Archiving hides a deal from the Properties list,
-  Compare, and the dashboard switcher without deleting it; it lives here until
-  restored. The `archived` flag is the only state; fixtures omit it (falsy = active),
-  so S5 is unaffected.
+  Restore/Delete actions in the sticky-left column. Archiving hides a deal from the
+  Properties list, Compare, and the dashboard switcher without deleting it; it lives
+  here until restored. Reached from the header action bar's **Archive** button; each
+  property card also carries an explicit **Archive** (+ **Delete**) footer button.
+  The `archived` flag is the only state; fixtures omit it (falsy = active), so S5 is
+  unaffected.
 - Spec: `specs/property-dashboard/` (spec, plan, tasks, workbook-model, research).
 
 ## Project-Specific Security Constraints
@@ -97,7 +104,7 @@ Read by `ui-tester` and the Playwright kit at runtime — fill in before invokin
 | Invalid test credential | _n/a_ |
 | Primary nav button | `Load sample deal` (first-run) / `+ New property` |
 | Primary content selector | `.kpi-strip` (dashboard) · `.lcard` (list) · `.compare-table` (compare) |
-| Nav cards | `['Properties', 'Compare', 'Archive']` |
+| Nav cards | header action bar `['Compare', 'Archive', '+ New property', 'Import a listing']` (list-type views) + static nav `['Properties', 'Export', 'Import']` |
 | Playwright test directory | `.github/scripts/ui-tests` |
 | Key selectors | list `.lcard__name` · delete `.lcard__del` · dashboard `.kpi` / `.kpi__value` · inputs by `aria-label` (e.g. `input[aria-label="Offer price"]`, committed on Enter/blur) · undo/redo `.topbar__action` (`button[aria-label="Undo last change"]` / `"Redo change"`) · compare `.cell--best`/`.cell--worst` |
 
@@ -137,7 +144,7 @@ fine-pointer context; the generic `app.spec.js` covers the mobile viewports).
 | S29 | Formula entry | Every numeric field (`fieldNum` $ + `fieldPercent` %, now `type=text`) accepts an arithmetic expression that evaluates on commit and is replaced by the result, Excel-style: `2+2`→`4`, `1300000/2`→`650000` (drives the model), percent `5+0.5`→`5.5%`; plain numbers unchanged. Pure evaluator `js/mathinput.js` (`evalMath`/`commitNumericInput`) supports `+ - * / ()` + unary, rejects non-arithmetic/`eval`-style input and ÷0 (falls back to a lenient read, never NaN), snaps float noise. Unit-tested in `tests/mathinput.test.mjs` (blocking CI step) | An expression stays literal, commits NaN, evaluates arbitrary JS, or a plain number breaks |
 | S30 | Photos gallery | A topbar **▦ N** button (kept off the dashboard grid so S11 one-screen holds) opens a modal gallery; pasting image URLs (newline/comma/space separated) adds them **deduped + sanitized** (only http(s), `javascript:`/`data:`/relative dropped via `js/media.js`); each thumbnail opens a full-size **lightbox** with ←/→/Esc nav; Esc closes only the lightbox (not the gallery beneath); removing a photo and reload persists via auto-save (`prop.media.photos`). Fixtures default to empty (`normalizeMedia`), so S5 is unaffected. Pure helpers unit-tested in `tests/media.test.mjs` (blocking CI step) | No ▦ button, a `javascript:` URL is accepted, dupes stack, lightbox nav/Esc broken, Esc closes both layers, or photos lost on reload |
 | S31 | Listing import | The list's primary **Import a listing** action opens a modal with one textarea that takes **either** a Crexi **URL** (→ `importListing` → the `import-listing` Edge Function, stubbed in `tests/_supabase-mock.js`) **or** LoopNet **page source** (→ `parseLoopNetHtml`, parsed in-browser from the page's JSON-LD, no network). `classifyImportInput` routes them. A LoopNet **URL** is refused with a hint to paste the source instead (Akamai blocks server fetch); unsupported input shows an inline error and doesn't navigate; a good input creates + opens the property with its fields (Subtype/Source/photos). On success the modal shows an explicit **"✓ Import successful — opening the property…"** (`.modal__status--ok`) + toast, then opens the detail screen after a short beat (the confirmation precedes navigation). `+ New property` (blank) and `Load sample` remain | No Import button/modal, no "Import successful" confirmation before the detail screen, a Crexi URL or LoopNet source doesn't create+open a property, a LoopNet URL isn't hinted, bad input navigates/no error, or imported fields missing |
-| S32 | Archive | A property card's **Archive** button (in the `.lcard__tools` cluster next to Delete) sets `prop.archived` and drops it from the Properties list, Compare, and the dashboard switcher — persisted via auto-save (survives reload), never deleted. A list-head **Archive**/**Archive (N)** button (next to Compare — deliberately **not** a topbar nav link, which would overflow the mobile topbar, S4/S21) opens the `#/archive` view, which lists archived deals as rows in the **exact** Compare "Table" layout (`.archive-table.compare-table--rows`, sortable headers, best/worst highlight, verdict pill) with per-row **Restore** (→ back to Properties) and Delete. Fixtures omit the flag (active), so S5 holds | No Archive button/view, archived deal still in list/Compare/switcher, archive lost on reload, Restore doesn't return the deal, or the table isn't the compare-rows layout |
+| S32 | Archive | A property card's **Archive** button (in the `.lcard__foot` next to Delete) sets `prop.archived` and drops it from the Properties list, Compare, and the dashboard switcher — persisted via auto-save (survives reload), never deleted. The header action bar's **Archive**/**Archive (N)** button (`#nav-archive`, next to Compare — the action bar lives in the topbar on list-type views, **not** the dashboard, so the mobile topbar can't overflow, S4/S21) opens the `#/archive` view, which lists archived deals as rows in the **exact** Compare "Table" layout (`.archive-table.compare-table--rows`, sortable headers, best/worst highlight, verdict pill) with per-row **Restore** (→ back to Properties) and Delete in the sticky-left column. Fixtures omit the flag (active), so S5 holds | No Archive button/view, archived deal still in list/Compare/switcher, archive lost on reload, Restore doesn't return the deal, or the table isn't the compare-rows layout |
 
 **The app is gated behind login** (owner decision, 2026-07-16), using **email +
 password** (`signIn`/`signUp`/`resetPassword`/`updatePassword` in `js/supabase.js`;
