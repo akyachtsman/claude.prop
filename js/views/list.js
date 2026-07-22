@@ -70,9 +70,11 @@ export function renderList(container, ctx) {
           kpi('NOI', fmt.moneyCompact(m.noi)), kpi('CoC', fmt.percent2(m.cashOnCash)),
         ]),
       ]),
+      // Archive is the only card action — deleting happens from the Archive view
+      // (archive first, then Restore or Delete there), so a deal is never lost in
+      // one click from the list.
       el('div', { class: 'lcard__foot' }, [
         el('button', { class: 'lcard__act', type: 'button', 'aria-label': `Archive ${prop.name || 'property'}`, title: 'Archive this property', onclick: () => ctx.archive(prop), text: 'Archive' }),
-        el('button', { class: 'lcard__act lcard__del', type: 'button', 'aria-label': `Delete ${prop.name || 'property'}`, title: 'Delete this property', onclick: () => ctx.remove(prop), text: 'Delete' }),
       ]),
     ]);
   });

@@ -419,9 +419,9 @@ body {
 /* Header action bar (Compare / Archive / New / Import) — shown on the list-type
    views, right-aligned in the otherwise-empty center slot so it reads as part of
    the header nav. Not rendered on the dashboard (its center is already full). */
-.topbar__actbar { display: flex; gap: var(--space-2); margin-left: auto; flex-wrap: wrap; }
-.topbar__act { min-height: 36px; padding: 6px var(--space-3); font-size: var(--font-sm); border-radius: var(--radius-md); }
-.topbar__act--on { border-color: var(--color-accent); color: var(--color-accent); box-shadow: inset 0 0 0 1px var(--color-accent); }
+/* The action bar's buttons are plain topbar links (same as the static nav on the
+   right), so it reads as one continuous header — not a row of boxed buttons. */
+.topbar__actbar { display: flex; gap: var(--space-1); margin-left: auto; flex-wrap: wrap; align-items: center; }
 .topbar__link { background: transparent; border: none; font: inherit; cursor: pointer; }
 
 /* editable field grids inside cards — dense for one-screen fit */
@@ -507,7 +507,6 @@ body {
   border: 1px solid var(--color-border); border-radius: var(--radius-sm);
 }
 .lcard__act:hover, .lcard__act:focus-visible { border-color: var(--color-border-hover); background: var(--color-bg); color: var(--color-text-primary); }
-.lcard__del:hover, .lcard__del:focus-visible { border-color: var(--color-fail); background: var(--color-fail-bg); color: var(--color-fail); }
 .lcard__head { display: flex; align-items: center; gap: var(--space-3); }
 .lcard__mono {
   flex: none; width: 40px; height: 40px; border-radius: var(--radius-sm);

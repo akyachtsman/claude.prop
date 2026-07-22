@@ -522,16 +522,23 @@ test('S21 undo/redo — a committed edit can be reverted and replayed; typing al
   await expect.poll(async () => (await kpis(page))['CAP']).toBe('22.21%');
 });
 
-test('DELETE — a property is removed from its Properties-list card, with confirmation', async ({ page }) => {
+test('DELETE — deleting happens from the Archive rows (archive first), with confirmation', async ({ page }) => {
   await loadSample(page);
-  await page.goto('./', { waitUntil: 'load' });          // Delete now lives on the list card
+  await page.goto('./', { waitUntil: 'load' });
   await page.waitForSelector('.lcard');
+  // Cards no longer carry Delete — only Archive.
+  await expect(page.locator('.lcard .lcard__del')).toHaveCount(0);
+  // Archive the sample, then delete it from the Archive view (confirmed).
+  await page.click('button[aria-label^="Archive 715 Plumas"]');
+  await expect(page.locator('.lcard')).toHaveCount(0);
+  await page.click('#nav-archive');
+  await page.waitForSelector('.archive-table');
   let asked = false;
   page.on('dialog', (d) => { asked = true; d.accept(); });
-  await page.locator('.lcard__del').first().click();
-  await page.waitForTimeout(200);
+  await page.locator('.archive-del').first().click();
+  await page.waitForTimeout(300);
   expect(asked).toBe(true);
-  await expect(page.locator('.lcard')).toHaveCount(0);   // deleted → empty list
+  await expect(page.locator('.empty')).toContainText('No archived properties');   // deleted → archive empty
 });
 
 // (S22 demo-seed removed here: the demo deals now seed per-account via the
