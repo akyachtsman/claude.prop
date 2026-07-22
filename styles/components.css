@@ -680,3 +680,38 @@ body.is-readonly #view button:not(.topbar__link):not(.switcher__btn) {
   .modal__panel { animation: modal-in 0.16s ease-out; }
   @keyframes modal-in { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
 }
+
+/* photo gallery (modal) + full-size lightbox ---------------------------------- */
+.modal__panel.gallery { max-width: 720px; gap: var(--space-4); }
+.gallery__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.gallery__grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--space-3); max-height: 52vh; overflow-y: auto;
+}
+.gallery__empty { color: var(--color-text-secondary); font-size: var(--font-sm); margin: 0; padding: var(--space-6) 0; text-align: center; }
+.gallery__cell { position: relative; margin: 0; }
+.gallery__img {
+  width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block;
+  border-radius: var(--radius-md); border: 1px solid var(--color-border);
+  background: var(--gen-shade); cursor: zoom-in;
+}
+.gallery__del {
+  position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border: none;
+  border-radius: var(--radius-pill); background: rgba(19, 46, 78, 0.72); color: #fff;
+  font-size: 15px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.gallery__del:hover, .gallery__del:focus-visible { background: var(--color-danger); }
+.gallery__add { display: flex; gap: var(--space-2); align-items: flex-start; }
+.gallery__ta { flex: 1; resize: vertical; font-family: inherit; min-height: 42px; }
+
+.lightbox {
+  position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
+  gap: var(--space-3); padding: var(--space-6); background: rgba(10, 20, 34, 0.88);
+}
+.lightbox__img { max-width: min(90vw, 1100px); max-height: 86vh; object-fit: contain; border-radius: var(--radius-md); }
+.lightbox__nav {
+  flex: none; width: 44px; height: 44px; border: none; border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.14); color: #fff; font-size: 26px; line-height: 1; cursor: pointer;
+}
+.lightbox__nav:hover, .lightbox__nav:focus-visible { background: rgba(255, 255, 255, 0.28); }
+.lightbox__cap { position: fixed; bottom: 18px; left: 0; right: 0; text-align: center; color: #E6EEF8; font-size: var(--font-sm); font-variant-numeric: tabular-nums; }

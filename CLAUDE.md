@@ -43,6 +43,8 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
 - `js/format.js` — number/date/rate formatting (editorial rules).
 - `js/dom.js` — `el()`/`render()`/`toast()` DOM builder (all text via `textContent`).
 - `js/notes.js` — workbook methodology text (verbatim).
+- `js/mathinput.js` — pure Excel-style arithmetic evaluator for numeric fields (`evalMath`/`commitNumericInput`).
+- `js/media.js` — pure photo-gallery helpers (`safeImageUrl`/`parsePhotoUrls`/`normalizeMedia`); `prop.media.photos` is a `string[]` of validated http(s) image URLs.
 - `js/sample.js` — the sample deal + `EXPECTED` fixture (drives the fidelity test).
 - `js/views/{dashboard,list,compare}.js` — the three views; `js/app.js` is the
   hash router (`#/`, `#/p/:id`, `#/compare`) + shared state.
@@ -118,6 +120,7 @@ fine-pointer context; the generic `app.spec.js` covers the mobile viewports).
 | S27 | Offline read-only | Signed-in + offline shows the `#offline-banner` and `body.is-readonly`; the write choke-point (`store.save`/`remove`) rejects edits (no cache mutation); reconnect clears the banner | No banner/read-only state, or an edit persists while offline signed-in |
 | S28 | First-sign-in seed | A fresh account (reconcile enabled) gap-seeds the 715 Plumas sample + 3 demos on first sign-in; the test reloads (reading the persisted stateful mock) so the assertion is engine-independent across chromium/webkit. The gap-seed *logic* is also unit-tested in `tests/reconcile.test.mjs` | Fewer than 4 cards, or a fixture missing |
 | S29 | Formula entry | Every numeric field (`fieldNum` $ + `fieldPercent` %, now `type=text`) accepts an arithmetic expression that evaluates on commit and is replaced by the result, Excel-style: `2+2`→`4`, `1300000/2`→`650000` (drives the model), percent `5+0.5`→`5.5%`; plain numbers unchanged. Pure evaluator `js/mathinput.js` (`evalMath`/`commitNumericInput`) supports `+ - * / ()` + unary, rejects non-arithmetic/`eval`-style input and ÷0 (falls back to a lenient read, never NaN), snaps float noise. Unit-tested in `tests/mathinput.test.mjs` (blocking CI step) | An expression stays literal, commits NaN, evaluates arbitrary JS, or a plain number breaks |
+| S30 | Photos gallery | A topbar **▦ N** button (kept off the dashboard grid so S11 one-screen holds) opens a modal gallery; pasting image URLs (newline/comma/space separated) adds them **deduped + sanitized** (only http(s), `javascript:`/`data:`/relative dropped via `js/media.js`); each thumbnail opens a full-size **lightbox** with ←/→/Esc nav; Esc closes only the lightbox (not the gallery beneath); removing a photo and reload persists via auto-save (`prop.media.photos`). Fixtures default to empty (`normalizeMedia`), so S5 is unaffected. Pure helpers unit-tested in `tests/media.test.mjs` (blocking CI step) | No ▦ button, a `javascript:` URL is accepted, dupes stack, lightbox nav/Esc broken, Esc closes both layers, or photos lost on reload |
 
 **The app is gated behind login** (owner decision, 2026-07-16), using **email +
 password** (`signIn`/`signUp`/`resetPassword`/`updatePassword` in `js/supabase.js`;

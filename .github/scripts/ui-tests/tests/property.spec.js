@@ -327,6 +327,36 @@ test('Formula entry — an arithmetic expression in a numeric field evaluates on
   await expect(offer).toHaveValue('1300000');
 });
 
+test('Photos gallery — add image URLs (deduped + sanitized), view in a lightbox, remove, and persist', async ({ page }) => {
+  await loadSample(page);
+  const btn = page.locator('button[aria-label^="Photos"]');
+  await expect(btn).toContainText('0');
+  await btn.click();
+  await expect(page.locator('.gallery')).toBeVisible();
+  // paste four lines: two good URLs, a javascript: URL (dropped), and a duplicate
+  await page.fill('textarea[aria-label="Add photo URLs"]',
+    'https://ex.com/1.jpg\nhttps://ex.com/2.jpg\njavascript:alert(1)\nhttps://ex.com/1.jpg');
+  await page.click('button:has-text("Add photos")');
+  await expect(page.locator('.gallery__cell')).toHaveCount(2);   // deduped + junk dropped
+  await expect(btn).toContainText('2');
+  // full-size lightbox + keyboard nav
+  await page.locator('.gallery__img').first().click();
+  await expect(page.locator('.lightbox__cap')).toHaveText('1 / 2');
+  await page.locator('.lightbox__nav[aria-label="Next photo"]').click();
+  await expect(page.locator('.lightbox__cap')).toHaveText('2 / 2');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.lightbox')).toHaveCount(0);
+  await expect(page.locator('.gallery')).toBeVisible();          // gallery survives the lightbox's Escape
+  // remove one, close, and confirm it survives a reload (auto-saved)
+  await page.locator('.gallery__del').first().click();
+  await expect(page.locator('.gallery__cell')).toHaveCount(1);
+  await page.click('button:has-text("Done")');
+  await page.waitForTimeout(600);
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForSelector('.kpi-strip');
+  await expect(page.locator('button[aria-label^="Photos"]')).toContainText('1');
+});
+
 test('Pills check the FIXED 8% / 1.25 benchmark — a Target goal-seek moves actual CAP but not the bar', async ({ page }) => {
   await loadSample(page);
   const capPill = page.locator('.topbar__pills .pill').nth(0);
