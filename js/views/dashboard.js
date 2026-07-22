@@ -7,7 +7,7 @@ import * as fmt from '../format.js';
 import { compute, capVerdict, dscrVerdict, onePctVerdict, BENCHMARK_CAP, BENCHMARK_DSCR } from '../model.js';
 import { NOTES } from '../notes.js';
 import { commitNumericInput } from '../mathinput.js';
-import { parsePhotoUrls, normalizeMedia } from '../media.js';
+import { parsePhotoUrls, normalizeMedia, safeImageUrl } from '../media.js';
 
 const DEBOUNCE = 120;
 
@@ -308,10 +308,11 @@ export function renderDashboard(container, ctx) {
   // (subtype, tenancy, broker, …) plus a free-text description. Kept in a modal
   // rather than inline fields so the one-screen layout holds on every context
   // (touch inputs are 44px tall, so extra inline rows would overflow on mobile).
-  const LISTING_FIELDS = [['Subtype', 'subtype'], ['Tenancy', 'tenancy'], ['Stories', 'stories'], ['Opp Zone', 'oppZone'], ['Broker', 'broker']];
+  const LISTING_FIELDS = [['Subtype', 'subtype'], ['Broker', 'broker']];
   const listingBtn = el('button', { class: 'photos-btn', type: 'button', title: 'Listing details', 'aria-label': 'Listing details' });
   function refreshListingBtn() {
-    const filled = LISTING_FIELDS.some(([, k]) => (prop.info[k] || '').trim()) || (prop.info.description || '').trim();
+    const filled = LISTING_FIELDS.some(([, k]) => (prop.info[k] || '').trim())
+      || (prop.info.photosLink || '').trim() || (prop.info.description || '').trim();
     listingBtn.textContent = filled ? '🏷 ✓' : '🏷';
   }
   refreshListingBtn();
@@ -612,13 +613,22 @@ export function renderDashboard(container, ctx) {
       inp.addEventListener('input', () => { prop.info[key] = inp.value; dirty = true; });
       return el('label', { class: 'field' }, [el('span', { class: 'field__label', text: label }), inp]);
     });
-    const ta = el('textarea', { class: 'input desc-ta', rows: '6', 'aria-label': 'Property description', placeholder: 'Listing description, highlights, notes…' });
+    // Photos link — a URL to the source listing / photo gallery, with a live
+    // "Open ↗" anchor when the value is a valid http(s) link.
+    const linkInp = el('input', { class: 'input', type: 'url', value: prop.info.photosLink || '', 'aria-label': 'Photos link', placeholder: 'https://… listing / photo gallery' });
+    const linkOpen = el('a', { class: 'link-open', target: '_blank', rel: 'noopener noreferrer', text: 'Open ↗' });
+    const syncLink = () => { const u = safeImageUrl(linkInp.value); if (u) { linkOpen.href = u; linkOpen.hidden = false; } else { linkOpen.removeAttribute('href'); linkOpen.hidden = true; } };
+    linkInp.addEventListener('input', () => { prop.info.photosLink = linkInp.value; dirty = true; syncLink(); });
+    syncLink();
+    const linkField = el('label', { class: 'field' }, [el('span', { class: 'field__label' }, ['Photos link ', linkOpen]), linkInp]);
+    const ta = el('textarea', { class: 'input desc-ta', rows: '6', 'aria-label': 'Property description', placeholder: 'Description, highlights, building/business extras…' });
     ta.value = prop.info.description || '';
     ta.addEventListener('input', () => { prop.info.description = ta.value; dirty = true; });
     const closeBtn = el('button', { class: 'btn btn--ghost', type: 'button', text: 'Done' });
     const panel = el('div', { class: 'modal__panel desc-modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Listing details' }, [
       el('div', { class: 'gallery__head' }, [el('h2', { class: 'modal__title', text: 'Listing details' }), closeBtn]),
       el('div', { class: 'form-grid' }, fieldEls),
+      linkField,
       el('span', { class: 'field__label', text: 'Description' }),
       ta,
     ]);
