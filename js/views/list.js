@@ -29,6 +29,7 @@ function badge(prop, m) {
 
 export function renderList(container, ctx) {
   const props = ctx.list();
+  const archiveCount = ctx.archivedCount ? ctx.archivedCount() : 0;
 
   if (props.length === 0) {
     render(container, [el('div', { class: 'empty' }, [
@@ -38,6 +39,9 @@ export function renderList(container, ctx) {
         el('button', { class: 'btn btn--primary', type: 'button', onclick: () => ctx.importUrl(), text: 'Import a listing' }),
         el('button', { class: 'btn btn--ghost', type: 'button', onclick: () => ctx.newProperty(), text: 'Add your first property' }),
         el('button', { class: 'btn btn--ghost', type: 'button', onclick: () => ctx.loadSample(), text: 'Load sample deal' }),
+        ...(archiveCount > 0
+          ? [el('button', { class: 'btn btn--ghost', type: 'button', onclick: () => ctx.goArchive(), text: `Archive (${archiveCount})` })]
+          : []),
       ]),
     ])]);
     return;
@@ -70,7 +74,10 @@ export function renderList(container, ctx) {
       // Decorative "opens" cue — pointer-events:none so clicks fall through to
       // the open button beneath it.
       el('span', { class: 'lcard__go', 'aria-hidden': 'true', text: '›' }),
-      el('button', { class: 'lcard__del', type: 'button', 'aria-label': `Delete ${prop.name || 'property'}`, title: 'Delete', onclick: () => ctx.remove(prop), text: '×' }),
+      el('div', { class: 'lcard__tools' }, [
+        el('button', { class: 'lcard__tool', type: 'button', 'aria-label': `Archive ${prop.name || 'property'}`, title: 'Archive', onclick: () => ctx.archive(prop), text: '⤓' }),
+        el('button', { class: 'lcard__tool lcard__del', type: 'button', 'aria-label': `Delete ${prop.name || 'property'}`, title: 'Delete', onclick: () => ctx.remove(prop), text: '×' }),
+      ]),
     ]);
   });
 
@@ -79,6 +86,7 @@ export function renderList(container, ctx) {
       el('h1', { text: 'Properties' }),
       el('div', { class: 'list-head__actions' }, [
         el('button', { class: 'btn btn--ghost', type: 'button', onclick: () => ctx.goCompare(), text: 'Compare' }),
+        el('button', { class: 'btn btn--ghost', type: 'button', onclick: () => ctx.goArchive(), text: archiveCount > 0 ? `Archive (${archiveCount})` : 'Archive' }),
         el('button', { class: 'btn btn--ghost', type: 'button', onclick: () => ctx.newProperty(), text: '+ New property' }),
         el('button', { class: 'btn btn--primary', type: 'button', onclick: () => ctx.importUrl(), text: 'Import a listing' }),
       ]),
