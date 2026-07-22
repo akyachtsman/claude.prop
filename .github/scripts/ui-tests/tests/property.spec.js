@@ -381,6 +381,7 @@ test('S31 import — one box takes a Crexi URL (server) or LoopNet page source (
   await page.click('button[aria-label="Listing details"]');
   await expect(page.locator('input[aria-label="Subtype"]')).toHaveValue('Auto Shop');
   await expect(page.locator('input[aria-label="Source"]')).toHaveValue(/crexi\.com/);
+  await page.keyboard.press('Escape');   // close the Listing-details modal before reopening Import
 
   // (d) pasted LoopNet page source is parsed in-browser (no network) into a property
   await openImport();
