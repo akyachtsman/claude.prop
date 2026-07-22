@@ -201,8 +201,27 @@ function showDashboard(id) {
   clear(center);
   const prevId = props[(idx - 1 + props.length) % props.length]?.id;
   const nextId = props[(idx + 1) % props.length]?.id;
+  // The property name/address is editable right here in the header (there's no
+  // room for it in the one-screen dashboard body). Committing on Enter/blur saves
+  // and is one undo step, mirroring the field-commit flow in the dashboard.
+  const nameInput = el('input', {
+    class: 'switcher__name', type: 'text', value: working.name || '',
+    'aria-label': 'Property name or address', placeholder: 'Add address / name',
+    title: 'Property name / address — click to edit',
+  });
+  const commitName = () => {
+    const v = nameInput.value.trim();
+    if (v === (working.name || '')) return;              // no change → nothing to commit
+    working.name = v;
+    if (!store.save(working)) { showDashboard(working.id); return; }   // offline reject
+    undoStack.push(committedState);
+    committedState = deepCopy(working);
+    redoStack = [];
+    refreshHistory();
+  };
+  nameInput.addEventListener('change', commitName);       // Enter / blur
   const title = el('div', { class: 'switcher__title' }, [
-    el('h1', { text: working.name || 'Untitled' }),
+    nameInput,
     el('span', { class: 'sub', text: `${fmtSub(working)} · property ${idx + 1} of ${props.length}` }),
   ]);
   const pills = el('div', { class: 'topbar__pills' });
