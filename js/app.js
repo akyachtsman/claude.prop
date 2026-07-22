@@ -9,6 +9,7 @@ import { sampleProperty, demoProperties } from './sample.js';
 import { renderDashboard } from './views/dashboard.js';
 import { renderList } from './views/list.js';
 import { renderCompare } from './views/compare.js';
+import { classifyImportInput, parseLoopNetHtml } from './importparse.js';
 
 const view = document.getElementById('view');
 const center = document.getElementById('topbar-center');
@@ -93,6 +94,7 @@ function showList() {
     list: store.list,
     open: (id) => navigate('#/p/' + encodeURIComponent(id)),
     newProperty: createNew,
+    importUrl: openImport,
     loadSample: loadSample,
     goCompare: () => navigate('#/compare'),
     remove: (p) => {
@@ -226,6 +228,66 @@ function loadSample() {
   if (!p) return;                                  // offline reject (store toasts)
   toast('Sample deal loaded.', 'success');
   navigate('#/p/' + encodeURIComponent(p.id));
+}
+
+// Add a property from a listing: one box takes either a Crexi URL (fetched +
+// normalized server-side by the import-listing Edge Function) or LoopNet page
+// source (parsed in the browser from its embedded JSON-LD). The app detects
+// which and routes it. "Start blank" falls back to createNew.
+function openImport() {
+  const input = el('textarea', { class: 'input import-ta', rows: '3', 'aria-label': 'Listing URL or page source',
+    placeholder: 'Paste a Crexi listing URL — or, for LoopNet, the page source (open the listing, Ctrl+U, select all, copy).' });
+  const status = el('p', { class: 'modal__status' });
+  const importBtn = el('button', { class: 'btn btn--primary', type: 'button', text: 'Import' });
+  const blankBtn = el('button', { class: 'btn btn--ghost', type: 'button', text: 'Start blank instead' });
+  const panel = el('div', { class: 'modal__panel import-modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Add a property from a listing' }, [
+    el('h2', { class: 'modal__title', text: 'Add a property from a listing' }),
+    el('p', { class: 'modal__body', text: 'Paste a Crexi URL, or LoopNet page source — the details, photos, and figures come in automatically.' }),
+    input, status,
+    el('div', { class: 'modal__actions' }, [blankBtn, importBtn]),
+  ]);
+  const overlay = el('div', { class: 'modal__overlay' }, [panel]);
+  const close = () => { document.removeEventListener('keydown', onKey); overlay.remove(); };
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  const busy = (on) => { importBtn.disabled = on; importBtn.textContent = on ? 'Importing…' : 'Import'; };
+  const finish = (property) => {
+    const saved = store.save(property);
+    if (!saved) { busy(false); return; }             // offline reject (store toasts)
+    close();
+    toast('Imported from listing.', 'success');
+    navigate('#/p/' + encodeURIComponent(saved.id));
+  };
+  async function doImport() {
+    const raw = input.value.trim();
+    const kind = classifyImportInput(raw);
+    if (kind === 'empty') { status.textContent = 'Paste a listing URL or the page source first.'; return; }
+    status.textContent = ''; busy(true);
+    if (kind === 'url') {
+      if (/loopnet\.com/i.test(raw)) {   // LoopNet blocks server fetch — needs the page source instead
+        status.textContent = 'For LoopNet, paste the page source (open the listing, Ctrl+U, select all, copy) — not the URL.';
+        busy(false); return;
+      }
+      let mod;
+      try { mod = await import('./supabase.js'); }
+      catch { status.textContent = 'Import needs a connection. Try again in a moment.'; busy(false); return; }
+      const res = await mod.importListing(raw);
+      if (!res.ok) { status.textContent = res.error; busy(false); return; }
+      finish(res.property);
+    } else if (kind === 'html') {
+      const res = parseLoopNetHtml(raw);
+      if (!res.ok) { status.textContent = res.error; busy(false); return; }
+      finish(res.property);
+    } else {
+      status.textContent = "That doesn't look like a listing URL or page source.";
+      busy(false);
+    }
+  }
+  importBtn.addEventListener('click', doImport);
+  blankBtn.addEventListener('click', () => { close(); createNew(); });
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', onKey);
+  document.body.appendChild(overlay);
+  input.focus();
 }
 
 // ── export / import ──────────────────────────────────────────────────────

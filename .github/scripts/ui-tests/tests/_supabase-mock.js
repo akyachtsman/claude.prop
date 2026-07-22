@@ -73,5 +73,33 @@ export async function installSignedIn(page, { email = 'tester@example.com', seed
     return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
   });
 
+  // import-listing Edge Function — returns a canned property for a Crexi URL,
+  // 400 for anything else (so the URL-import flow is exercised without network).
+  await page.route('**/functions/v1/import-listing', (route) => {
+    let body = {};
+    try { body = JSON.parse(route.request().postData() || '{}'); } catch (e) { /* ignore */ }
+    const url = String(body.url || '');
+    if (!/crexi\.com/.test(url)) {
+      return route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: 'Unsupported or invalid listing URL.' }) });
+    }
+    const property = {
+      id: 'imported-' + url.replace(/\D/g, '').slice(-7),
+      schemaVersion: 1, name: '3091 Marysville Boulevard',
+      info: { propertyType: 'Retail', askingPrice: 950000, rentableSF: 2996, lotSize: '9,259 SF', yearBuilt: '1960', zoning: 'C 2', hvacAge: '', roofAge: 'Newer roof', parking: '', ceilingHeight: '', appraisedValue: 0, apn: '265-0093-012-0000', bedrooms: '', baths: '', subtype: 'Auto Shop', broker: 'Nick Sadek', source: url, photosLink: url, description: 'Prime auto repair / smog shop near HWY-80.' },
+      targets: { desiredCap: 0, desiredDscr: 0 },
+      offer: { offerPrice: 950000, fees: 0, improvements: 0 },
+      loans: [{ ltv: 0.7, rate: 0.065, termYears: 25, maturityYears: 0, type: 'CONV' }, { ltv: 0, rate: 0.065, termYears: 25, maturityYears: 0, type: 'IO' }],
+      tenants: Array.from({ length: 4 }, () => ({ name: '', sf: 0, monthlyIncome: 0, leaseExpires: '', leaseOptions: '' })),
+      expenses: [
+        { key: 'insurance', label: 'Insurance', amount: 2996, included: true, estimated: true, useDefault: true },
+        { key: 'taxes', label: 'Property taxes', amount: 11400, included: true, estimated: true, useDefault: true },
+        { key: 'utilities', label: 'Utilities', amount: 0, included: true, estimated: false },
+      ],
+      assumptions: { minOppCostEquity: 0.15, taxRate: 0.28, collectionLoss: 0.05, cashflowAppr: 0.02, capitalAppr: 0.02 },
+      media: { photos: ['https://ex.com/a.jpg', 'https://ex.com/b.jpg'] },
+    };
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ property }) });
+  });
+
   return { rows };
 }

@@ -45,14 +45,22 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
 - `js/notes.js` — workbook methodology text (verbatim).
 - `js/mathinput.js` — pure Excel-style arithmetic evaluator for numeric fields (`evalMath`/`commitNumericInput`).
 - `js/media.js` — pure photo-gallery helpers (`safeImageUrl`/`parsePhotoUrls`/`normalizeMedia`); `prop.media.photos` is a `string[]` of validated http(s) image URLs.
+- `supabase/functions/import-listing/` — Edge Function: takes a listing URL, fetches the provider API **server-side** (browsers can't, cross-origin), normalizes to a property, returns `{ property }`. Only known provider hosts are fetched (Crexi now), from an id parsed out of the URL — never an arbitrary URL (no SSRF). `js/supabase.js` `importListing(url)` calls it; the client saves the result through the normal RLS store.
+- `js/importparse.js` — pure import helpers: `classifyImportInput(text)` (url / html / empty / unknown) and `parseLoopNetHtml(text)`. The single Import box takes **either** a Crexi URL (→ the Edge Function) **or** pasted LoopNet page source (→ parsed in-browser from the listing's own JSON-LD, since LoopNet's Akamai wall blocks any server fetch). Unit-tested with a fixture in `tests/importparse.test.mjs`.
 - `js/sample.js` — the sample deal + `EXPECTED` fixture (drives the fidelity test).
 - `js/views/{dashboard,list,compare}.js` — the three views; `js/app.js` is the
   hash router (`#/`, `#/p/:id`, `#/compare`) + shared state.
 - Spec: `specs/property-dashboard/` (spec, plan, tasks, workbook-model, research).
 
 ## Project-Specific Security Constraints
-- Local-first: all property data lives in the browser (`localStorage`, key
-  `propanalytics.v1`); no backend, no credentials, no network calls in v1.
+- Local-first: property data lives in the browser (`localStorage`, key
+  `propanalytics.v1`) or, signed in, per-user cloud rows under RLS. No
+  service-role/secret key ever ships in client code (only the public URL +
+  publishable key, `js/config.js`).
+- The one outbound integration is the **`import-listing` Edge Function** (server
+  side, so no secret in the browser): it fetches only known provider hosts from
+  an id parsed out of a recognized listing URL — never an arbitrary URL — and is
+  `verify_jwt` gated. Everything else is still computed client-side.
 - Export/import is user-initiated JSON; import validates shape + schema version
   and never silently wipes existing data.
 
@@ -121,6 +129,7 @@ fine-pointer context; the generic `app.spec.js` covers the mobile viewports).
 | S28 | First-sign-in seed | A fresh account (reconcile enabled) gap-seeds the 715 Plumas sample + 3 demos on first sign-in; the test reloads (reading the persisted stateful mock) so the assertion is engine-independent across chromium/webkit. The gap-seed *logic* is also unit-tested in `tests/reconcile.test.mjs` | Fewer than 4 cards, or a fixture missing |
 | S29 | Formula entry | Every numeric field (`fieldNum` $ + `fieldPercent` %, now `type=text`) accepts an arithmetic expression that evaluates on commit and is replaced by the result, Excel-style: `2+2`→`4`, `1300000/2`→`650000` (drives the model), percent `5+0.5`→`5.5%`; plain numbers unchanged. Pure evaluator `js/mathinput.js` (`evalMath`/`commitNumericInput`) supports `+ - * / ()` + unary, rejects non-arithmetic/`eval`-style input and ÷0 (falls back to a lenient read, never NaN), snaps float noise. Unit-tested in `tests/mathinput.test.mjs` (blocking CI step) | An expression stays literal, commits NaN, evaluates arbitrary JS, or a plain number breaks |
 | S30 | Photos gallery | A topbar **▦ N** button (kept off the dashboard grid so S11 one-screen holds) opens a modal gallery; pasting image URLs (newline/comma/space separated) adds them **deduped + sanitized** (only http(s), `javascript:`/`data:`/relative dropped via `js/media.js`); each thumbnail opens a full-size **lightbox** with ←/→/Esc nav; Esc closes only the lightbox (not the gallery beneath); removing a photo and reload persists via auto-save (`prop.media.photos`). Fixtures default to empty (`normalizeMedia`), so S5 is unaffected. Pure helpers unit-tested in `tests/media.test.mjs` (blocking CI step) | No ▦ button, a `javascript:` URL is accepted, dupes stack, lightbox nav/Esc broken, Esc closes both layers, or photos lost on reload |
+| S31 | Listing import | The list's primary **Import a listing** action opens a modal with one textarea that takes **either** a Crexi **URL** (→ `importListing` → the `import-listing` Edge Function, stubbed in `tests/_supabase-mock.js`) **or** LoopNet **page source** (→ `parseLoopNetHtml`, parsed in-browser from the page's JSON-LD, no network). `classifyImportInput` routes them. A LoopNet **URL** is refused with a hint to paste the source instead (Akamai blocks server fetch); unsupported input shows an inline error and doesn't navigate; a good input creates + opens the property with its fields (Subtype/Source/photos). `+ New property` (blank) and `Load sample` remain | No Import button/modal, a Crexi URL or LoopNet source doesn't create+open a property, a LoopNet URL isn't hinted, bad input navigates/no error, or imported fields missing |
 
 **The app is gated behind login** (owner decision, 2026-07-16), using **email +
 password** (`signIn`/`signUp`/`resetPassword`/`updatePassword` in `js/supabase.js`;

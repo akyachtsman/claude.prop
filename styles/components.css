@@ -694,6 +694,8 @@ body.is-readonly #view button:not(.topbar__link):not(.switcher__btn) {
 }
 .photos-btn:hover, .photos-btn:focus-visible { border-color: var(--color-accent); color: var(--color-accent); }
 
+.modal__panel.import-modal { max-width: 560px; }
+.import-ta { width: 100%; resize: vertical; font-family: inherit; font-size: var(--font-sm); min-height: 72px; line-height: 1.4; }
 .modal__panel.desc-modal { max-width: 620px; gap: var(--space-3); }
 .desc-ta { width: 100%; resize: vertical; font-family: inherit; font-size: var(--font-sm); min-height: 180px; line-height: 1.5; }
 .link-open { font-size: var(--font-xs); color: var(--color-accent); font-weight: 600; text-decoration: none; margin-left: 6px; }

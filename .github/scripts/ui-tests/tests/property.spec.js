@@ -357,6 +357,44 @@ test('Photos gallery — add image URLs (deduped + sanitized), view in a lightbo
   await expect(page.locator('button[aria-label^="Photos"]')).toContainText('1');
 });
 
+test('S31 import — one box takes a Crexi URL (server) or LoopNet page source (parsed in-browser)', async ({ page }) => {
+  await loadSample(page);                 // boots the signed-in app
+  const box = 'textarea[aria-label="Listing URL or page source"]';
+  const openImport = async () => { await page.goto('./#/', { waitUntil: 'load' }); await page.waitForSelector('.lcard'); await page.click('button:has-text("Import a listing")'); await expect(page.locator('.import-modal')).toBeVisible(); };
+
+  // (a) unsupported input surfaces an error, no navigation
+  await openImport();
+  await page.fill(box, 'just some words');
+  await page.click('.modal__actions button:has-text("Import")');
+  await expect(page.locator('.modal__status')).toContainText(/doesn.t look like/i);
+
+  // (b) a LoopNet URL is refused with a hint to paste the source instead
+  await page.fill(box, 'https://www.loopnet.com/Listing/x/41097591/');
+  await page.click('.modal__actions button:has-text("Import")');
+  await expect(page.locator('.modal__status')).toContainText(/page source/i);
+
+  // (c) a Crexi URL imports via the (stubbed) Edge Function and opens the property
+  await page.fill(box, 'https://www.crexi.com/properties/2606773/california-3091-marysville-boulevard');
+  await page.click('.modal__actions button:has-text("Import")');
+  await page.waitForSelector('.kpi-strip');
+  await expect(page.locator('button[aria-label^="Photos"]')).toContainText('2');
+  await page.click('button[aria-label="Listing details"]');
+  await expect(page.locator('input[aria-label="Subtype"]')).toHaveValue('Auto Shop');
+  await expect(page.locator('input[aria-label="Source"]')).toHaveValue(/crexi\.com/);
+  await page.keyboard.press('Escape');   // close the Listing-details modal before reopening Import
+
+  // (d) pasted LoopNet page source is parsed in-browser (no network) into a property
+  await openImport();
+  const ld = JSON.stringify({ '@type': ['RealEstateListing', 'Product'], '@id': 'https://www.loopnet.com/Listing/1835-Fulton-Ave/41097591/#listing', name: '1835 Fulton Ave', url: 'https://www.loopnet.com/Listing/1835-Fulton-Ave/41097591/', offers: [{ price: 1050000, '@type': 'Offer' }], additionalProperty: [{ name: 'Property Type', value: ['Retail'] }, { name: 'Property Subtype', value: ['Storefront Retail/Office'] }, { name: 'Gross Leasable Area', value: ['4,697 SF'] }, { name: 'Year Built', value: ['1960'] }] });
+  const source = `<!DOCTYPE html><html><body><img src="https://images1.loopnet.com/i2/H/110/1835-Fulton-Ave-Sacramento-CA-Building-Photo-1-Large.jpg"><script type="application/ld+json">${ld}</script></body></html>`;
+  await page.fill(box, source);
+  await page.click('.modal__actions button:has-text("Import")');
+  await page.waitForSelector('.kpi-strip');
+  await page.click('button[aria-label="Listing details"]');
+  await expect(page.locator('input[aria-label="Subtype"]')).toHaveValue('Storefront Retail/Office');
+  await expect(page.locator('input[aria-label="Source"]')).toHaveValue(/loopnet\.com/);
+});
+
 test('Pills check the FIXED 8% / 1.25 benchmark — a Target goal-seek moves actual CAP but not the bar', async ({ page }) => {
   await loadSample(page);
   const capPill = page.locator('.topbar__pills .pill').nth(0);
