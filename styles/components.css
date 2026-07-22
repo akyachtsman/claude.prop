@@ -558,7 +558,11 @@ body {
    a button (reopens the deal) that reads like the compare name. */
 .archive-name { display: block; background: none; border: none; padding: 0; cursor: pointer; text-align: left; text-decoration: underline; text-decoration-color: transparent; }
 .archive-name:hover, .archive-name:focus-visible { text-decoration-color: currentColor; }
-.archive-table .archive-actions { display: flex; gap: 6px; margin-top: 6px; flex-wrap: nowrap; }
+/* Prospect cell on ONE line: name · verdict · R/× actions, never stacked */
+.archive-prospect { display: flex; align-items: center; gap: var(--space-2); flex-wrap: nowrap; }
+.archive-prospect .archive-name { white-space: nowrap; }
+.archive-prospect .compare-verdict { margin-top: 0; }
+.archive-table .archive-actions { display: flex; gap: 6px; margin-top: 0; flex-wrap: nowrap; flex: none; }
 .btn--sm { min-height: 30px; padding: 4px var(--space-3); font-size: var(--font-xs); }
 /* R (restore) + × (permanent delete): equal compact squares, always on one row */
 .archive-restore, .archive-del { flex: none; width: 30px; min-width: 30px; padding: 0; justify-content: center; font-weight: 800; }
