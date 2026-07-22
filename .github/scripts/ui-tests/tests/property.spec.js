@@ -376,6 +376,7 @@ test('S31 import — one box takes a Crexi URL (server) or LoopNet page source (
   // (c) a Crexi URL imports via the (stubbed) Edge Function and opens the property
   await page.fill(box, 'https://www.crexi.com/properties/2606773/california-3091-marysville-boulevard');
   await page.click('.modal__actions button:has-text("Import")');
+  await expect(page.locator('.modal__status--ok')).toContainText(/import successful/i);   // confirmed before the detail screen
   await page.waitForSelector('.kpi-strip');
   await expect(page.locator('button[aria-label^="Photos"]')).toContainText('2');
   await page.click('button[aria-label="Listing details"]');

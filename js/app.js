@@ -253,9 +253,17 @@ function openImport() {
   const finish = (property) => {
     const saved = store.save(property);
     if (!saved) { busy(false); return; }             // offline reject (store toasts)
-    close();
-    toast('Imported from listing.', 'success');
-    navigate('#/p/' + encodeURIComponent(saved.id));
+    // Confirm success in the still-open modal, then open the property after a
+    // brief beat so the "import successful" message registers before the switch.
+    importBtn.disabled = true;
+    importBtn.textContent = 'Imported';
+    status.className = 'modal__status modal__status--ok';
+    status.textContent = '✓ Import successful — opening the property…';
+    toast('Import successful.', 'success');
+    setTimeout(() => {
+      close();
+      navigate('#/p/' + encodeURIComponent(saved.id));
+    }, 1000);
   };
   async function doImport() {
     const raw = input.value.trim();
