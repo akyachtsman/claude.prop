@@ -35,7 +35,7 @@ export function renderList(container, ctx) {
       el('h2', { text: 'No properties yet' }),
       el('p', { text: 'Add a property to underwrite it against your own CAP and DSCR targets, or load a sample deal to explore.' }),
       el('div', { class: 'empty__actions' }, [
-        el('button', { class: 'btn btn--primary', type: 'button', onclick: () => ctx.importUrl(), text: 'Import from a listing URL' }),
+        el('button', { class: 'btn btn--primary', type: 'button', onclick: () => ctx.importUrl(), text: 'Import a listing' }),
         el('button', { class: 'btn btn--ghost', type: 'button', onclick: () => ctx.newProperty(), text: 'Add your first property' }),
         el('button', { class: 'btn btn--ghost', type: 'button', onclick: () => ctx.loadSample(), text: 'Load sample deal' }),
       ]),
@@ -80,7 +80,7 @@ export function renderList(container, ctx) {
       el('div', { class: 'list-head__actions' }, [
         el('button', { class: 'btn btn--ghost', type: 'button', onclick: () => ctx.goCompare(), text: 'Compare' }),
         el('button', { class: 'btn btn--ghost', type: 'button', onclick: () => ctx.newProperty(), text: '+ New property' }),
-        el('button', { class: 'btn btn--primary', type: 'button', onclick: () => ctx.importUrl(), text: 'Import from URL' }),
+        el('button', { class: 'btn btn--primary', type: 'button', onclick: () => ctx.importUrl(), text: 'Import a listing' }),
       ]),
     ]),
     el('div', { class: 'lcard-grid' }, cards),
