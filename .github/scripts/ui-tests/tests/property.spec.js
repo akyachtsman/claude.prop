@@ -357,6 +357,26 @@ test('Photos gallery — add image URLs (deduped + sanitized), view in a lightbo
   await expect(page.locator('button[aria-label^="Photos"]')).toContainText('1');
 });
 
+test('S31 URL import — pasting a listing URL creates a property via the import-listing function', async ({ page }) => {
+  await loadSample(page);                 // boots the signed-in app
+  await page.goto('./#/', { waitUntil: 'load' });
+  await page.waitForSelector('.lcard');
+  await page.click('button:has-text("Import from URL")');
+  await expect(page.locator('.modal__panel')).toBeVisible();
+  // an unsupported URL surfaces an error and does not navigate
+  await page.fill('input[aria-label="Listing URL"]', 'not-a-listing');
+  await page.click('.modal__actions button:has-text("Import")');
+  await expect(page.locator('.modal__status')).toContainText(/unsupported|invalid/i);
+  // a Crexi URL imports and opens the new property with the listing data in place
+  await page.fill('input[aria-label="Listing URL"]', 'https://www.crexi.com/properties/2606773/california-3091-marysville-boulevard');
+  await page.click('.modal__actions button:has-text("Import")');
+  await page.waitForSelector('.kpi-strip');
+  await expect(page.locator('button[aria-label^="Photos"]')).toContainText('2');   // 2 photos from the import
+  await page.click('button[aria-label="Listing details"]');
+  await expect(page.locator('input[aria-label="Subtype"]')).toHaveValue('Auto Shop');
+  await expect(page.locator('input[aria-label="Source"]')).toHaveValue(/crexi\.com/);
+});
+
 test('Pills check the FIXED 8% / 1.25 benchmark — a Target goal-seek moves actual CAP but not the bar', async ({ page }) => {
   await loadSample(page);
   const capPill = page.locator('.topbar__pills .pill').nth(0);

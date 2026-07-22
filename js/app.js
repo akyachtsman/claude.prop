@@ -93,6 +93,7 @@ function showList() {
     list: store.list,
     open: (id) => navigate('#/p/' + encodeURIComponent(id)),
     newProperty: createNew,
+    importUrl: openImportUrl,
     loadSample: loadSample,
     goCompare: () => navigate('#/compare'),
     remove: (p) => {
@@ -226,6 +227,48 @@ function loadSample() {
   if (!p) return;                                  // offline reject (store toasts)
   toast('Sample deal loaded.', 'success');
   navigate('#/p/' + encodeURIComponent(p.id));
+}
+
+// Add a property from a listing URL: a small modal collects the URL and calls
+// the import-listing Edge Function (server-side fetch + normalize), then saves
+// the returned property like any other. "Start blank" falls back to createNew.
+function openImportUrl() {
+  const input = el('input', { class: 'input', type: 'url', 'aria-label': 'Listing URL', placeholder: 'https://www.crexi.com/properties/…' });
+  const status = el('p', { class: 'modal__status' });
+  const importBtn = el('button', { class: 'btn btn--primary', type: 'button', text: 'Import' });
+  const blankBtn = el('button', { class: 'btn btn--ghost', type: 'button', text: 'Start blank instead' });
+  const panel = el('div', { class: 'modal__panel', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Add a property from a listing' }, [
+    el('h2', { class: 'modal__title', text: 'Add a property from a listing' }),
+    el('p', { class: 'modal__body', text: 'Paste a Crexi listing URL — the details, photos, and figures come in automatically.' }),
+    input, status,
+    el('div', { class: 'modal__actions' }, [blankBtn, importBtn]),
+  ]);
+  const overlay = el('div', { class: 'modal__overlay' }, [panel]);
+  const close = () => { document.removeEventListener('keydown', onKey); overlay.remove(); };
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  const busy = (on) => { importBtn.disabled = on; importBtn.textContent = on ? 'Importing…' : 'Import'; };
+  async function doImport() {
+    const url = input.value.trim();
+    if (!url) { status.textContent = 'Paste a listing URL first.'; return; }
+    busy(true); status.textContent = '';
+    let mod;
+    try { mod = await import('./supabase.js'); }
+    catch { status.textContent = 'Import needs a connection. Try again in a moment.'; busy(false); return; }
+    const res = await mod.importListing(url);
+    if (!res.ok) { status.textContent = res.error; busy(false); return; }
+    const saved = store.save(res.property);
+    if (!saved) { busy(false); return; }             // offline reject (store toasts)
+    close();
+    toast('Imported from listing.', 'success');
+    navigate('#/p/' + encodeURIComponent(saved.id));
+  }
+  importBtn.addEventListener('click', doImport);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') doImport(); });
+  blankBtn.addEventListener('click', () => { close(); createNew(); });
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', onKey);
+  document.body.appendChild(overlay);
+  input.focus();
 }
 
 // ── export / import ──────────────────────────────────────────────────────

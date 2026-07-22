@@ -68,6 +68,32 @@ export async function getSession() {
   return data ? data.session : null;
 }
 
+/**
+ * Import a property from a listing URL via the `import-listing` Edge Function.
+ * The fetch must be server-side (the browser can't reach listing sites
+ * cross-origin), so the function pulls + normalizes the listing and returns a
+ * property; the caller saves it through the normal RLS-scoped store.
+ * Returns { ok, property } or { ok:false, error }.
+ */
+export async function importListing(url) {
+  const session = await getSession();
+  const token = (session && session.access_token) || SUPABASE_PUBLISHABLE_KEY;
+  let res;
+  try {
+    res = await fetch(`${SUPABASE_URL}/functions/v1/import-listing`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ url }),
+    });
+  } catch {
+    return { ok: false, error: 'Network error — check your connection and try again.' };
+  }
+  let data = {};
+  try { data = await res.json(); } catch { /* non-JSON error body */ }
+  if (!res.ok || !data.property) return { ok: false, error: data.error || `Import failed (${res.status}).` };
+  return { ok: true, property: data.property };
+}
+
 /** Subscribe to auth changes. cb(event, session). Returns an unsubscribe fn. */
 export function onAuthChange(cb) {
   const { data } = supabase.auth.onAuthStateChange(cb);
