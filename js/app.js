@@ -107,7 +107,7 @@ function fillTopbarActions() {
   clear(center);
   const n = store.list().filter(isArchived).length;
   const act = (label, onClick, id) => {
-    const b = el('button', { class: 'btn btn--ghost topbar__act', type: 'button', onclick: onClick, text: label });
+    const b = el('button', { class: 'topbar__link topbar__act', type: 'button', onclick: onClick, text: label });
     if (id) b.id = id;
     return b;
   };
@@ -115,7 +115,7 @@ function fillTopbarActions() {
     act('Compare', () => navigate('#/compare'), 'nav-compare'),
     act(n > 0 ? `Archive (${n})` : 'Archive', () => navigate('#/archive'), 'nav-archive'),
     act('+ New property', createNew),
-    el('button', { class: 'btn btn--primary topbar__act', type: 'button', onclick: openImport, text: 'Import a listing' }),
+    act('Import a listing', openImport),
   ]));
 }
 
