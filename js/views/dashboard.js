@@ -273,10 +273,6 @@ export function renderDashboard(container, ctx) {
     ['HVAC', 'hvacAge', 'text'], ['Roof', 'roofAge', 'text'],
     ['Parking', 'parking', 'text'], ['Ceiling', 'ceilingHeight', 'text'],
     ['APN', 'apn', 'text'],
-    // Listing descriptors captured verbatim from a source listing (free text).
-    ['Subtype', 'subtype', 'text'], ['Tenancy', 'tenancy', 'text'],
-    ['Stories', 'stories', 'text'], ['Opp Zone', 'oppZone', 'text'],
-    ['Broker', 'broker', 'text'],
   ];
   // Deal summary — full-width band ABOVE the cards, mirroring the workbook's
   // Offer/All-In/Fees/Improvement header row. Editable, synced with the Offer
@@ -308,16 +304,22 @@ export function renderDashboard(container, ctx) {
   }
   refreshPhotosBtn();
   photosBtn.addEventListener('click', openGallery);
-  // Description — a longer free-text narrative (listing copy, highlights, notes).
-  // Behind a button + modal so a paragraph never costs the one-screen layout.
-  const descBtn = el('button', { class: 'photos-btn', type: 'button', title: 'Description', 'aria-label': 'Description' });
-  function refreshDescBtn() { descBtn.textContent = (prop.info.description || '').trim() ? '📝 ✓' : '📝'; }
-  refreshDescBtn();
-  descBtn.addEventListener('click', openDescription);
+  // Listing details — the extra descriptors imported from a source listing
+  // (subtype, tenancy, broker, …) plus a free-text description. Kept in a modal
+  // rather than inline fields so the one-screen layout holds on every context
+  // (touch inputs are 44px tall, so extra inline rows would overflow on mobile).
+  const LISTING_FIELDS = [['Subtype', 'subtype'], ['Tenancy', 'tenancy'], ['Stories', 'stories'], ['Opp Zone', 'oppZone'], ['Broker', 'broker']];
+  const listingBtn = el('button', { class: 'photos-btn', type: 'button', title: 'Listing details', 'aria-label': 'Listing details' });
+  function refreshListingBtn() {
+    const filled = LISTING_FIELDS.some(([, k]) => (prop.info[k] || '').trim()) || (prop.info.description || '').trim();
+    listingBtn.textContent = filled ? '🏷 ✓' : '🏷';
+  }
+  refreshListingBtn();
+  listingBtn.addEventListener('click', openListing);
   const infoCard = el('section', { class: 'card col-3', 'aria-label': 'Property Info' }, [
     el('div', { class: 'card__head' }, [
       el('span', { class: 'eyebrow', text: 'Property Info' }),
-      el('div', { class: 'card__head-actions' }, [descBtn, photosBtn]),
+      el('div', { class: 'card__head-actions' }, [listingBtn, photosBtn]),
     ]),
     el('div', { class: 'form-grid form-grid--3' }, infoDefs.map(([label, key, type]) => {
       // Property Type drives the insurance estimate — re-seed a blank insurance on change.
@@ -601,23 +603,30 @@ export function renderDashboard(container, ctx) {
     document.body.appendChild(box);
   }
 
-  // Description modal — a single textarea for the property's narrative; the edit
-  // is committed once on close (one undo step), not per keystroke.
-  function openDescription() {
-    const ta = el('textarea', { class: 'input desc-ta', rows: '9', 'aria-label': 'Property description', placeholder: 'Listing description, highlights, notes…' });
-    ta.value = prop.info.description || '';
+  // Listing-details modal — the extra descriptor fields + a description textarea.
+  // Edits are committed once on close (one undo step), not per keystroke.
+  function openListing() {
     let dirty = false;
+    const fieldEls = LISTING_FIELDS.map(([label, key]) => {
+      const inp = el('input', { class: 'input', type: 'text', value: prop.info[key] || '', 'aria-label': label });
+      inp.addEventListener('input', () => { prop.info[key] = inp.value; dirty = true; });
+      return el('label', { class: 'field' }, [el('span', { class: 'field__label', text: label }), inp]);
+    });
+    const ta = el('textarea', { class: 'input desc-ta', rows: '6', 'aria-label': 'Property description', placeholder: 'Listing description, highlights, notes…' });
+    ta.value = prop.info.description || '';
     ta.addEventListener('input', () => { prop.info.description = ta.value; dirty = true; });
     const closeBtn = el('button', { class: 'btn btn--ghost', type: 'button', text: 'Done' });
-    const panel = el('div', { class: 'modal__panel desc-modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Description' }, [
-      el('div', { class: 'gallery__head' }, [el('h2', { class: 'modal__title', text: 'Description' }), closeBtn]),
+    const panel = el('div', { class: 'modal__panel desc-modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Listing details' }, [
+      el('div', { class: 'gallery__head' }, [el('h2', { class: 'modal__title', text: 'Listing details' }), closeBtn]),
+      el('div', { class: 'form-grid' }, fieldEls),
+      el('span', { class: 'field__label', text: 'Description' }),
       ta,
     ]);
     const overlay = el('div', { class: 'modal__overlay' }, [panel]);
     const close = () => {
       document.removeEventListener('keydown', onKey);
       overlay.remove();
-      refreshDescBtn();
+      refreshListingBtn();
       if (dirty) onEdit();   // commit + auto-save once
     };
     const onKey = (e) => { if (e.key === 'Escape') close(); };
@@ -625,7 +634,7 @@ export function renderDashboard(container, ctx) {
     overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
     document.addEventListener('keydown', onKey);
     document.body.appendChild(overlay);
-    ta.focus();
+    fieldEls[0].querySelector('input').focus();
   }
 
   // Actions — rendered into the top bar (keeps the dashboard one-screen) ----
