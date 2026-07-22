@@ -416,6 +416,12 @@ body {
 /* app views (dashboard editable, list, compare) ------------------------- */
 .topbar__center { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-2); }
 .topbar__viewtitle { font-weight: 800; font-size: var(--font-lg); color: var(--color-on-navy); }
+/* Header action bar (Compare / Archive / New / Import) — shown on the list-type
+   views, right-aligned in the otherwise-empty center slot so it reads as part of
+   the header nav. Not rendered on the dashboard (its center is already full). */
+.topbar__actbar { display: flex; gap: var(--space-2); margin-left: auto; flex-wrap: wrap; }
+.topbar__act { min-height: 36px; padding: 6px var(--space-3); font-size: var(--font-sm); border-radius: var(--radius-md); }
+.topbar__act--on { border-color: var(--color-accent); color: var(--color-accent); box-shadow: inset 0 0 0 1px var(--color-accent); }
 .topbar__link { background: transparent; border: none; font: inherit; cursor: pointer; }
 
 /* editable field grids inside cards — dense for one-screen fit */
@@ -488,29 +494,21 @@ body {
 .lcard:hover, .lcard:focus-within { border-color: var(--color-accent); box-shadow: var(--shadow-md); }
 .lcard__open {
   text-align: left; font: inherit; cursor: pointer; background: none; border: none;
-  width: 100%; padding: var(--space-3) var(--space-5) var(--space-3) var(--space-4);   /* room for the › cue */
+  width: 100%; padding: var(--space-3) var(--space-4);
   display: flex; flex-direction: column; gap: var(--space-3);
 }
-/* "opens" disclosure cue — signals the whole card is clickable */
-.lcard__go {
-  position: absolute; right: var(--space-3); top: 50%; transform: translateY(-50%);
-  font-size: 26px; line-height: 1; font-weight: 400; color: var(--color-border-hover);
-  pointer-events: none; transition: color 0.15s ease, right 0.15s ease;
+/* Card footer: explicit, labelled Archive + Delete actions (siblings of the
+   full-area open button). */
+.lcard__foot { display: flex; gap: var(--space-2); padding: var(--space-2) var(--space-3) var(--space-3); border-top: 1px solid var(--color-border); }
+.lcard__act {
+  flex: 1; min-height: 34px; padding: 6px var(--space-2);
+  font: inherit; font-size: var(--font-sm); font-weight: 600; cursor: pointer;
+  background: var(--color-surface); color: var(--color-text-secondary);
+  border: 1px solid var(--color-border); border-radius: var(--radius-sm);
 }
-.lcard:hover .lcard__go, .lcard:focus-within .lcard__go { color: var(--color-accent); right: calc(var(--space-3) - 3px); }
-/* Top-right control cluster: Archive + Delete glyphs, layered above the open button */
-.lcard__tools { position: absolute; top: 6px; right: 8px; z-index: 1; display: flex; align-items: center; gap: 2px; }
-.lcard__tool {
-  width: 22px; height: 22px; line-height: 1; padding: 0;
-  display: flex; align-items: center; justify-content: center;
-  font: inherit; font-size: 16px; cursor: pointer;
-  background: none; border: 1px solid transparent; border-radius: var(--radius-sm);
-  color: var(--color-text-secondary);
-}
-.lcard__tool:hover, .lcard__tool:focus-visible { border-color: var(--color-border-hover); background: var(--color-bg); color: var(--color-text-primary); }
-.lcard__del { font-size: 18px; }
-.lcard__del:hover, .lcard__del:focus-visible { background: var(--color-fail-bg); color: var(--color-fail); border-color: transparent; }
-.lcard__head { display: flex; align-items: center; gap: var(--space-3); padding-right: 52px; }   /* padding keeps the badge clear of the Archive/Delete cluster */
+.lcard__act:hover, .lcard__act:focus-visible { border-color: var(--color-border-hover); background: var(--color-bg); color: var(--color-text-primary); }
+.lcard__del:hover, .lcard__del:focus-visible { border-color: var(--color-fail); background: var(--color-fail-bg); color: var(--color-fail); }
+.lcard__head { display: flex; align-items: center; gap: var(--space-3); }
 .lcard__mono {
   flex: none; width: 40px; height: 40px; border-radius: var(--radius-sm);
   background: var(--color-navy); color: var(--color-on-navy);
@@ -678,12 +676,22 @@ body.is-readonly #view button:not(.topbar__link):not(.switcher__btn) {
   background: rgba(19, 46, 78, 0.45);
 }
 .modal__panel {
+  position: relative;
   background: var(--color-surface); color: var(--color-text-primary);
   border-radius: var(--radius-lg); box-shadow: var(--shadow-md);
   padding: var(--space-6); width: 100%; max-width: 420px;
   display: flex; flex-direction: column; gap: var(--space-3);
 }
-.modal__title { font-size: var(--font-xl); font-weight: 700; margin: 0; }
+.modal__close {
+  position: absolute; top: 10px; right: 12px; z-index: 1;
+  width: 30px; height: 30px; line-height: 1; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  font: inherit; font-size: 22px; cursor: pointer;
+  background: none; border: 1px solid transparent; border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+}
+.modal__close:hover, .modal__close:focus-visible { border-color: var(--color-border-hover); background: var(--color-bg); color: var(--color-text-primary); }
+.modal__title { font-size: var(--font-xl); font-weight: 700; margin: 0; padding-right: 28px; }
 .modal__body { font-size: var(--font-base); color: var(--color-text-secondary); margin: 0; line-height: 1.5; }
 .modal__status { min-height: 1.2em; font-size: var(--font-sm); }
 .modal__status--ok { color: var(--color-accent); font-weight: 600; }
