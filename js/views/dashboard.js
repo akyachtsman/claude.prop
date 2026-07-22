@@ -308,7 +308,7 @@ export function renderDashboard(container, ctx) {
   // (subtype, tenancy, broker, …) plus a free-text description. Kept in a modal
   // rather than inline fields so the one-screen layout holds on every context
   // (touch inputs are 44px tall, so extra inline rows would overflow on mobile).
-  const LISTING_FIELDS = [['Subtype', 'subtype'], ['Broker', 'broker']];
+  const LISTING_FIELDS = [['Subtype', 'subtype'], ['Broker', 'broker'], ['Source', 'source']];
   const listingBtn = el('button', { class: 'photos-btn', type: 'button', title: 'Listing details', 'aria-label': 'Listing details' });
   function refreshListingBtn() {
     const filled = LISTING_FIELDS.some(([, k]) => (prop.info[k] || '').trim())
