@@ -276,6 +276,7 @@ export function renderDashboard(container, ctx) {
     // Listing descriptors captured verbatim from a source listing (free text).
     ['Subtype', 'subtype', 'text'], ['Tenancy', 'tenancy', 'text'],
     ['Stories', 'stories', 'text'], ['Opp Zone', 'oppZone', 'text'],
+    ['Broker', 'broker', 'text'],
   ];
   // Deal summary — full-width band ABOVE the cards, mirroring the workbook's
   // Offer/All-In/Fees/Improvement header row. Editable, synced with the Offer
@@ -307,8 +308,17 @@ export function renderDashboard(container, ctx) {
   }
   refreshPhotosBtn();
   photosBtn.addEventListener('click', openGallery);
+  // Description — a longer free-text narrative (listing copy, highlights, notes).
+  // Behind a button + modal so a paragraph never costs the one-screen layout.
+  const descBtn = el('button', { class: 'photos-btn', type: 'button', title: 'Description', 'aria-label': 'Description' });
+  function refreshDescBtn() { descBtn.textContent = (prop.info.description || '').trim() ? '📝 ✓' : '📝'; }
+  refreshDescBtn();
+  descBtn.addEventListener('click', openDescription);
   const infoCard = el('section', { class: 'card col-3', 'aria-label': 'Property Info' }, [
-    el('div', { class: 'card__head' }, [el('span', { class: 'eyebrow', text: 'Property Info' }), photosBtn]),
+    el('div', { class: 'card__head' }, [
+      el('span', { class: 'eyebrow', text: 'Property Info' }),
+      el('div', { class: 'card__head-actions' }, [descBtn, photosBtn]),
+    ]),
     el('div', { class: 'form-grid form-grid--3' }, infoDefs.map(([label, key, type]) => {
       // Property Type drives the insurance estimate — re-seed a blank insurance on change.
       if (type === 'select') {
@@ -589,6 +599,33 @@ export function renderDashboard(container, ctx) {
     document.addEventListener('keydown', onKey);
     paint();
     document.body.appendChild(box);
+  }
+
+  // Description modal — a single textarea for the property's narrative; the edit
+  // is committed once on close (one undo step), not per keystroke.
+  function openDescription() {
+    const ta = el('textarea', { class: 'input desc-ta', rows: '9', 'aria-label': 'Property description', placeholder: 'Listing description, highlights, notes…' });
+    ta.value = prop.info.description || '';
+    let dirty = false;
+    ta.addEventListener('input', () => { prop.info.description = ta.value; dirty = true; });
+    const closeBtn = el('button', { class: 'btn btn--ghost', type: 'button', text: 'Done' });
+    const panel = el('div', { class: 'modal__panel desc-modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Description' }, [
+      el('div', { class: 'gallery__head' }, [el('h2', { class: 'modal__title', text: 'Description' }), closeBtn]),
+      ta,
+    ]);
+    const overlay = el('div', { class: 'modal__overlay' }, [panel]);
+    const close = () => {
+      document.removeEventListener('keydown', onKey);
+      overlay.remove();
+      refreshDescBtn();
+      if (dirty) onEdit();   // commit + auto-save once
+    };
+    const onKey = (e) => { if (e.key === 'Escape') close(); };
+    closeBtn.addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(overlay);
+    ta.focus();
   }
 
   // Actions — rendered into the top bar (keeps the dashboard one-screen) ----

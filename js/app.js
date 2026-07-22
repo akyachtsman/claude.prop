@@ -25,7 +25,7 @@ let committedState = null;   // the current committed state, in memory (drives u
 function blankProperty() {
   return {
     id: store.newId(), schemaVersion: 1, name: 'New property',
-    info: { propertyType: 'Commercial', askingPrice: 0, rentableSF: 0, lotSize: '', yearBuilt: '', zoning: '', hvacAge: '', roofAge: '', parking: '', ceilingHeight: '', appraisedValue: 0, apn: '', bedrooms: '', baths: '', subtype: '', tenancy: '', stories: '', oppZone: '' },
+    info: { propertyType: 'Commercial', askingPrice: 0, rentableSF: 0, lotSize: '', yearBuilt: '', zoning: '', hvacAge: '', roofAge: '', parking: '', ceilingHeight: '', appraisedValue: 0, apn: '', bedrooms: '', baths: '', subtype: '', tenancy: '', stories: '', oppZone: '', broker: '', description: '' },
     targets: { desiredCap: 0, desiredDscr: 0 },   // empty by default; pills use the hard-coded benchmark until a Target is set
     offer: { offerPrice: 0, fees: 0, improvements: 0 },
     loans: [{ ltv: 0.7, rate: 0.065, termYears: 25, maturityYears: 0, type: 'CONV' }, { ltv: 0, rate: 0.065, termYears: 25, maturityYears: 0, type: 'IO' }],

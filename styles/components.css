@@ -685,12 +685,16 @@ body.is-readonly #view button:not(.topbar__link):not(.switcher__btn) {
 /* Property Info card header row: title + Photos button, no extra height. */
 .card__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-2); }
 .card__head .eyebrow { margin-bottom: 0; }
+.card__head-actions { display: flex; gap: var(--space-2); flex: none; }
 .photos-btn {
   border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-secondary);
   border-radius: var(--radius-pill); font: inherit; font-size: var(--font-xs); font-weight: 700;
   padding: 1px 10px; cursor: pointer; line-height: 1.7; white-space: nowrap; flex: none;
 }
 .photos-btn:hover, .photos-btn:focus-visible { border-color: var(--color-accent); color: var(--color-accent); }
+
+.modal__panel.desc-modal { max-width: 620px; gap: var(--space-3); }
+.desc-ta { width: 100%; resize: vertical; font-family: inherit; font-size: var(--font-sm); min-height: 180px; line-height: 1.5; }
 
 .modal__panel.gallery { max-width: 720px; gap: var(--space-4); }
 .gallery__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
