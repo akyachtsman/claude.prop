@@ -293,7 +293,19 @@ export function renderDashboard(container, ctx) {
     dealCell('Target CAP', fieldPercent(null, (v) => { goalSeekOffer('cap', v); onEdit(); }, { label: 'Target CAP' })),
     dealCell('Target DSCR', fieldNum(null, (v) => { goalSeekOffer('dscr', v); onEdit(); }, { label: 'Target DSCR', step: '0.01' })),
   ]);
-  const infoCard = card('Property Info', 'col-3', [
+  // Photos button — lives in the Property Info card header (not the top bar, so
+  // the mobile top bar can't overflow; and in an existing header row, so it adds
+  // no dashboard height). Opens the gallery modal (hoisted below).
+  const photosBtn = el('button', { class: 'photos-btn', type: 'button', title: 'Photos' });
+  function refreshPhotosBtn() {
+    const n = prop.media.photos.length;
+    photosBtn.textContent = '▦ ' + n;
+    photosBtn.setAttribute('aria-label', `Photos (${n})`);
+  }
+  refreshPhotosBtn();
+  photosBtn.addEventListener('click', openGallery);
+  const infoCard = el('section', { class: 'card col-3', 'aria-label': 'Property Info' }, [
+    el('div', { class: 'card__head' }, [el('span', { class: 'eyebrow', text: 'Property Info' }), photosBtn]),
     el('div', { class: 'form-grid form-grid--3' }, infoDefs.map(([label, key, type]) => {
       // Property Type drives the insurance estimate — re-seed a blank insurance on change.
       if (type === 'select') {
@@ -510,18 +522,6 @@ export function renderDashboard(container, ctx) {
   ]);
   const rightStack = el('div', { class: 'col-3 stack' }, [assumeCard, methodCard]);
 
-  // Photos — a topbar button opens a gallery modal, so the dashboard itself
-  // stays one-screen. Photos are image URLs (e.g. imported from a listing);
-  // the browser renders them directly.
-  const photosBtn = el('button', { class: 'topbar__link topbar__action', type: 'button', title: 'Photos' });
-  function refreshPhotosBtn() {
-    const n = prop.media.photos.length;
-    photosBtn.textContent = '▦ ' + n;
-    photosBtn.setAttribute('aria-label', `Photos (${n})`);
-  }
-  refreshPhotosBtn();
-  photosBtn.addEventListener('click', openGallery);
-
   function openGallery() {
     const grid = el('div', { class: 'gallery__grid' });
     function renderThumbs() {
@@ -589,11 +589,12 @@ export function renderDashboard(container, ctx) {
   }
 
   // Actions — rendered into the top bar (keeps the dashboard one-screen) ----
-  // Top-bar actions: Photos gallery + the edit-history controls. Edits auto-save
-  // on commit (no Save), and Delete lives on each Properties-list card.
+  // Top-bar actions are just the edit-history controls (kept lean so the mobile
+  // top bar never overflows). Edits auto-save on commit (no Save), and Delete
+  // lives on each Properties-list card. The Photos button lives in the Property
+  // Info card header instead.
   if (ctx.actionsHost) {
     render(ctx.actionsHost, [
-      photosBtn,
       ...(ctx.undoButton ? [ctx.undoButton] : []),
       ...(ctx.redoButton ? [ctx.redoButton] : []),
     ]);
