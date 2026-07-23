@@ -5,7 +5,7 @@
 // Properties list and Compare without deleting it; this is where it lives until
 // restored.
 
-import { el, render } from '../dom.js';
+import { el, render, dragScroll } from '../dom.js';
 import { compute } from '../model.js';
 import { METRICS, fnum, extremes, verdictPill } from './compare.js';
 
@@ -29,6 +29,7 @@ export function renderArchive(container, ctx) {
   // Row-table sorting: 'name' or a METRICS index; null = as-listed order.
   let sortKey = null, sortDir = 'asc';
   const tableHost = el('div', { class: 'table-wrap' });
+  dragScroll(tableHost);
 
   // A clickable, keyboard-operable sort header — identical behaviour to Compare:
   // ascending first, re-click flips; aria-sort keeps it accessible.

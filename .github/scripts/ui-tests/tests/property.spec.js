@@ -260,6 +260,23 @@ test('S14 pro-forma horizon — slider extends to 10 years with a boundary and 1
   await expect(stats).toHaveCount(1);
 });
 
+test('S14b table drag-to-scroll — clicking and dragging the pro-forma table pans it (overlay scrollbars auto-hide)', async ({ page }) => {
+  await loadSample(page);
+  await page.locator('.pf-slider').evaluate((el) => { el.value = '10'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  const wrap = page.locator('.card[aria-label="Pro-Forma"] .table-wrap');
+  await expect.poll(() => wrap.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);   // genuinely overflows
+  const before = await wrap.evaluate((el) => el.scrollLeft);
+  const box = await wrap.boundingBox();
+  await page.mouse.move(box.x + box.width - 30, box.y + 30);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 30, box.y + 30, { steps: 10 });
+  await page.mouse.up();
+  const after = await wrap.evaluate((el) => el.scrollLeft);
+  expect(after).toBeGreaterThan(before);
+  // pointer capture is released and the drag state clears once the mouse is up
+  await expect(wrap).not.toHaveClass(/is-dragging/);
+});
+
 test('S15 goal-seek — typing Target CAP/DSCR back-solves the offer so the ACTUAL metric hits it', async ({ page }) => {
   await loadSample(page);
   const offer = page.locator('.deal-strip input[aria-label="Offer price"]');

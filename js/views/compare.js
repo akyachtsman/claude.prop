@@ -4,7 +4,7 @@
 //   • Side by side — each property a column, every metric a row.
 // Both share the property picker; best/worst is direction-aware, no-data neutral.
 
-import { el, render } from '../dom.js';
+import { el, render, dragScroll } from '../dom.js';
 import * as fmt from '../format.js';
 import { compute, capVerdict, dscrVerdict } from '../model.js';
 
@@ -93,6 +93,7 @@ export function renderCompare(container, ctx) {
   }
 
   const tableHost = el('div', { class: 'table-wrap' });
+  dragScroll(tableHost);
 
   function draw() {
     [...chips.children].forEach((c, i) => {

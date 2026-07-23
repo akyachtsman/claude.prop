@@ -40,3 +40,39 @@ export function toast(message, kind = 'info') {
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 3200);
 }
+
+/** Click-and-drag horizontal panning for an overflow-x:auto container — a
+ *  reliable way to scroll a wide table when the native scrollbar auto-hides
+ *  (macOS-style overlay scrollbars fade out at rest, independent of CSS).
+ *  Mouse only (pointerType 'mouse'); touch/trackpad keep native scroll/swipe.
+ *  Uses pointer capture so drag tracking is self-contained per element — no
+ *  window-level listeners to leak across re-renders. A drag beyond a small
+ *  threshold swallows the next click so it doesn't also fire (e.g. a sort
+ *  header) underneath the pointer. */
+export function dragScroll(el) {
+  let pointerId = null, startX = 0, startScrollLeft = 0, dragging = false, moved = false;
+  el.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    dragging = true; moved = false; pointerId = e.pointerId;
+    startX = e.clientX; startScrollLeft = el.scrollLeft;
+    // Capture is deferred to the FIRST real movement (see pointermove) — capturing
+    // immediately on pointerdown retargets pointerup away from whatever was under
+    // the cursor (a sort header, a Restore/Delete button), silently breaking its
+    // click. A plain click never crosses the threshold, so it's never captured
+    // and reaches its target exactly as if this listener didn't exist.
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const dx = e.clientX - startX;
+    if (!moved && Math.abs(dx) > 4) { moved = true; el.setPointerCapture(pointerId); el.classList.add('is-dragging'); }
+    if (moved) el.scrollLeft = startScrollLeft - dx;
+  });
+  const end = () => {
+    if (!dragging) return;
+    dragging = false;
+    el.classList.remove('is-dragging');
+    if (moved) el.addEventListener('click', (ev) => { ev.stopPropagation(); ev.preventDefault(); }, { capture: true, once: true });
+  };
+  el.addEventListener('pointerup', end);
+  el.addEventListener('pointercancel', end);
+}
