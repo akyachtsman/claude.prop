@@ -592,13 +592,15 @@ body {
 .empty p { color: var(--color-text-secondary); margin: 0 0 var(--space-4); }
 .empty__actions { display: flex; gap: var(--space-2); justify-content: center; flex-wrap: wrap; }
 
-/* compare view — property picker: a checkbox in front of each row (not a chip
-   row); unchecked rows sink below a divider, out of the comparison. Multiple
-   compact rows wrap per line, same footprint as the old chip row. */
+/* compare view, Side by side layout only: a checkbox-per-property picker grid
+   above the table (properties are columns there, so there's no "row" to put
+   a checkbox in front of). Table layout embeds its checkbox in the table
+   itself instead — see .compare-check-col below. */
 .compare-picker {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: var(--space-1) var(--space-4); margin: var(--space-2) 0 var(--space-3);
 }
+.compare-picker:empty { margin: 0; }
 .compare-row {
   display: flex; align-items: center; gap: var(--space-2);
   min-height: 36px; padding: 4px 0; cursor: pointer; min-width: 0;
@@ -615,8 +617,27 @@ body {
   text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary);
 }
 .compare-divider::before, .compare-divider::after { content: ''; flex: 1; border-top: 1px solid var(--color-border); }
+/* Table layout's in-row divider: a full-width row between the included and
+   excluded property rows, same "out of range" label as .compare-divider. */
+.compare-divider-row td {
+  padding: var(--space-1) var(--space-2); font-size: var(--font-xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary);
+  text-align: center; background: var(--color-bg);
+  border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border);
+}
+/* Table layout's excluded rows: dimmed, values still visible but no best/worst highlight */
+.compare-table-row--off { opacity: 0.6; }
+.compare-table-row--off .compare-name { font-weight: 400; color: var(--color-text-secondary); }
+/* checkbox column leading every Table-layout row (included or excluded) */
+.compare-check-col { width: 40px; min-width: 40px !important; text-align: center; padding-left: 6px !important; padding-right: 6px !important; }
+.compare-check-col input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--color-accent); margin: 0; vertical-align: middle; }
 .compare-table th, .compare-table td { min-width: 120px; }
-.compare-table td:first-child, .compare-table th:first-child { position: sticky; left: 0; background: var(--color-surface); font-weight: 600; }
+.compare-table td:first-child, .compare-table th:first-child { position: sticky; left: 0; background: var(--color-surface); font-weight: 600; z-index: 1; }
+/* Table layout only: the checkbox is first-child now, so the Prospect name
+   (second column) needs its own sticky offset to stay pinned during scroll. */
+.compare-table--rows td:nth-child(2), .compare-table--rows th:nth-child(2) {
+  position: sticky; left: 40px; background: var(--color-surface); font-weight: 600; z-index: 1;
+}
 .cell--best { color: var(--color-pass-text); font-weight: 800; background: var(--color-pass-bg); }
 .cell--worst { color: var(--color-fail-text); background: var(--color-fail-bg); }
 .compare-verdict td { padding-top: var(--space-2); }
@@ -629,7 +650,7 @@ body {
 /* rows table: one property per row, many metric columns — narrow, tight cells
    (more columns are expected, so keep them compact and let .table-wrap scroll) */
 .compare-table--rows th, .compare-table--rows td { min-width: 76px; padding-left: 6px; padding-right: 6px; }
-.compare-table--rows th:first-child, .compare-table--rows td:first-child { min-width: 176px; }
+.compare-table--rows th:nth-child(2), .compare-table--rows td:nth-child(2) { min-width: 176px; }
 .compare-name { display: block; font-weight: 700; color: var(--color-navy); }
 .compare-table--rows .compare-verdict { display: inline-block; margin-top: 3px; }
 /* Archive table: the compare rows layout + a per-row action column. The name is

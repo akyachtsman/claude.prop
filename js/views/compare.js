@@ -71,33 +71,39 @@ export function renderCompare(container, ctx) {
   // Row-table sorting: key is 'name' or a METRICS index; null = selection order.
   let sortKey = null, sortDir = 'asc';
 
-  // Picker: a checkbox per property, "in front of" each row. Unchecking drops
-  // it out of the comparison AND sinks its row below a divider (out of the
-  // sortable/comparable range) — re-checking brings it right back in. Rebuilt
-  // (not just class-toggled) on every change since rows must reorder.
-  const pickerHost = el('div', { class: 'compare-picker' });
-  function pickerRow(p, on) {
+  function toggleSelected(p, checked) {
+    const idx = selected.findIndex((s) => s.id === p.id);
+    if (checked) { if (idx < 0) selected.push(p); }
+    else if (idx >= 0) selected.splice(idx, 1);
+    draw();
+  }
+  // A checkbox for one property — used in front of its own row (Table layout)
+  // or its own column (Side by side). Unchecking drops it out of the
+  // comparison; re-checking brings it right back in.
+  function pickerCheckbox(p, on) {
     const checkbox = el('input', {
       type: 'checkbox', checked: on ? true : null,
       'aria-label': `Include ${p.name || 'Untitled'} in comparison`,
     });
-    checkbox.addEventListener('change', () => {
-      const idx = selected.findIndex((s) => s.id === p.id);
-      if (checkbox.checked) { if (idx < 0) selected.push(p); }
-      else if (idx >= 0) selected.splice(idx, 1);
-      draw();
-    });
-    return el('label', { class: 'compare-row' + (on ? '' : ' compare-row--off') }, [
-      checkbox, el('span', { class: 'compare-row__name', text: p.name || 'Untitled' }),
-    ]);
+    checkbox.addEventListener('change', () => toggleSelected(p, checkbox.checked));
+    return checkbox;
   }
+  // Side by side has no per-property "row" to put a checkbox in front of
+  // (properties are columns there), so it keeps a compact picker grid above
+  // the table — same checkbox-per-property, sink-below-divider behavior.
+  const pickerHost = el('div', { class: 'compare-picker' });
   function drawPicker() {
+    if (layout !== 'cols') { render(pickerHost, []); return; }
     const included = [], excluded = [];
     all.forEach((p) => (selected.some((s) => s.id === p.id) ? included : excluded).push(p));
-    const rows = included.map((p) => pickerRow(p, true));
+    const rows = included.map((p) => el('label', { class: 'compare-row' }, [
+      pickerCheckbox(p, true), el('span', { class: 'compare-row__name', text: p.name || 'Untitled' }),
+    ]));
     if (excluded.length) {
       rows.push(el('div', { class: 'compare-divider', text: 'Not included in comparison' }));
-      rows.push(...excluded.map((p) => pickerRow(p, false)));
+      rows.push(...excluded.map((p) => el('label', { class: 'compare-row compare-row--off' }, [
+        pickerCheckbox(p, false), el('span', { class: 'compare-row__name', text: p.name || 'Untitled' }),
+      ])));
     }
     render(pickerHost, rows);
   }
@@ -166,14 +172,24 @@ export function renderCompare(container, ctx) {
     });
   }
 
-  // Table: one row per property, metrics across the top; click any header to sort.
+  // Table: one row per property, metrics across the top; click any header to
+  // sort. A checkbox leads every row, checked property or not — unchecking
+  // excludes it from the comparison and sorting, and sinks its row below a
+  // divider row; the divider only appears once something is excluded.
   function drawTable() {
-    const cols = selected.map((p) => ({ p, m: compute(p) }));
-    // best/worst is computed over the full set, so it's independent of row order.
+    const included = all.filter((p) => selected.some((s) => s.id === p.id));
+    const excluded = all.filter((p) => !selected.some((s) => s.id === p.id));
+    const cols = included.map((p) => ({ p, m: compute(p) }));
+    // best/worst is computed over the included set only, independent of row order.
     const bw = METRICS.map(([label, sel, f, dir]) => extremes(cols.map(({ m, p }) => sel(m, p)), dir));
-    const head = el('tr', {}, [sortHeader('name', 'Prospect', false),
-      ...METRICS.map(([label], i) => sortHeader(i, label, true))]);
-    const body = sortRows(cols).map(({ p, m }) => el('tr', {}, [
+    const colCount = METRICS.length + 2;   // checkbox + prospect + metrics
+    const head = el('tr', {}, [
+      el('th', { scope: 'col', class: 'compare-check-col', 'aria-label': 'Include in comparison' }),
+      sortHeader('name', 'Prospect', false),
+      ...METRICS.map(([label], i) => sortHeader(i, label, true)),
+    ]);
+    const includedRows = sortRows(cols).map(({ p, m }) => el('tr', {}, [
+      el('td', { class: 'compare-check-col' }, [pickerCheckbox(p, true)]),
       el('td', {}, [el('span', { class: 'compare-name', text: p.name || 'Untitled' }), verdictPill(p, m)]),
       ...METRICS.map(([label, sel, f], ci) => {
         const v = sel(m, p);
@@ -182,8 +198,27 @@ export function renderCompare(container, ctx) {
         return el('td', { class: cls, text: fnum(v) ? '—' : f(v) });
       }),
     ]));
+    let excludedRows = [];
+    if (excluded.length) {
+      excludedRows = [
+        el('tr', { class: 'compare-divider-row' }, [
+          el('td', { colspan: String(colCount), text: 'Not included in comparison' }),
+        ]),
+        ...excluded.map((p) => {
+          const m = compute(p);
+          return el('tr', { class: 'compare-table-row--off' }, [
+            el('td', { class: 'compare-check-col' }, [pickerCheckbox(p, false)]),
+            el('td', {}, [el('span', { class: 'compare-name', text: p.name || 'Untitled' })]),
+            ...METRICS.map(([label, sel, f]) => {
+              const v = sel(m, p);
+              return el('td', { class: 'num', text: fnum(v) ? '—' : f(v) });
+            }),
+          ]);
+        }),
+      ];
+    }
     render(tableHost, [el('table', { class: 'data-table compare-table compare-table--rows' }, [
-      el('thead', {}, head), el('tbody', {}, body),
+      el('thead', {}, head), el('tbody', {}, [...includedRows, ...excludedRows]),
     ])]);
   }
 
