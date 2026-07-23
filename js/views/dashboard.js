@@ -217,6 +217,12 @@ export function renderDashboard(container, ctx) {
       'NOI ÷ all-in cost'],
     ['1% Rule', (m) => fmt.money(m.onePctRule), (m) => verdictClass(onePctVerdict(m.onePctRule)), () => 'rent vs 1% offer',
       'Monthly rent − 1% of offer price'],
+    ['Breakeven Occ.', (m) => fmt.percent2(m.breakevenOccupancy), null, () => 'of gross income',
+      '(Included expenses + annual debt service) ÷ gross annual income'],
+    ['Expense Ratio', (m) => fmt.percent2(m.expenseRatio), null, () => 'of gross income',
+      'Included expenses ÷ gross annual income'],
+    ['Price/SF', (m) => fmt.moneyCents(m.priceSF), null, () => 'offer ÷ rentable SF',
+      'Offer Price ÷ Rentable SF'],
   ];
   // Shared formula popup — position:fixed so it escapes the strip's overflow:hidden
   // and can be clamped to the viewport. Included in render() so it's cleaned up.

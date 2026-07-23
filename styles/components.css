@@ -143,7 +143,12 @@ body {
 /* KPI strip — the signature: one framed band, hairline-divided cells ----- */
 .kpi-strip {
   display: grid;
-  grid-template-columns: repeat(12, 1fr);
+  /* minmax(0, 1fr), not bare 1fr: a bare 1fr track won't shrink below its
+     content's min-content width (nowrap labels), so 15 narrow columns of
+     nowrap text overflow the strip past the viewport instead of dividing
+     evenly. minmax(0, ...) lets tracks actually shrink; overflow is then
+     handled per-cell via .kpi__label's ellipsis below. */
+  grid-template-columns: repeat(15, minmax(0, 1fr));
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -152,26 +157,31 @@ body {
   margin-bottom: var(--space-2);
 }
 .kpi {
-  padding: 6px var(--space-2);
+  padding: 6px 5px;                        /* tighter than --space-2 (8px) — 15 cols need the room */
   border-top: 1px solid var(--color-border);
   border-left: 1px solid var(--color-border);
   min-height: 52px;
+  min-width: 0;                            /* let the cell shrink; label truncates instead of overflowing */
   background: var(--gen-shade);            /* generated fields share a consistent shade */
 }
-.kpi:nth-child(-n+12) { border-top: none; }
-.kpi:nth-child(12n+1) { border-left: none; }
+.kpi:nth-child(-n+15) { border-top: none; }
+.kpi:nth-child(15n+1) { border-left: none; }
 .kpi__label {
-  font-size: 9.5px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.04em; color: var(--color-text-secondary); line-height: 1.2;
-  white-space: nowrap;
+  font-size: 9px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.02em; color: var(--color-text-secondary); line-height: 1.2;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .kpi__value {
-  font-size: var(--font-lg); font-weight: 800; color: var(--color-navy);
+  font-size: 15px; font-weight: 800; color: var(--color-navy);
   margin-top: 2px; line-height: 1.15;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .kpi__value--pass { color: var(--color-pass); }
 .kpi__value--fail { color: var(--color-fail); }
-.kpi__note { font-size: 10px; color: var(--color-text-secondary); margin-top: 1px; }
+.kpi__note {
+  font-size: 10px; color: var(--color-text-secondary); margin-top: 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 /* formula popup: focusable KPI cells reveal their calculation on hover/focus */
 .kpi--info { cursor: help; }
 .kpi-tip {
@@ -196,16 +206,17 @@ body {
   pointer-events: none;
 }
 @media (max-width: 1100px) {
-  .kpi-strip { grid-template-columns: repeat(6, 1fr); }
-  .kpi:nth-child(-n+12) { border-top: 1px solid var(--color-border); }
-  .kpi:nth-child(12n+1) { border-left: 1px solid var(--color-border); }
-  .kpi:nth-child(-n+6) { border-top: none; }
-  .kpi:nth-child(6n+1) { border-left: none; }
+  /* 5, not 6: 15 KPIs ÷ 5 = 3 clean rows, no dangling half-empty row */
+  .kpi-strip { grid-template-columns: repeat(5, 1fr); }
+  .kpi:nth-child(-n+15) { border-top: 1px solid var(--color-border); }
+  .kpi:nth-child(15n+1) { border-left: 1px solid var(--color-border); }
+  .kpi:nth-child(-n+5) { border-top: none; }
+  .kpi:nth-child(5n+1) { border-left: none; }
 }
 @media (max-width: 760px) {
   .kpi-strip { grid-template-columns: repeat(3, 1fr); }
-  .kpi:nth-child(-n+6) { border-top: 1px solid var(--color-border); }
-  .kpi:nth-child(6n+1) { border-left: 1px solid var(--color-border); }
+  .kpi:nth-child(-n+5) { border-top: 1px solid var(--color-border); }
+  .kpi:nth-child(5n+1) { border-left: 1px solid var(--color-border); }
   .kpi:nth-child(-n+3) { border-top: none; }
   .kpi:nth-child(3n+1) { border-left: none; }
 }
