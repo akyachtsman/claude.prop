@@ -27,6 +27,11 @@ let undoStack = [];     // committed prior states of the property being edited (
 let redoStack = [];     // states undone and available to redo (cleared by any new edit)
 let historyId = null;   // the property the undo/redo stacks belong to
 let committedState = null;   // the current committed state, in memory (drives undo/redo snapshots)
+// The one property currently mid-creation: set right before navigating into a
+// brand-new blank/sample/imported deal, consumed (cleared) on that one entry so
+// it starts unlocked; every OTHER entry into a property's dashboard force-locks
+// it (see showDashboard()).
+let justCreatedId = null;
 
 // ── blank property factory (for "+ New") ────────────────────────────────
 function blankProperty() {
@@ -191,13 +196,30 @@ function showCompare(ids) {
   });
 }
 
-function showDashboard(id) {
-  const saved = store.get(id);
+// `opts.refresh`: an in-place re-render of the SAME page — undo/redo, or
+// discarding a rejected offline edit — never a fresh entry, so it must not
+// fight an in-progress edit by force-relocking underneath the user.
+function showDashboard(id, opts = {}) {
+  let saved = store.get(id);
   if (!saved) { toast('That property no longer exists.', 'info'); navigate('#/'); return; }
   // The switcher cycles active properties only; keep the current one addressable
   // even if it's archived (e.g. opened straight from the Archive view).
   const props = store.list().filter((p) => isActive(p) || p.id === id);
   const idx = props.findIndex((p) => p.id === id);
+
+  // Force the dashboard locked on every fresh entry into an EXISTING property —
+  // a safety default so simply browsing into a deal (even re-opening the same
+  // one from the list after leaving it) never leaves it silently editable.
+  // Skipped for the one-shot "just created" navigation (a brand-new blank/
+  // sample/imported deal must start unlocked so it can actually be filled in)
+  // and for opts.refresh.
+  if (justCreatedId === id) {
+    justCreatedId = null;
+  } else if (!opts.refresh && !saved.locked) {
+    saved = { ...saved, locked: true };
+    store.save(saved);
+  }
+
   const working = deepCopy(saved);
   normalizeLoans(working);   // guarantee a Loan 2 slot (see below)
 
@@ -229,7 +251,7 @@ function showDashboard(id) {
     const v = nameInput.value.trim();
     if (v === (working.name || '')) return;              // no change → nothing to commit
     working.name = v;
-    if (!store.save(working)) { showDashboard(working.id); return; }   // offline reject
+    if (!store.save(working)) { showDashboard(working.id, { refresh: true }); return; }   // offline reject
     undoStack.push(committedState);
     committedState = deepCopy(working);
     redoStack = [];
@@ -262,7 +284,7 @@ function showDashboard(id) {
     onCommit: () => {
       // Signed-in + offline rejects the write (store returns null): discard the
       // typed edit by re-rendering from the committed state; don't touch history.
-      if (!store.save(working)) { showDashboard(working.id); return; }
+      if (!store.save(working)) { showDashboard(working.id, { refresh: true }); return; }
       undoStack.push(committedState);
       committedState = deepCopy(working);
       redoStack = [];
@@ -307,7 +329,7 @@ function undo(id) {
   if (!store.save(prev)) return;                   // offline reject → leave the stacks untouched
   undoStack.pop();
   redoStack.push(committedState);                  // current state → available to redo
-  showDashboard(id);                               // re-render from the restored state (history is module-level, preserved)
+  showDashboard(id, { refresh: true });             // re-render from the restored state (history is module-level, preserved)
 }
 function redo(id) {
   if (!redoStack.length) return;
@@ -315,17 +337,19 @@ function redo(id) {
   if (!store.save(next)) return;                   // offline reject → leave the stacks untouched
   redoStack.pop();
   undoStack.push(committedState);                  // current state → available to undo
-  showDashboard(id);
+  showDashboard(id, { refresh: true });
 }
 function createNew() {
   const p = store.save(blankProperty());
   if (!p) return;                                  // offline reject (store toasts)
+  justCreatedId = p.id;                             // this one entry starts unlocked
   navigate('#/p/' + encodeURIComponent(p.id));
 }
 function loadSample() {
   const p = store.save(sampleProperty());
   if (!p) return;                                  // offline reject (store toasts)
   toast('Sample deal loaded.', 'success');
+  justCreatedId = p.id;                             // this one entry starts unlocked
   navigate('#/p/' + encodeURIComponent(p.id));
 }
 
@@ -362,6 +386,7 @@ function openImport() {
     status.className = 'modal__status modal__status--ok';
     status.textContent = '✓ Import successful — opening the property…';
     toast('Import successful.', 'success');
+    justCreatedId = saved.id;                          // this one entry starts unlocked
     setTimeout(() => {
       close();
       navigate('#/p/' + encodeURIComponent(saved.id));
