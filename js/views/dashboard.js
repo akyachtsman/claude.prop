@@ -468,26 +468,33 @@ export function renderDashboard(container, ctx) {
       el('span', { class: 'loan-cols__label', text: label }), ...cells,
     ]);
   }
+  const loanValCell = (nodes) => el('span', { class: 'loan-cols__val' }, nodes);
+  // Loan Amount is derived (offer × LTV) — shown first, above the editable
+  // params, so it reads as each loan's headline figure rather than buried in
+  // a combined "amount · payment" fact line.
+  const amountCells = prop.loans.map((ln, i) => {
+    const amt = el('span', {}); out.debtNodes['loanAmt' + i] = amt;
+    return loanValCell([amt]);
+  });
   const loanCols = el('div', { class: 'loan-cols' }, [
     loanColsRow('', prop.loans.map((_, i) => el('span', { class: 'loan-cols__head', text: `Loan ${i + 1}` })), 'loan-cols__row--head'),
+    loanColsRow('Amount', amountCells),
     loanColsRow('LTV', prop.loans.map((ln, i) => fieldPercent(ln.ltv, (v) => { ln.ltv = v; onEdit(); }, { label: `Loan ${i + 1} LTV`, step: '0.1' }))),
     loanColsRow('Rate', prop.loans.map((ln, i) => fieldPercent(ln.rate, (v) => { ln.rate = v; onEdit(); }, { label: `Loan ${i + 1} rate`, step: '0.1' }))),
     loanColsRow('Amort', prop.loans.map((ln, i) => fieldNum(ln.termYears, (v) => { ln.termYears = v; onEdit(); }, { label: `Loan ${i + 1} amortization years` }))),
     loanColsRow('Maturity', prop.loans.map((ln, i) => fieldNum(ln.maturityYears ?? 0, (v) => { ln.maturityYears = v; onEdit(); }, { label: `Loan ${i + 1} maturity years` }))),
     loanColsRow('Type', prop.loans.map((ln, i) => fieldSelect(ln.type, ['CONV', 'IO'], (v) => { ln.type = v; onEdit(); }, `Loan ${i + 1} type`))),
   ]);
-  const loanValCell = (nodes) => el('span', { class: 'loan-cols__val' }, nodes);
-  const amtPayCells = prop.loans.map((ln, i) => {
-    const amt = el('span', {}); out.debtNodes['loanAmt' + i] = amt;
+  const payCells = prop.loans.map((ln, i) => {
     const pay = el('span', {}); out.debtNodes['pay' + i] = pay;
-    return loanValCell([amt, document.createTextNode(' · '), pay]);
+    return loanValCell([pay]);
   });
   const balloonCells = prop.loans.map((ln, i) => {
     const balloon = el('span', {}); out.debtNodes['balloon' + i] = balloon;
     return loanValCell([balloon]);
   });
   const loanFacts = el('div', { class: 'loan-cols loan-cols--facts' }, [
-    loanColsRow('Amt / mo.', amtPayCells),
+    loanColsRow('Mo. payment', payCells),
     loanColsRow('Balloon due', balloonCells),
   ]);
   out.totalMortgageCell = el('dd', {});
