@@ -592,14 +592,29 @@ body {
 .empty p { color: var(--color-text-secondary); margin: 0 0 var(--space-4); }
 .empty__actions { display: flex; gap: var(--space-2); justify-content: center; flex-wrap: wrap; }
 
-/* compare view */
-.compare-picker { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-2) 0 var(--space-3); }
-.chip {
-  font: inherit; font-weight: 600; cursor: pointer;
-  min-height: 44px; padding: 6px var(--space-3); border-radius: var(--radius-pill);
-  border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-primary);
+/* compare view — property picker: a checkbox in front of each row (not a chip
+   row); unchecked rows sink below a divider, out of the comparison. Multiple
+   compact rows wrap per line, same footprint as the old chip row. */
+.compare-picker {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--space-1) var(--space-4); margin: var(--space-2) 0 var(--space-3);
 }
-.chip--on { background: var(--color-navy); color: var(--color-on-navy); border-color: var(--color-navy); }
+.compare-row {
+  display: flex; align-items: center; gap: var(--space-2);
+  min-height: 36px; padding: 4px 0; cursor: pointer; min-width: 0;
+}
+.compare-row input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--color-accent); flex: none; margin: 0; }
+.compare-row__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.compare-row--off { opacity: 0.6; }
+.compare-row--off .compare-row__name { color: var(--color-text-secondary); font-weight: 400; }
+/* divider: the "out of comparison range" line, spanning every column of the grid */
+.compare-divider {
+  grid-column: 1 / -1;
+  display: flex; align-items: center; gap: var(--space-3);
+  margin: var(--space-1) 0; font-size: var(--font-xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary);
+}
+.compare-divider::before, .compare-divider::after { content: ''; flex: 1; border-top: 1px solid var(--color-border); }
 .compare-table th, .compare-table td { min-width: 120px; }
 .compare-table td:first-child, .compare-table th:first-child { position: sticky; left: 0; background: var(--color-surface); font-weight: 600; }
 .cell--best { color: var(--color-pass-text); font-weight: 800; background: var(--color-pass-bg); }
