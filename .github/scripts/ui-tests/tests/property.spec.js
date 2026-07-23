@@ -538,6 +538,40 @@ test('S33 Loan 2 secondary financing — every deal gets an editable second loan
   await expect(page.locator('input[aria-label="Loan 2 LTV"]')).toHaveValue('10');
 });
 
+test('S34 Offer Price lock — a locked offer price resists direct edits, goal-seek, and the Asking→Offer sync', async ({ page }) => {
+  await loadSample(page);
+  const offer = page.locator('input[aria-label="Offer price"]');
+  const lockBtn = page.locator('.lock-btn');
+  // starts unlocked — plain white, editable
+  await expect(offer).toBeEditable();
+  await expect(lockBtn).toHaveAttribute('aria-label', 'Lock offer price');
+  // lock it: the field shades and stops accepting direct input
+  await lockBtn.click();
+  await expect(lockBtn).toHaveAttribute('aria-label', 'Unlock offer price');
+  await expect(offer).not.toBeEditable();
+  await expect(offer).toHaveClass(/input--locked/);
+  // goal-seek (Target CAP) is also blocked while locked — the offer doesn't move
+  await setField(page, '.deal-strip input[aria-label="Target CAP"]', '6');
+  await page.waitForTimeout(200);
+  await expect(offer).toHaveValue('1300000');
+  // editing Asking Price normally seeds Offer Price — also blocked while locked
+  await setField(page, 'input[aria-label="Asking"]', '1450000');
+  await page.waitForTimeout(200);
+  await expect(offer).toHaveValue('1300000');
+  // unlock: editable again, and a real edit goes through
+  await lockBtn.click();
+  await expect(offer).toBeEditable();
+  await setField(page, 'input[aria-label="Offer price"]', '1250000');
+  await expect(offer).toHaveValue('1250000');
+  // the locked flag persists across reload like any other field
+  await lockBtn.click();
+  await page.waitForTimeout(600);   // let the auto-save debounce fire
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForSelector('.kpi-strip');
+  await expect(page.locator('input[aria-label="Offer price"]')).not.toBeEditable();
+  await expect(page.locator('.lock-btn')).toHaveAttribute('aria-label', 'Unlock offer price');
+});
+
 // (S20 stale-sample auto-refresh removed: it exercised the LOCAL built-in-sample
 //  migration, which the login gate retires — a signed-in account's sample is
 //  authoritative and updates via normal upsert, not a boot-time local refresh.)
