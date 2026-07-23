@@ -294,6 +294,13 @@ body {
 .table-wrap::-webkit-scrollbar-track { background: var(--color-bg); border-radius: var(--radius-pill); }
 .table-wrap::-webkit-scrollbar-thumb { background: var(--color-border-hover); border-radius: var(--radius-pill); border: 2px solid var(--color-bg); }
 .table-wrap::-webkit-scrollbar-thumb:hover { background: var(--color-text-secondary); }
+/* Click-and-drag panning (js/dom.js dragScroll): the styled scrollbar above
+   still auto-hides at rest on macOS-style overlay-scrollbar setups regardless
+   of CSS, so dragging the table body itself is the reliable fallback — never
+   depends on hitting a thin bar. cursor hints the affordance; dragging disables
+   text selection so a drag doesn't also select cell text. */
+.table-wrap { cursor: grab; }
+.table-wrap.is-dragging { cursor: grabbing; user-select: none; }
 .data-table { width: 100%; border-collapse: collapse; font-size: var(--font-sm); }
 .data-table th {
   text-align: left; font-size: 10px; font-weight: 700;

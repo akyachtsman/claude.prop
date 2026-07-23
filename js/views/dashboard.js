@@ -2,7 +2,7 @@
 // live recompute, KPI strip, 5yr pro-forma, expense toggles, methodology.
 // Inputs stay mounted (focus preserved); only output nodes refresh on edit.
 
-import { el, clear, render, toast } from '../dom.js';
+import { el, clear, render, toast, dragScroll } from '../dom.js';
 import * as fmt from '../format.js';
 import { compute, capVerdict, dscrVerdict, onePctVerdict, BENCHMARK_CAP, BENCHMARK_DSCR } from '../model.js';
 import { NOTES } from '../notes.js';
@@ -791,7 +791,7 @@ function card(title, colClass, children) {
     el('span', { class: 'eyebrow', text: title }), ...children,
   ]);
 }
-function tableWrap(t) { return el('div', { class: 'table-wrap' }, [t]); }
+function tableWrap(t) { const w = el('div', { class: 'table-wrap' }, [t]); dragScroll(w); return w; }
 function grid2(children) { return el('div', { class: 'form-grid' }, children); }
 function labeledField(label, input) {
   return el('label', { class: 'field' }, [el('span', { class: 'field__label', text: label }), input]);
