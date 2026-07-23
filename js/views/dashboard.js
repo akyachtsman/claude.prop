@@ -457,38 +457,46 @@ export function renderDashboard(container, ctx) {
   ]);
 
   // Offer & debt service --------------------------------------------------
+  // Loan 1 + Loan 2 (a secondary financing option, normalized onto every
+  // property in app.js) share ONE compact grid — LTV/Rate/Amort/Maturity/Type
+  // as rows, one column per loan — rather than two stacked title+field+facts
+  // blocks, so both fit the one-screen dashboard budget (S11) and read like
+  // the reference workbook's side-by-side Finance Amount 1/2 columns.
   out.debtNodes = {};
-  function debtRow(label, valueNode) { return el('div', {}, [el('dt', { text: label }), valueNode]); }
-  const loanFields = prop.loans.map((ln, i) => {
-    const amt = el('dd', {});
-    out.debtNodes['loanAmt' + i] = amt;
-    const pay = el('dd', {});
-    out.debtNodes['pay' + i] = pay;
-    const balloon = el('dd', {});
-    out.debtNodes['balloon' + i] = balloon;
-    return el('div', { class: 'loan-edit' }, [
-      el('span', { class: 'loan-edit__title', text: `Loan ${i + 1}` }),
-      el('div', { class: 'loan-grid loan-grid--5' }, [
-        labeledField('LTV', fieldPercent(ln.ltv, (v) => { ln.ltv = v; onEdit(); }, { label: `Loan ${i + 1} LTV`, step: '0.1' })),
-        labeledField('Rate', fieldPercent(ln.rate, (v) => { ln.rate = v; onEdit(); }, { label: `Loan ${i + 1} rate`, step: '0.1' })),
-        labeledField('Amort', fieldNum(ln.termYears, (v) => { ln.termYears = v; onEdit(); }, { label: `Loan ${i + 1} amortization years` })),
-        labeledField('Maturity', fieldNum(ln.maturityYears ?? 0, (v) => { ln.maturityYears = v; onEdit(); }, { label: `Loan ${i + 1} maturity years` })),
-        labeledField('Type', fieldSelect(ln.type, ['CONV', 'IO'], (v) => { ln.type = v; onEdit(); }, `Loan ${i + 1} type`)),
-      ]),
-      el('dl', { class: 'facts facts--1col' }, [
-        el('div', {}, [el('dt', { text: `Loan ${i + 1} amount / mo. payment` }),
-          el('dd', {}, [amt, document.createTextNode(' · '), pay])]),
-        el('div', {}, [el('dt', { text: 'Balloon due' }), balloon]),
-      ]),
+  function loanColsRow(label, cells, cls) {
+    return el('div', { class: 'loan-cols__row' + (cls ? ' ' + cls : '') }, [
+      el('span', { class: 'loan-cols__label', text: label }), ...cells,
     ]);
+  }
+  const loanCols = el('div', { class: 'loan-cols' }, [
+    loanColsRow('', prop.loans.map((_, i) => el('span', { class: 'loan-cols__head', text: `Loan ${i + 1}` })), 'loan-cols__row--head'),
+    loanColsRow('LTV', prop.loans.map((ln, i) => fieldPercent(ln.ltv, (v) => { ln.ltv = v; onEdit(); }, { label: `Loan ${i + 1} LTV`, step: '0.1' }))),
+    loanColsRow('Rate', prop.loans.map((ln, i) => fieldPercent(ln.rate, (v) => { ln.rate = v; onEdit(); }, { label: `Loan ${i + 1} rate`, step: '0.1' }))),
+    loanColsRow('Amort', prop.loans.map((ln, i) => fieldNum(ln.termYears, (v) => { ln.termYears = v; onEdit(); }, { label: `Loan ${i + 1} amortization years` }))),
+    loanColsRow('Maturity', prop.loans.map((ln, i) => fieldNum(ln.maturityYears ?? 0, (v) => { ln.maturityYears = v; onEdit(); }, { label: `Loan ${i + 1} maturity years` }))),
+    loanColsRow('Type', prop.loans.map((ln, i) => fieldSelect(ln.type, ['CONV', 'IO'], (v) => { ln.type = v; onEdit(); }, `Loan ${i + 1} type`))),
+  ]);
+  const loanValCell = (nodes) => el('span', { class: 'loan-cols__val' }, nodes);
+  const amtPayCells = prop.loans.map((ln, i) => {
+    const amt = el('span', {}); out.debtNodes['loanAmt' + i] = amt;
+    const pay = el('span', {}); out.debtNodes['pay' + i] = pay;
+    return loanValCell([amt, document.createTextNode(' · '), pay]);
   });
+  const balloonCells = prop.loans.map((ln, i) => {
+    const balloon = el('span', {}); out.debtNodes['balloon' + i] = balloon;
+    return loanValCell([balloon]);
+  });
+  const loanFacts = el('div', { class: 'loan-cols loan-cols--facts' }, [
+    loanColsRow('Amt / mo.', amtPayCells),
+    loanColsRow('Balloon due', balloonCells),
+  ]);
   out.totalMortgageCell = el('dd', {});
   out.allInCell = el('dd', {});
   out.allInCells.push(out.allInCell);
   // Offer / Fees / Improvement now live only in the deal-summary band above;
   // this card is loan data + derived debt/equity totals.
   const debtCard = card('Offer & Debt Service', 'col-3', [
-    ...loanFields,
+    loanCols, loanFacts,
     el('dl', { class: 'facts facts--1col' }, [
       el('div', {}, [el('dt', { text: 'Total yearly mortgage' }), out.totalMortgageCell]),
       el('div', {}, [el('dt', { text: 'All-in cost (equity)' }), out.allInCell]),

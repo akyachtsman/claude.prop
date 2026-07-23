@@ -520,6 +520,24 @@ test('S19 amortization vs. maturity — a balloon is reported without changing D
   expect((await kpis(page))['DSCR']).toBe(dscrBefore);
 });
 
+test('S33 Loan 2 secondary financing — every deal gets an editable second loan slot, wired into the totals', async ({ page }) => {
+  await loadSample(page);   // the sample was saved with only ONE loan — normalizeLoans() backfills a 2nd
+  await expect(page.locator('input[aria-label="Loan 2 LTV"]')).toBeVisible();
+  // a fresh, unfilled Loan 2 (0% LTV) is a pure no-op on every KPI (S5 fidelity)
+  expect((await kpis(page))['CAP']).toBe('5.13%');
+  expect((await kpis(page))['DSCR']).toBe('0.84');
+  // filling in Loan 2 as a real secondary loan adds real debt service, so it's
+  // genuinely wired into compute() — not just decorative fields
+  await setField(page, 'input[aria-label="Loan 2 LTV"]', '10');
+  await setField(page, 'input[aria-label="Loan 2 rate"]', '7');
+  await setField(page, 'input[aria-label="Loan 2 amortization years"]', '25');
+  await expect.poll(async () => (await kpis(page))['DSCR']).not.toBe('0.84');
+  // persists across reload like any other field (auto-saved)
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForSelector('.kpi-strip');
+  await expect(page.locator('input[aria-label="Loan 2 LTV"]')).toHaveValue('10');
+});
+
 // (S20 stale-sample auto-refresh removed: it exercised the LOCAL built-in-sample
 //  migration, which the login gate retires — a signed-in account's sample is
 //  authoritative and updates via normal upsert, not a boot-time local refresh.)
