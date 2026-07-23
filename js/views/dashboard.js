@@ -117,6 +117,9 @@ export function renderDashboard(container, ctx) {
   out.allInCells = [];
   function offerField(key, label) {
     const input = fieldNum(prop.offer[key], (v) => {
+      // Belt-and-suspenders: the input's `readOnly` attribute already blocks
+      // typing while locked; this guards a programmatic change slipping through.
+      if (key === 'offerPrice' && prop.offer.locked) { input.value = String(prop.offer.offerPrice); return; }
       prop.offer[key] = v;
       offerInputs[key].forEach((n) => { if (n !== input) n.value = input.value; });
       if (key === 'offerPrice') seedFormulaExpenses(['taxes']);   // offer drives the tax estimate only
@@ -172,6 +175,7 @@ export function renderDashboard(container, ctx) {
     return -(pmt * (1 - Math.pow(1 + rate, -nper)) / rate);
   }
   function goalSeekOffer(kind, target) {
+    if (prop.offer.locked) return;   // a locked offer price can't be moved by the goal-seek either
     const m = compute(prop);
     let offer = null;
     if (kind === 'cap') {
@@ -279,6 +283,30 @@ export function renderDashboard(container, ctx) {
   // & Debt card; All-In Cost derived. Built here, mounted in render() below.
   const allInSummaryCell = el('div', { class: 'deal-cell__val' });
   out.allInCells.push(allInSummaryCell);
+  // Offer Price lock: a safety toggle so a fully-negotiated/critical figure
+  // can't be changed by accident. Locking also blocks the two OTHER paths that
+  // write offerPrice — the Target CAP/DSCR goal-seek and the Asking→Offer sync
+  // below — not just direct typing, or "locked" wouldn't really mean locked.
+  // Persisted on prop.offer.locked (auto-saved, undoable like any other edit);
+  // white when unlocked, shaded like a disabled field when locked.
+  const offerPriceInput = offerField('offerPrice', 'Offer price');
+  const lockBtn = el('button', { class: 'lock-btn', type: 'button' });
+  function paintOfferLock() {
+    const locked = !!prop.offer.locked;
+    offerPriceInput.readOnly = locked;
+    offerPriceInput.classList.toggle('input--locked', locked);
+    lockBtn.classList.toggle('lock-btn--locked', locked);
+    lockBtn.textContent = locked ? '🔒' : '🔓';
+    lockBtn.title = locked ? 'Unlock to edit the offer price' : 'Lock to prevent accidental edits';
+    lockBtn.setAttribute('aria-label', locked ? 'Unlock offer price' : 'Lock offer price');
+  }
+  lockBtn.addEventListener('click', () => {
+    prop.offer.locked = !prop.offer.locked;
+    paintOfferLock();
+    onEdit();
+  });
+  paintOfferLock();
+  const offerPriceField = el('div', { class: 'offer-lock' }, [lockBtn, offerPriceInput]);
   // Target CAP/DSCR is a GOAL-SEEK ACTION, not a stored setting: typing a value
   // back-solves the offer price so the ACTUAL CAP/DSCR becomes that number
   // (CAP = NOI÷offer, DSCR via PV(loan)÷LTV). It always renders EMPTY on load — a
@@ -286,7 +314,7 @@ export function renderDashboard(container, ctx) {
   // a value never reads as a default the user didn't set. The verdict pills check
   // the fixed benchmark, independent of this field.
   const dealStrip = el('div', { class: 'deal-strip', 'aria-label': 'Deal summary' }, [
-    dealCell('Offer Price', offerField('offerPrice', 'Offer price')),
+    dealCell('Offer Price', offerPriceField),
     dealCell('All-In Cost', allInSummaryCell, true),
     dealCell('Fees', offerField('fees', 'Fees')),
     dealCell('Improvement', offerField('improvements', 'Improvements')),
@@ -332,8 +360,9 @@ export function renderDashboard(container, ctx) {
         return labeledField(label, fieldNum(prop.info[key], (v) => {
           prop.info[key] = v;
           // Workbook onEdit parity: editing Asking Price seeds the Offer Price to
-          // it (the offer's starting point), syncing every bound offer input.
-          if (key === 'askingPrice') {
+          // it (the offer's starting point), syncing every bound offer input —
+          // unless the offer price is locked, which protects it from this too.
+          if (key === 'askingPrice' && !prop.offer.locked) {
             prop.offer.offerPrice = v;
             offerInputs.offerPrice.forEach((n) => { n.value = String(v); });
           }
