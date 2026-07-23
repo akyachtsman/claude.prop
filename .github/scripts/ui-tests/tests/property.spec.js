@@ -196,6 +196,25 @@ test('Property name/address — editable in the header, renames the deal and per
   await expect(page.locator('.lcard__name')).toContainText('123 Market St — Retail');
 });
 
+test('Property list cards — a fixed six KPIs always shown, no source line', async ({ page }) => {
+  await page.goto('./', { waitUntil: 'load' });
+  await page.click('button:has-text("Load sample deal")');
+  await page.waitForSelector('.kpi-strip');
+  await page.click('#nav-properties');
+  await page.click('button:has-text("+ New property")');
+  await page.waitForSelector('.kpi-strip');
+  await page.click('#nav-properties');
+  await page.waitForSelector('.lcard');
+  const cards = page.locator('.lcard');
+  await expect(cards).toHaveCount(2);
+  // every card — the one with real data and the blank one — shows exactly six
+  // KPI slots; the set doesn't grow/shrink based on what the deal has data for
+  for (const card of await cards.all()) {
+    await expect(card.locator('.lcard__kpi')).toHaveCount(6);
+  }
+  await expect(page.locator('.lcard__source')).toHaveCount(0);
+});
+
 test('S9 empty/zero — a zeroed property renders "—", never NaN', async ({ page }) => {
   await page.goto('./', { waitUntil: 'load' });
   await page.click('button:has-text("Add your first property")');
