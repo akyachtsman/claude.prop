@@ -549,7 +549,9 @@ test('S34 Dashboard lock — locking shades and blocks every editable field acro
   const insuranceIncluded = page.locator('#exp-insurance');
   const pfSlider = page.locator('.pf-slider');
 
-  // starts unlocked — every field type is editable, sitting outside any one field
+  // the toggle sits right in front of Offer Price — the same deal-cell — but
+  // still controls every field across the whole dashboard, not just this one
+  await expect(page.locator('.deal-cell:has(.dash-lock-btn)')).toContainText('Offer Price');
   await expect(lockBtn).toHaveAttribute('aria-label', 'Lock all fields');
   await expect(offer).toBeEditable();
   await expect(propType).toBeEnabled();
