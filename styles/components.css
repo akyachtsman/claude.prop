@@ -51,11 +51,21 @@ body {
 .switcher__btn:hover, .switcher__btn:focus-visible { background: var(--color-accent); }
 /* Cap + truncate the title so the switcher yields width to the verdict pills
    instead of pushing them into the nav (full name is in the deal card + list). */
-.switcher__title { flex: 0 1 auto; min-width: 0; max-width: 130px; }
+.switcher__title { flex: 0 1 auto; min-width: 0; max-width: 130px; transition: max-width 0.15s ease; }
+.switcher__title:focus-within { max-width: 260px; }   /* room to type an address when editing */
 .switcher__title h1 {
   margin: 0; font-size: var(--font-lg); font-weight: 800; line-height: 1.2;
   color: var(--color-on-navy); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+/* Editable property name/address — looks like the title, hints edit on hover/focus */
+.switcher__name {
+  width: 100%; margin: 0; padding: 0; font: inherit; font-size: var(--font-lg); font-weight: 800; line-height: 1.2;
+  color: var(--color-on-navy); background: transparent; border: none;
+  border-bottom: 1px solid transparent; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.switcher__name::placeholder { color: var(--color-on-navy-muted); font-weight: 600; }
+.switcher__name:hover { border-bottom-color: var(--color-on-navy-muted); }
+.switcher__name:focus { outline: none; border-bottom-color: var(--color-accent); }
 .switcher__title .sub {
   display: block; font-size: var(--font-xs); color: var(--color-on-navy-muted);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;

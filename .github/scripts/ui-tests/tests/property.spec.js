@@ -149,6 +149,20 @@ test('New property defaults — Target CAP / DSCR start empty', async ({ page })
   await expect(page.locator('input[aria-label="Target DSCR"]')).toHaveValue('');
 });
 
+test('Property name/address — editable in the header, renames the deal and persists', async ({ page }) => {
+  await page.goto('./', { waitUntil: 'load' });
+  await page.click('button:has-text("Add your first property")');
+  await page.waitForSelector('.kpi-strip');
+  const nameInput = page.locator('.switcher__name');
+  await expect(nameInput).toHaveValue('New property');     // editable name field is present in the header
+  await nameInput.fill('123 Market St — Retail');
+  await nameInput.blur();                                    // commit on blur
+  // the new name flows to the Properties list card and survives a reload (auto-saved)
+  await page.goto('./', { waitUntil: 'load' });
+  await page.waitForSelector('.lcard');
+  await expect(page.locator('.lcard__name')).toContainText('123 Market St — Retail');
+});
+
 test('S9 empty/zero — a zeroed property renders "—", never NaN', async ({ page }) => {
   await page.goto('./', { waitUntil: 'load' });
   await page.click('button:has-text("Add your first property")');
