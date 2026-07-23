@@ -279,6 +279,35 @@ export function renderDashboard(container, ctx) {
   // & Debt card; All-In Cost derived. Built here, mounted in render() below.
   const allInSummaryCell = el('div', { class: 'deal-cell__val' });
   out.allInCells.push(allInSummaryCell);
+  // Dashboard-wide edit lock: sits right in front of the Offer Price field —
+  // the deal's headline figure — but toggling it shades and read-only/disables
+  // every editable field across the WHOLE dashboard (Property Info, Income,
+  // Expenses, Offer & Debt Service incl. both loans, deal-strip, Assumptions),
+  // not just Offer Price. Pro-Forma's horizon slider is excluded — a view
+  // toggle, not deal data. Locking a field's own input naturally blocks any
+  // path fed by its onChange — the Target CAP/DSCR goal-seek and the
+  // Asking→Offer sync both stop firing once their source fields are locked, no
+  // separate guard needed. Persisted on prop.locked (auto-saved, undoable).
+  const dashLockBtn = el('button', { class: 'dash-lock-btn', type: 'button' });
+  function paintDashLock() {
+    const locked = !!prop.locked;
+    container.classList.toggle('is-locked', locked);
+    container.querySelectorAll('input, select, textarea').forEach((node) => {
+      if (node.classList.contains('pf-slider')) return;   // view-only horizon toggle, not deal data
+      if (node.tagName === 'SELECT' || node.type === 'checkbox') node.disabled = locked;
+      else node.readOnly = locked;
+    });
+    dashLockBtn.textContent = locked ? '🔒' : '🔓';
+    dashLockBtn.classList.toggle('dash-lock-btn--locked', locked);
+    dashLockBtn.title = locked ? 'Unlock every field in this deal' : 'Lock every field to prevent accidental edits';
+    dashLockBtn.setAttribute('aria-label', locked ? 'Unlock all fields' : 'Lock all fields');
+  }
+  dashLockBtn.addEventListener('click', () => {
+    prop.locked = !prop.locked;
+    paintDashLock();
+    onEdit();
+  });
+  const offerPriceField = el('div', { class: 'offer-lock' }, [dashLockBtn, offerField('offerPrice', 'Offer price')]);
   // Target CAP/DSCR is a GOAL-SEEK ACTION, not a stored setting: typing a value
   // back-solves the offer price so the ACTUAL CAP/DSCR becomes that number
   // (CAP = NOI÷offer, DSCR via PV(loan)÷LTV). It always renders EMPTY on load — a
@@ -286,7 +315,7 @@ export function renderDashboard(container, ctx) {
   // a value never reads as a default the user didn't set. The verdict pills check
   // the fixed benchmark, independent of this field.
   const dealStrip = el('div', { class: 'deal-strip', 'aria-label': 'Deal summary' }, [
-    dealCell('Offer Price', offerField('offerPrice', 'Offer price')),
+    dealCell('Offer Price', offerPriceField),
     dealCell('All-In Cost', allInSummaryCell, true),
     dealCell('Fees', offerField('fees', 'Fees')),
     dealCell('Improvement', offerField('improvements', 'Improvements')),
@@ -674,40 +703,8 @@ export function renderDashboard(container, ctx) {
     ]);
   }
 
-  // Dashboard-wide edit lock: shades and read-only/disables every editable
-  // field in the card grid, so an important deal can't be changed by accident.
-  // Sits above the deal-strip — outside any specific field, not tied to Offer
-  // Price — and covers the whole grid (Property Info, Income, Expenses, Offer &
-  // Debt Service incl. both loans, Pro-Forma horizon excluded as a view-only
-  // toggle, Assumptions). Locking naturally blocks every write path FED by a
-  // locked field's onChange — including the Target CAP/DSCR goal-seek and the
-  // Asking→Offer sync, since those source inputs are locked too — so no
-  // separate per-path guard is needed. Persisted on prop.locked (auto-saved,
-  // undoable like any other edit).
-  const dashLockBtn = el('button', { class: 'dash-lock-btn', type: 'button' });
-  function paintDashLock() {
-    const locked = !!prop.locked;
-    container.classList.toggle('is-locked', locked);
-    container.querySelectorAll('input, select, textarea').forEach((node) => {
-      if (node.classList.contains('pf-slider')) return;   // view-only horizon toggle, not deal data
-      if (node.tagName === 'SELECT' || node.type === 'checkbox') node.disabled = locked;
-      else node.readOnly = locked;
-    });
-    dashLockBtn.textContent = locked ? '🔒 Locked' : '🔓 Lock fields';
-    dashLockBtn.classList.toggle('dash-lock-btn--locked', locked);
-    dashLockBtn.title = locked ? 'Unlock to edit this deal' : 'Lock every field to prevent accidental edits';
-    dashLockBtn.setAttribute('aria-label', locked ? 'Unlock all fields' : 'Lock all fields');
-  }
-  dashLockBtn.addEventListener('click', () => {
-    prop.locked = !prop.locked;
-    paintDashLock();
-    onEdit();
-  });
-  const dashLockRow = el('div', { class: 'dash-lock-row' }, [dashLockBtn]);
-
   render(container, [
     kpiStrip,
-    dashLockRow,
     dealStrip,
     el('div', { class: 'grid' }, [infoCard, incomeCard, expenseCard, debtCard, proformaCard, rightStack]),
     kpiTip,
