@@ -583,8 +583,9 @@ body {
 .lcard__title { min-width: 0; flex: 1; display: flex; flex-direction: column; }
 .lcard__name { font-weight: 700; color: var(--color-navy); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lcard__sub { font-size: var(--font-xs); color: var(--color-text-secondary); }
-.lcard__source { font-size: 10px; color: var(--color-accent); font-weight: 600; letter-spacing: .02em; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lcard__kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+/* Fixed 6-slot grid (3x2) — always the same six metrics, never fewer/more, so
+   the card's shape never shifts based on what a deal has data for. */
+.lcard__kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
 .lcard__kpi { display: flex; flex-direction: column; }
 .lcard__kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary); font-weight: 700; }
 .lcard__kpi-val { font-weight: 800; color: var(--color-navy); }

@@ -11,14 +11,6 @@ function monogram(name) {
   return initials.toUpperCase();
 }
 
-// The site a property was uploaded from — the hostname if the source is a URL
-// (crexi.com), otherwise the text as typed. Empty when no source is set.
-function sourceLabel(src) {
-  const s = (src || '').trim();
-  if (!s) return '';
-  try { return new URL(s).hostname.replace(/^www\./, ''); } catch { return s; }
-}
-
 function badge(prop, m) {
   const cap = capVerdict(m.cap);
   const dscr = dscrVerdict(m.dscr);
@@ -61,13 +53,16 @@ export function renderList(container, ctx) {
           el('div', { class: 'lcard__title' }, [
             el('span', { class: 'lcard__name', text: prop.name || 'Untitled property' }),
             el('span', { class: 'lcard__sub', text: `Offer ${fmt.money(prop.offer.offerPrice)} · ${fmt.integer(prop.info.rentableSF)} SF` }),
-            ...(sourceLabel(prop.info && prop.info.source) ? [el('span', { class: 'lcard__source', text: `via ${sourceLabel(prop.info.source)}` })] : []),
           ]),
           badge(prop, m),
         ]),
+        // Always the same fixed six — never conditional on what the deal has
+        // data for; format.js renders "—" for anything not computable, so the
+        // card's shape never shifts between properties.
         el('div', { class: 'lcard__kpis' }, [
           kpi('CAP', fmt.percent2(m.cap)), kpi('DSCR', fmt.ratio(m.dscr)),
           kpi('NOI', fmt.moneyCompact(m.noi)), kpi('CoC', fmt.percent2(m.cashOnCash)),
+          kpi('IRR', fmt.percent2(m.irr)), kpi('5Y NPV', fmt.moneyCompact(m.npv)),
         ]),
       ]),
       // Archive is the only card action — deleting happens from the Archive view
