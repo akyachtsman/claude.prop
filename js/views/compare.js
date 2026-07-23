@@ -71,17 +71,36 @@ export function renderCompare(container, ctx) {
   // Row-table sorting: key is 'name' or a METRICS index; null = selection order.
   let sortKey = null, sortDir = 'asc';
 
-  const chips = el('div', { class: 'compare-picker' }, all.map((p) => {
-    const on = selected.some((s) => s.id === p.id);
-    const c = el('button', { class: 'chip' + (on ? ' chip--on' : ''), type: 'button', 'aria-pressed': on ? 'true' : 'false', text: p.name || 'Untitled' });
-    c.addEventListener('click', () => {
+  // Picker: a checkbox per property, "in front of" each row. Unchecking drops
+  // it out of the comparison AND sinks its row below a divider (out of the
+  // sortable/comparable range) — re-checking brings it right back in. Rebuilt
+  // (not just class-toggled) on every change since rows must reorder.
+  const pickerHost = el('div', { class: 'compare-picker' });
+  function pickerRow(p, on) {
+    const checkbox = el('input', {
+      type: 'checkbox', checked: on ? true : null,
+      'aria-label': `Include ${p.name || 'Untitled'} in comparison`,
+    });
+    checkbox.addEventListener('change', () => {
       const idx = selected.findIndex((s) => s.id === p.id);
-      if (idx >= 0) { if (selected.length > 2) selected.splice(idx, 1); }   // keep at least 2
-      else selected.push(p);   // no upper cap — add as many as you like
+      if (checkbox.checked) { if (idx < 0) selected.push(p); }
+      else if (idx >= 0) selected.splice(idx, 1);
       draw();
     });
-    return c;
-  }));
+    return el('label', { class: 'compare-row' + (on ? '' : ' compare-row--off') }, [
+      checkbox, el('span', { class: 'compare-row__name', text: p.name || 'Untitled' }),
+    ]);
+  }
+  function drawPicker() {
+    const included = [], excluded = [];
+    all.forEach((p) => (selected.some((s) => s.id === p.id) ? included : excluded).push(p));
+    const rows = included.map((p) => pickerRow(p, true));
+    if (excluded.length) {
+      rows.push(el('div', { class: 'compare-divider', text: 'Not included in comparison' }));
+      rows.push(...excluded.map((p) => pickerRow(p, false)));
+    }
+    render(pickerHost, rows);
+  }
 
   const seg = el('div', { class: 'seg', role: 'group', 'aria-label': 'Comparison layout' }, [
     segBtn('table', 'Table'), segBtn('cols', 'Side by side'),
@@ -96,11 +115,7 @@ export function renderCompare(container, ctx) {
   dragScroll(tableHost);
 
   function draw() {
-    [...chips.children].forEach((c, i) => {
-      const on = selected.some((s) => s.id === all[i].id);
-      c.className = 'chip' + (on ? ' chip--on' : '');
-      c.setAttribute('aria-pressed', on ? 'true' : 'false');
-    });
+    drawPicker();
     [...seg.children].forEach((b, i) => {
       const on = (i === 0 ? 'table' : 'cols') === layout;
       b.className = 'seg__btn' + (on ? ' seg__btn--on' : '');
@@ -199,8 +214,8 @@ export function renderCompare(container, ctx) {
       el('button', { class: 'btn btn--ghost', type: 'button', onclick: () => ctx.goList(), text: 'Back to properties' }),
     ]),
     el('div', { class: 'compare-controls' }, [seg]),
-    el('p', { class: 'fineprint', text: 'Pick any 2 or more properties. Click a column header to sort. Best value per metric is green, worst is red; no-data is neutral.' }),
-    chips, tableHost,
+    el('p', { class: 'fineprint', text: 'Uncheck a property to leave it out of the comparison — check it back in anytime. Click a column header to sort. Best value per metric is green, worst is red; no-data is neutral.' }),
+    pickerHost, tableHost,
   ]);
   draw();
 }

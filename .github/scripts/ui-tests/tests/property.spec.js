@@ -139,6 +139,33 @@ test('S8 compare — best/worst highlight and per-column verdict', async ({ page
   await expect(page.locator('.cell--best').first()).toBeVisible();
 });
 
+test('S36 compare picker — unchecking a property excludes it and sinks its row below a divider', async ({ page }) => {
+  await loadSample(page);
+  await page.click('#nav-properties');
+  await page.click('button:has-text("+ New property")');
+  await page.waitForSelector('.kpi-strip');
+  await page.click('#nav-properties');
+  await page.waitForSelector('.lcard');
+  await page.click('#nav-compare');
+  await page.waitForSelector('.compare-table');
+  // both start checked, both included in the table, no divider yet
+  await expect(page.locator('.compare-row input[type="checkbox"]:checked')).toHaveCount(2);
+  await expect(page.locator('.compare-table--rows tbody tr')).toHaveCount(2);
+  await expect(page.locator('.compare-divider')).toHaveCount(0);
+  // uncheck "New property" — it excludes from the table AND sinks below a divider.
+  // Locate by the stable aria-label, not a row/class, since the row reorders on change.
+  const newPropCheckbox = page.locator('input[aria-label="Include New property in comparison"]');
+  await newPropCheckbox.uncheck();
+  await expect(page.locator('.compare-divider')).toContainText('Not included in comparison');
+  await expect(page.locator('.compare-table--rows tbody tr')).toHaveCount(1);
+  await expect(page.locator('.compare-table--rows tbody tr')).toContainText('715 Plumas');
+  await expect(page.locator('.compare-row--off')).toContainText('New property');
+  // re-check it — back in the table, divider gone, no longer sunk
+  await newPropCheckbox.check();
+  await expect(page.locator('.compare-divider')).toHaveCount(0);
+  await expect(page.locator('.compare-table--rows tbody tr')).toHaveCount(2);
+});
+
 test('New property defaults — Target CAP / DSCR start empty', async ({ page }) => {
   await page.goto('./', { waitUntil: 'load' });
   await page.click('button:has-text("Add your first property")');
