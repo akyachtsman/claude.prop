@@ -281,7 +281,19 @@ body {
 .exp-default__formula { font-style: italic; overflow: hidden; text-overflow: ellipsis; }
 
 /* data tables ------------------------------------------------------------------ */
-.table-wrap { overflow-x: auto; }
+/* A comfortably grabbable, always-visible horizontal scrollbar (the browser
+   default is thin/auto-hiding and hard to hit precisely, especially where the
+   pro-forma table sits flush against the stats row beneath it) + a little
+   bottom padding so the bar isn't flush against that next line. Shared by the
+   pro-forma, Compare, and Archive tables. */
+.table-wrap {
+  overflow-x: auto; padding-bottom: 6px;
+  scrollbar-width: auto; scrollbar-color: var(--color-border-hover) var(--color-bg);
+}
+.table-wrap::-webkit-scrollbar { height: 12px; }
+.table-wrap::-webkit-scrollbar-track { background: var(--color-bg); border-radius: var(--radius-pill); }
+.table-wrap::-webkit-scrollbar-thumb { background: var(--color-border-hover); border-radius: var(--radius-pill); border: 2px solid var(--color-bg); }
+.table-wrap::-webkit-scrollbar-thumb:hover { background: var(--color-text-secondary); }
 .data-table { width: 100%; border-collapse: collapse; font-size: var(--font-sm); }
 .data-table th {
   text-align: left; font-size: 10px; font-weight: 700;
