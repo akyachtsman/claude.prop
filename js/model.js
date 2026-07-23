@@ -128,6 +128,19 @@ export function compute(property) {
   const onePctRule = totalMonthlyRent - offerPrice * 0.01;
   const wacc = loanCalc.reduce((s, l) => s + num(l.ltv) * num(l.rate) * (1 - taxRate), 0)
     + (1 - loanCalc.reduce((s, l) => s + num(l.ltv), 0)) * minOpp;
+  // Breakeven occupancy: the share of gross income needed just to cover
+  // included expenses + debt service — a risk lens distinct from DSCR (DSCR
+  // only measures NOI's cushion over debt; this measures cushion over debt
+  // AND opex together, i.e. how far collections can fall before cash flow
+  // goes negative).
+  const breakevenOccupancy = div(includedExpense + annualDebt, totalRent);
+  // Total expense ratio: included expenses as a share of gross income — the
+  // headline counterpart to the per-line expensePctOfNoi breakdown below.
+  const expenseRatio = div(includedExpense, totalRent);
+  // Price per rentable SF — the standard broker comp metric; uses the
+  // property's total rentable SF (not just currently-leased tenant SF), so it
+  // stays meaningful even on a partly-vacant building.
+  const priceSF = div(offerPrice, num(info.rentableSF));
 
   // Pro-forma projections (correction a: YR-1 subtracts BOTH loans via annualDebt).
   // The 5-year hold is the fidelity baseline (unchanged); the 10-year hold is a
@@ -172,6 +185,7 @@ export function compute(property) {
     // headline (5-year hold)
     noi, noiLessCollection, cap, dscr, noiDebtService, cashOnCash, returnOnCost,
     onePctRule, wacc, irr: irrValue, npv, totalReturn,
+    breakevenOccupancy, expenseRatio, priceSF,
     // proforma: per-year series + both hold horizons; legacy 5-year aliases kept
     proforma: {
       operating, apprYear, maxYears: MAX_YEARS, h5, h10,
