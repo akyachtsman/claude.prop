@@ -139,7 +139,7 @@ test('S8 compare — best/worst highlight and per-column verdict', async ({ page
   await expect(page.locator('.cell--best').first()).toBeVisible();
 });
 
-test('S36 compare picker — unchecking a property excludes it and sinks its row below a divider', async ({ page }) => {
+test('S36 compare picker — the checkbox leads every table row; unchecking excludes it and sinks its row below a divider', async ({ page }) => {
   await loadSample(page);
   await page.click('#nav-properties');
   await page.click('button:has-text("+ New property")');
@@ -148,22 +148,28 @@ test('S36 compare picker — unchecking a property excludes it and sinks its row
   await page.waitForSelector('.lcard');
   await page.click('#nav-compare');
   await page.waitForSelector('.compare-table');
-  // both start checked, both included in the table, no divider yet
-  await expect(page.locator('.compare-row input[type="checkbox"]:checked')).toHaveCount(2);
-  await expect(page.locator('.compare-table--rows tbody tr')).toHaveCount(2);
-  await expect(page.locator('.compare-divider')).toHaveCount(0);
-  // uncheck "New property" — it excludes from the table AND sinks below a divider.
-  // Locate by the stable aria-label, not a row/class, since the row reorders on change.
+  const includedRows = page.locator('.compare-table--rows tbody tr:not(.compare-divider-row):not(.compare-table-row--off)');
+  // both start checked, both included in the table, no divider yet — the checkbox
+  // lives in the table's own leading column, not a separate picker section
+  await expect(page.locator('.compare-check-col input[type="checkbox"]:checked')).toHaveCount(2);
+  await expect(includedRows).toHaveCount(2);
+  await expect(page.locator('.compare-divider-row')).toHaveCount(0);
+  await expect(page.locator('.compare-table-row--off')).toHaveCount(0);
+  // uncheck "New property" — it excludes from the table AND sinks below a divider
+  // row, still within the same table. Locate by the stable aria-label, since the
+  // row moves between the included/excluded groups on change.
   const newPropCheckbox = page.locator('input[aria-label="Include New property in comparison"]');
   await newPropCheckbox.uncheck();
-  await expect(page.locator('.compare-divider')).toContainText('Not included in comparison');
-  await expect(page.locator('.compare-table--rows tbody tr')).toHaveCount(1);
-  await expect(page.locator('.compare-table--rows tbody tr')).toContainText('715 Plumas');
-  await expect(page.locator('.compare-row--off')).toContainText('New property');
+  await expect(page.locator('.compare-divider-row')).toContainText('Not included in comparison');
+  await expect(includedRows).toHaveCount(1);
+  await expect(includedRows).toContainText('715 Plumas');
+  await expect(page.locator('.compare-table-row--off')).toHaveCount(1);
+  await expect(page.locator('.compare-table-row--off')).toContainText('New property');
   // re-check it — back in the table, divider gone, no longer sunk
   await newPropCheckbox.check();
-  await expect(page.locator('.compare-divider')).toHaveCount(0);
-  await expect(page.locator('.compare-table--rows tbody tr')).toHaveCount(2);
+  await expect(page.locator('.compare-divider-row')).toHaveCount(0);
+  await expect(page.locator('.compare-table-row--off')).toHaveCount(0);
+  await expect(includedRows).toHaveCount(2);
 });
 
 test('New property defaults — Target CAP / DSCR start empty', async ({ page }) => {
