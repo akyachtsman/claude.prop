@@ -538,38 +538,57 @@ test('S33 Loan 2 secondary financing — every deal gets an editable second loan
   await expect(page.locator('input[aria-label="Loan 2 LTV"]')).toHaveValue('10');
 });
 
-test('S34 Offer Price lock — a locked offer price resists direct edits, goal-seek, and the Asking→Offer sync', async ({ page }) => {
+test('S34 Dashboard lock — locking shades and blocks every editable field across the whole dashboard', async ({ page }) => {
   await loadSample(page);
+  const lockBtn = page.locator('.dash-lock-btn');
   const offer = page.locator('input[aria-label="Offer price"]');
-  const lockBtn = page.locator('.lock-btn');
-  // starts unlocked — plain white, editable
+  const targetCap = page.locator('.deal-strip input[aria-label="Target CAP"]');
+  const propType = page.locator('select[aria-label="Type"]');
+  const tenantName = page.locator('input[aria-label="Tenant name"]').first();
+  const loan2Ltv = page.locator('input[aria-label="Loan 2 LTV"]');
+  const insuranceIncluded = page.locator('#exp-insurance');
+  const pfSlider = page.locator('.pf-slider');
+
+  // starts unlocked — every field type is editable, sitting outside any one field
+  await expect(lockBtn).toHaveAttribute('aria-label', 'Lock all fields');
   await expect(offer).toBeEditable();
-  await expect(lockBtn).toHaveAttribute('aria-label', 'Lock offer price');
-  // lock it: the field shades and stops accepting direct input
+  await expect(propType).toBeEnabled();
+  await expect(tenantName).toBeEditable();
+  await expect(loan2Ltv).toBeEditable();
+  await expect(insuranceIncluded).toBeEnabled();
+
+  // lock: text/number/select/checkbox fields across EVERY card shade and stop
+  // accepting input — including Target CAP, which blocks the goal-seek at its
+  // source (its own field is locked, so it can never fire) — but the pro-forma
+  // horizon slider (a view toggle, not deal data) stays interactive
   await lockBtn.click();
-  await expect(lockBtn).toHaveAttribute('aria-label', 'Unlock offer price');
+  await expect(lockBtn).toHaveAttribute('aria-label', 'Unlock all fields');
   await expect(offer).not.toBeEditable();
-  await expect(offer).toHaveClass(/input--locked/);
-  // goal-seek (Target CAP) is also blocked while locked — the offer doesn't move
-  await setField(page, '.deal-strip input[aria-label="Target CAP"]', '6');
-  await page.waitForTimeout(200);
-  await expect(offer).toHaveValue('1300000');
-  // editing Asking Price normally seeds Offer Price — also blocked while locked
-  await setField(page, 'input[aria-label="Asking"]', '1450000');
-  await page.waitForTimeout(200);
-  await expect(offer).toHaveValue('1300000');
-  // unlock: editable again, and a real edit goes through
+  await expect(propType).toBeDisabled();
+  await expect(tenantName).not.toBeEditable();
+  await expect(loan2Ltv).not.toBeEditable();
+  await expect(targetCap).not.toBeEditable();
+  await expect(insuranceIncluded).toBeDisabled();
+  await expect(pfSlider).toBeEnabled();
+
+  // unlock: every field type is editable again
   await lockBtn.click();
   await expect(offer).toBeEditable();
+  await expect(propType).toBeEnabled();
+  await expect(tenantName).toBeEditable();
+  await expect(insuranceIncluded).toBeEnabled();
+
+  // a real edit still works once unlocked
   await setField(page, 'input[aria-label="Offer price"]', '1250000');
   await expect(offer).toHaveValue('1250000');
+
   // the locked flag persists across reload like any other field
   await lockBtn.click();
   await page.waitForTimeout(600);   // let the auto-save debounce fire
   await page.reload({ waitUntil: 'load' });
   await page.waitForSelector('.kpi-strip');
   await expect(page.locator('input[aria-label="Offer price"]')).not.toBeEditable();
-  await expect(page.locator('.lock-btn')).toHaveAttribute('aria-label', 'Unlock offer price');
+  await expect(page.locator('.dash-lock-btn')).toHaveAttribute('aria-label', 'Unlock all fields');
 });
 
 // (S20 stale-sample auto-refresh removed: it exercised the LOCAL built-in-sample
