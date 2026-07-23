@@ -593,6 +593,33 @@ test('S34 Dashboard lock — locking shades and blocks every editable field acro
   await expect(page.locator('.dash-lock-btn')).toHaveAttribute('aria-label', 'Unlock all fields');
 });
 
+test('S35 Lock on entry — every fresh entry into an existing deal locks it; the creation window starts unlocked', async ({ page }) => {
+  const offer = page.locator('input[aria-label="Offer price"]');
+  // creating a new property (the "initial creation window") starts unlocked
+  await page.goto('./', { waitUntil: 'load' });
+  await page.click('button:has-text("Add your first property")');
+  await page.waitForSelector('.kpi-strip');
+  await expect(offer).toBeEditable();
+  // leave for the Properties list, then re-enter the SAME property — now locked,
+  // even though nothing was explicitly toggled (a fresh entry, not the creation window)
+  await page.click('#nav-properties');
+  await page.waitForSelector('.lcard');
+  await page.click('.lcard__open');
+  await page.waitForSelector('.kpi-strip');
+  await expect(offer).not.toBeEditable();
+  await expect(page.locator('.dash-lock-btn')).toHaveAttribute('aria-label', 'Unlock all fields');
+  // unlock, edit, then Undo — an in-place refresh must NOT re-lock mid-session
+  await page.click('.dash-lock-btn');
+  await setField(page, 'input[aria-label="Offer price"]', '999999');
+  await page.click('button[aria-label="Undo last change"]');
+  await page.waitForTimeout(200);
+  await expect(offer).toBeEditable();
+  // a full reload IS a fresh entry — locks again
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForSelector('.kpi-strip');
+  await expect(page.locator('input[aria-label="Offer price"]')).not.toBeEditable();
+});
+
 // (S20 stale-sample auto-refresh removed: it exercised the LOCAL built-in-sample
 //  migration, which the login gate retires — a signed-in account's sample is
 //  authoritative and updates via normal upsert, not a boot-time local refresh.)
