@@ -250,21 +250,23 @@ body {
 .input:hover { border-color: var(--color-border-hover); }
 .input:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 0; border-color: var(--color-accent); }
 .input--estimate { background: var(--color-accent-light); } /* model-estimated default */
-/* Offer Price lock: a shaded, read-only input (distinct from the accent-tinted
-   "estimate" fill — this is a protected ACTUAL value, not a computed one) plus
-   a small toggle button placed right in front of the field. */
-.input--locked { background: var(--color-bg); color: var(--color-text-secondary); cursor: not-allowed; }
-.offer-lock { display: flex; align-items: center; gap: 4px; }
-.offer-lock .input { min-width: 0; }
-.lock-btn {
-  flex: none; width: 26px; height: 26px; padding: 0; line-height: 1;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px; cursor: pointer;
+/* Dashboard-wide edit lock: every field shades and goes read-only/disabled
+   (distinct from the accent-tinted "estimate" fill — these are protected
+   ACTUAL values, not computed ones) when #view carries .is-locked. A single
+   container class + descendant selector, rather than per-element classes, so
+   toggling covers every card without walking the DOM twice. */
+.is-locked .input { background: var(--color-bg); color: var(--color-text-secondary); cursor: not-allowed; }
+.is-locked input[type="checkbox"] { cursor: not-allowed; opacity: 0.6; }
+.dash-lock-row { display: flex; justify-content: flex-end; margin-bottom: 2px; }
+.dash-lock-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  min-height: 24px; padding: 2px var(--space-2); line-height: 1;
+  font: inherit; font-size: var(--font-xs); font-weight: 700; cursor: pointer;
   background: var(--color-surface); color: var(--color-text-secondary);
-  border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border); border-radius: var(--radius-pill);
 }
-.lock-btn:hover, .lock-btn:focus-visible { border-color: var(--color-border-hover); background: var(--color-bg); }
-.lock-btn--locked { background: var(--color-bg); border-color: var(--color-border-hover); color: var(--color-navy); }
+.dash-lock-btn:hover, .dash-lock-btn:focus-visible { border-color: var(--color-border-hover); background: var(--color-bg); }
+.dash-lock-btn--locked { background: var(--color-bg); border-color: var(--color-border-hover); color: var(--color-navy); }
 
 /* checkbox rows (expense include toggles), two-up grid for density ------------ */
 .check-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--space-4); }

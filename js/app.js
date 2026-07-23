@@ -34,7 +34,8 @@ function blankProperty() {
     id: store.newId(), schemaVersion: 1, name: 'New property', archived: false,
     info: { propertyType: 'Commercial', askingPrice: 0, rentableSF: 0, lotSize: '', yearBuilt: '', zoning: '', hvacAge: '', roofAge: '', parking: '', ceilingHeight: '', appraisedValue: 0, apn: '', bedrooms: '', baths: '', subtype: '', broker: '', source: '', photosLink: '', description: '' },
     targets: { desiredCap: 0, desiredDscr: 0 },   // empty by default; pills use the hard-coded benchmark until a Target is set
-    offer: { offerPrice: 0, fees: 0, improvements: 0, locked: false },
+    offer: { offerPrice: 0, fees: 0, improvements: 0 },
+    locked: false,   // dashboard-wide edit lock — see js/views/dashboard.js applyGlobalLock()
     loans: [{ ltv: 0.7, rate: 0.065, termYears: 25, maturityYears: 0, type: 'CONV' }, { ltv: 0, rate: 0.065, termYears: 25, maturityYears: 0, type: 'IO' }],
     tenants: Array.from({ length: 4 }, () => ({ name: '', sf: 0, monthlyIncome: 0, leaseExpires: '', leaseOptions: '' })),
     expenses: [
