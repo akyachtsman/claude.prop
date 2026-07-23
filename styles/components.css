@@ -461,13 +461,24 @@ body {
 .card > .eyebrow { margin-bottom: var(--space-1); }
 .card .input { min-height: 28px; padding: 2px var(--space-2); font-size: var(--font-sm); }
 @media (pointer: coarse) { .card .input { min-height: 44px; font-size: 16px; } }
-.loan-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; align-items: end; }
-/* Five loan fields wrap to a roomy 3-col grid (2 rows) so the percent inputs
-   show their full value (e.g. 72.6 / 6.19) instead of clipping to "72." */
-.loan-grid--5 { grid-template-columns: repeat(3, 1fr); gap: 4px 6px; }
-.loan-edit { margin-top: var(--space-1); }
-.loan-edit .field__label { display: block; }
-.loan-edit__title { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; color: var(--color-text-secondary); margin-bottom: 2px; }
+/* Loan 1 / Loan 2 side by side: LTV/Rate/Amort/Maturity/Type as rows, one
+   column per loan (mirrors the reference workbook's Finance Amount 1/2
+   columns) — far more compact than two stacked per-loan blocks, which is
+   what makes a normalized second loan slot fit the one-screen budget (S11).
+   Each .loan-cols__row is `display:contents` so its label + N field cells
+   become direct items of the parent grid, flowing into its row/columns. */
+.loan-cols { display: grid; grid-template-columns: 56px repeat(2, 1fr); gap: 1px 5px; align-items: center; margin-top: 2px; }
+.loan-cols__row { display: contents; }
+/* ellipsis truncates the rendered label only — textContent (what S19 asserts
+   against) stays the full "Balloon due" regardless of visual width */
+.loan-cols__label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.loan-cols__head { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-navy); text-align: center; }
+.loan-cols--facts { margin-top: 3px; }
+.loan-cols__val {
+  display: block; text-align: center; font-weight: 700; font-size: var(--font-xs);
+  background: var(--gen-shade); border-radius: 4px; padding: 2px 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
 .amount-input { max-width: 84px; text-align: right; }
 .check-row { min-height: 30px; }
 @media (pointer: coarse) { .check-row { min-height: 44px; } }

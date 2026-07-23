@@ -55,6 +55,19 @@ function blankProperty() {
 
 function deepCopy(o) { return JSON.parse(JSON.stringify(o)); }
 
+// Every property gets a Loan 2 slot — a secondary financing option, editable
+// alongside Loan 1 in the Offer & Debt Service card (mirrors the reference
+// workbook's Finance Amount 1/2 columns). Existing deals with only one saved
+// loan (the sample, older/imported properties) get a zero-LTV placeholder
+// appended: amount = offer × 0 = $0, so it's a pure no-op on every KPI (CAP,
+// DSCR, NOI, WACC, NPV…) until the user actually fills it in — S5 fidelity
+// is unaffected. blankProperty() already includes this slot; this only backfills
+// properties that predate it.
+function normalizeLoans(p) {
+  if (!Array.isArray(p.loans)) p.loans = [];
+  while (p.loans.length < 2) p.loans.push({ ltv: 0, rate: 0.065, termYears: 25, maturityYears: 0, type: 'IO' });
+}
+
 // ── routing ─────────────────────────────────────────────────────────────
 function parseHash() {
   const h = location.hash.replace(/^#\/?/, '');
@@ -185,6 +198,7 @@ function showDashboard(id) {
   const props = store.list().filter((p) => isActive(p) || p.id === id);
   const idx = props.findIndex((p) => p.id === id);
   const working = deepCopy(saved);
+  normalizeLoans(working);   // guarantee a Loan 2 slot (see below)
 
   // Undo/Redo: each committed edit (a field commits on Enter/blur) pushes the
   // prior state; Undo pops it, Redo replays it. A new edit clears the redo
@@ -192,6 +206,7 @@ function showDashboard(id) {
   // on undo/redo, and reset when you switch to a different property.
   if (historyId !== id) { undoStack = []; redoStack = []; historyId = id; }
   committedState = deepCopy(saved);
+  normalizeLoans(committedState);
   const undoBtn = el('button', { class: 'topbar__link topbar__action', type: 'button', 'aria-label': 'Undo last change', title: 'Undo', text: '↶', onclick: () => undo(id) });
   const redoBtn = el('button', { class: 'topbar__link topbar__action', type: 'button', 'aria-label': 'Redo change', title: 'Redo', text: '↷', onclick: () => redo(id) });
   const refreshHistory = () => { undoBtn.disabled = undoStack.length === 0; redoBtn.disabled = redoStack.length === 0; };
