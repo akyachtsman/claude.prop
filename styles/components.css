@@ -283,6 +283,30 @@ body {
 .dash-lock-btn:hover, .dash-lock-btn:focus-visible { border-color: var(--color-border-hover); background: var(--color-bg); }
 .dash-lock-btn--locked { background: var(--color-bg); border-color: var(--color-border-hover); color: var(--color-navy); }
 
+/* Target CAP's two modes: a typed goal-seek (default, unchanged) or a
+   cap-rate sweep — a compact icon toggle plus whichever control is active. */
+.cap-sweep-wrap { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.cap-mode-btn {
+  flex: none; width: 26px; height: 26px; padding: 0; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; cursor: pointer;
+  background: var(--color-surface); color: var(--color-text-secondary);
+  border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+}
+.cap-mode-btn:hover, .cap-mode-btn:focus-visible { border-color: var(--color-border-hover); background: var(--color-bg); }
+.cap-mode-btn--on { background: var(--color-simulated-bg); border-color: var(--color-simulated); color: var(--color-simulated); }
+.cap-mode-btn:disabled { cursor: not-allowed; opacity: 0.6; }
+.cap-sweep-control { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+.cap-sweep-slider { flex: 1; min-width: 0; }
+.cap-sweep-readout { flex: none; font-size: var(--font-xs); font-weight: 700; color: var(--color-simulated); white-space: nowrap; }
+/* Offer Price while the sweep is live: burgundy, distinct from every other
+   field state (plain white editable, generated shade, estimate tint), so a
+   simulated figure never reads as the real saved offer. */
+.input--simulated {
+  color: var(--color-simulated) !important; border-color: var(--color-simulated) !important;
+  background: var(--color-simulated-bg) !important; font-weight: 700;
+}
+
 /* checkbox rows (expense include toggles), two-up grid for density ------------ */
 .check-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--space-4); }
 .check-grid .check-row { min-width: 0; }

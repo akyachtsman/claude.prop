@@ -80,11 +80,13 @@ export function renderDashboard(container, ctx) {
 
   // Soft "this value just changed" cue: the values changed by the latest edit
   // keep a faint highlight until the next edit, which clears them and marks the
-  // newly-changed ones. Suppressed on the initial render.
+  // newly-changed ones. Suppressed on the initial render, and on cap-sweep
+  // drags (a live preview, not a committed edit — see below).
   const flashed = [];
+  let suppressFlash = false;
   function clearFlashes() { flashed.forEach((n) => n.classList.remove('flash')); flashed.length = 0; }
   function flash(node) {
-    if (!node) return;
+    if (!node || suppressFlash) return;
     node.classList.add('flash');
     flashed.push(node);
   }
@@ -97,12 +99,44 @@ export function renderDashboard(container, ctx) {
     if (!firstPaint && !noFlash) flash(node);
   }
 
+  // Cap-rate sweep: an ephemeral, non-destructive "what if" preview, entered
+  // via the Target CAP cell's mode switch (see capModeBtn below). While on,
+  // every refresh() recomputes the ENTIRE dashboard as if Offer Price were
+  // NOI ÷ swept-cap — holding each loan's DOLLAR amount fixed at its real
+  // value (so NOI/rent/DSCR/payment never move, only the valuation/equity
+  // side does — mirrors a real appraisal sensitivity table, which floats
+  // value + LTV against a fixed loan, not the other way round). Never
+  // touches prop.offer.offerPrice, never calls onEdit/onCommit, never
+  // persisted — always off on a fresh render, same transient spirit as the
+  // Target CAP goal-seek itself (S15).
+  let sweepOn = false;
+  let sweepCap = null;
+
   function refresh() {
-    const m = compute(prop);
-    ctx.setHeaderVerdicts(m, prop);        // topbar pills
+    const realM = compute(prop);
+    let m = realM, simOffer = null;
+    if (sweepOn && sweepCap > 0 && Number.isFinite(realM.noi) && realM.noi > 0) {
+      const so = realM.noi / sweepCap;
+      if (Number.isFinite(so) && so > 0) {
+        simOffer = so;
+        const simLoans = prop.loans.map((ln, i) => {
+          const realAmt = realM.loans[i] ? realM.loans[i].amount : 0;
+          return { ...ln, ltv: simOffer > 0 ? realAmt / simOffer : (Number(ln.ltv) || 0) };
+        });
+        m = compute({ ...prop, offer: { ...prop.offer, offerPrice: simOffer }, loans: simLoans });
+      }
+    }
+    ctx.setHeaderVerdicts(m, prop);        // topbar pills reflect whatever's currently on screen
     if (!firstPaint) clearFlashes();       // drop the prior edit's highlights before marking new ones
+    const wasSuppressing = suppressFlash;
+    suppressFlash = sweepOn;               // dragging the sweep is a live preview, not an S16 edit
     paintKPIs(m);
     paintDerived(m);
+    suppressFlash = wasSuppressing;
+    offerInputs.offerPrice.forEach((n) => {
+      n.value = String(Math.round(simOffer !== null ? simOffer : (prop.offer.offerPrice ?? 0)));
+      n.classList.toggle('input--simulated', simOffer !== null);
+    });
   }
   function onEdit() {
     if (ctx.onCommit) ctx.onCommit();   // snapshot the pre-edit state for undo (one call per committed edit)
@@ -300,9 +334,11 @@ export function renderDashboard(container, ctx) {
     container.classList.toggle('is-locked', locked);
     container.querySelectorAll('input, select, textarea').forEach((node) => {
       if (node.classList.contains('pf-slider')) return;   // view-only horizon toggle, not deal data
-      if (node.tagName === 'SELECT' || node.type === 'checkbox') node.disabled = locked;
+      if (node.tagName === 'SELECT' || node.type === 'checkbox' || node.type === 'range') node.disabled = locked;
       else node.readOnly = locked;
     });
+    capModeBtn.disabled = locked;   // the sweep isn't caught by the generic loop above (it's a <button>)
+    if (locked && sweepOn) { sweepOn = false; sweepCap = null; paintCapMode(); refresh(); }
     dashLockBtn.textContent = locked ? '🔒' : '🔓';
     dashLockBtn.classList.toggle('dash-lock-btn--locked', locked);
     dashLockBtn.title = locked ? 'Unlock every field in this deal' : 'Lock every field to prevent accidental edits';
@@ -320,12 +356,59 @@ export function renderDashboard(container, ctx) {
   // deal never carries a "target" to redisplay (any stored value is ignored) — so
   // a value never reads as a default the user didn't set. The verdict pills check
   // the fixed benchmark, independent of this field.
+  //
+  // Target CAP additionally has a second mode, flipped by capModeBtn: instead
+  // of a typed goal-seek that permanently moves the offer (above), Sweep mode
+  // swaps in a slider that live-previews a RANGE of cap rates (see the sweep
+  // block in refresh()) without ever touching the saved deal. Goal-seek stays
+  // the default and is unchanged from before.
+  const targetCapField = fieldPercent(null, (v) => { goalSeekOffer('cap', v); onEdit(); }, { label: 'Target CAP' });
+  const sweepSlider = el('input', {
+    type: 'range', class: 'cap-sweep-slider', 'aria-label': 'Sweep cap rate', min: '1', max: '15', step: '0.25',
+  });
+  const sweepReadout = el('span', { class: 'cap-sweep-readout' });
+  sweepSlider.addEventListener('input', () => {
+    sweepCap = parseFloat(sweepSlider.value) / 100;
+    sweepReadout.textContent = fmt.percent2(sweepCap);
+    refresh();
+  });
+  const sweepControl = el('div', { class: 'cap-sweep-control' }, [sweepSlider, sweepReadout]);
+  const capModeBtn = el('button', { class: 'cap-mode-btn', type: 'button' });
+  function paintCapMode() {
+    targetCapField.style.display = sweepOn ? 'none' : '';
+    sweepControl.style.display = sweepOn ? '' : 'none';
+    capModeBtn.textContent = sweepOn ? '🎚' : '🎯';
+    capModeBtn.classList.toggle('cap-mode-btn--on', sweepOn);
+    capModeBtn.title = sweepOn
+      ? 'Switch back to a typed Target CAP (permanently moves the offer)'
+      : 'Switch to a cap-rate sweep (live preview, never saved)';
+    capModeBtn.setAttribute('aria-label', sweepOn ? 'Disable cap-rate sweep' : 'Enable cap-rate sweep');
+    capModeBtn.setAttribute('aria-pressed', sweepOn ? 'true' : 'false');
+  }
+  capModeBtn.addEventListener('click', () => {
+    sweepOn = !sweepOn;
+    if (sweepOn) {
+      const anchor = compute(prop).cap ?? BENCHMARK_CAP;
+      const lo = Math.max(0.01, anchor - 0.02), hi = anchor + 0.02;
+      sweepSlider.min = (lo * 100).toFixed(2);
+      sweepSlider.max = (hi * 100).toFixed(2);
+      sweepSlider.value = (anchor * 100).toFixed(2);
+      sweepCap = anchor;
+      sweepReadout.textContent = fmt.percent2(anchor);
+    } else {
+      sweepCap = null;
+    }
+    paintCapMode();
+    refresh();
+  });
+  paintCapMode();
+  const capControl = el('div', { class: 'cap-sweep-wrap' }, [capModeBtn, targetCapField, sweepControl]);
   const dealStrip = el('div', { class: 'deal-strip', 'aria-label': 'Deal summary' }, [
     dealCell('Offer Price', offerPriceField),
     dealCell('All-In Cost', allInSummaryCell, true),
     dealCell('Fees', offerField('fees', 'Fees')),
     dealCell('Improvement', offerField('improvements', 'Improvements')),
-    dealCell('Target CAP', fieldPercent(null, (v) => { goalSeekOffer('cap', v); onEdit(); }, { label: 'Target CAP' })),
+    dealCell('Target CAP', capControl),
     dealCell('Target DSCR', fieldNum(null, (v) => { goalSeekOffer('dscr', v); onEdit(); }, { label: 'Target DSCR', step: '0.01' })),
   ]);
   // Photos button — lives in the Property Info card header (not the top bar, so
