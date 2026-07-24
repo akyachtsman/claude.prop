@@ -176,8 +176,9 @@ test('New property defaults — Target CAP / DSCR start empty', async ({ page })
   await page.goto('./', { waitUntil: 'load' });
   await page.click('button:has-text("Add your first property")');
   await page.waitForSelector('.kpi-strip');
-  // Target starts EMPTY — a pre-filled value would read as a target the user set.
-  // Target is a goal-seek (moves the offer); the pills check the fixed 8% / 1.25.
+  // Target CAP/DSCR are live readouts of the deal's own actual CAP/DSCR — a
+  // brand-new property has $0 offer and no debt service, so neither is
+  // computable yet (both null), and the fields simply stay blank.
   await expect(page.locator('.deal-strip input[aria-label="Target CAP"]')).toHaveValue('');
   await expect(page.locator('input[aria-label="Target DSCR"]')).toHaveValue('');
 });
@@ -342,100 +343,49 @@ test('S15 goal-seek — typing Target CAP/DSCR back-solves the offer so the ACTU
   await expect.poll(async () => (await kpis(page))['DSCR']).toBe('1.40');
 });
 
-test('Cap-rate sweep — a live, non-destructive preview distinct from the Target CAP goal-seek', async ({ page }) => {
+test('Target CAP/DSCR sliders — dragging (release) permanently commits, same as typing', async ({ page }) => {
   await loadSample(page);
   const offer = page.locator('.deal-strip input[aria-label="Offer price"]');
-  const capModeBtn = page.locator('.cap-mode-btn').first();   // Target CAP row is first in DOM order
-  const before = await kpis(page);
-
-  await expect(capModeBtn).toHaveAttribute('aria-pressed', 'false');
-  await capModeBtn.click();
-  await expect(capModeBtn).toHaveAttribute('aria-pressed', 'true');
-  // entering sweep mode immediately marks the offer as simulated (burgundy),
-  // anchored at the deal's own current CAP so nothing visibly jumps yet
-  await expect(offer).toHaveClass(/input--simulated/);
-  await expect(offer).toHaveValue('1300000');
-
-  const slider = page.locator('.target-sweep-slider').first();
-  // fixed 5%-20% range, 0.05% steps
-  await expect(slider).toHaveAttribute('min', '5');
-  await expect(slider).toHaveAttribute('max', '20');
-  await expect(slider).toHaveAttribute('step', '0.05');
-  await slider.evaluate((el) => { el.value = '10'; el.dispatchEvent(new Event('input', { bubbles: true })); });
-
-  await expect.poll(async () => (await kpis(page))['CAP']).toBe('10.00%');
-  const swept = await kpis(page);
-  // NOI/DSCR/loan amount never move — the loan's dollar amount is held fixed,
-  // mirroring a real appraisal sensitivity table (value/LTV float, not the loan)
-  expect(swept['NOI']).toBe(before['NOI']);
-  expect(swept['DSCR']).toBe(before['DSCR']);
-  await expect(page.locator('.loan-cols__row:has(.loan-cols__label:text-is("Amount")) .loan-cols__val').first()).toHaveText('$944,970');
-  // Cash on Cash DOES move (all-in cost is offer-driven)
-  expect(swept['Cash on Cash']).not.toBe(before['Cash on Cash']);
-  // nothing was saved — a reload (of the SAME dashboard URL, not back to the
-  // list) shows the real deal, untouched
-  await page.reload({ waitUntil: 'load' });
-  await page.waitForSelector('.kpi-strip');
-  await expect(page.locator('.deal-strip input[aria-label="Offer price"]')).toHaveValue('1300000');
-  await expect(page.locator('.deal-strip input[aria-label="Offer price"]')).not.toHaveClass(/input--simulated/);
-  await expect.poll(async () => (await kpis(page))['CAP']).toBe(before['CAP']);
-  // a reload is a fresh entry (S35) — force-locked; unlock to continue testing
-  await page.locator('.dash-lock-btn').click();
-
-  // switching off reverts to real data without a reload
-  const capModeBtn2 = page.locator('.cap-mode-btn').first();
-  await capModeBtn2.click();
-  await expect(page.locator('.deal-strip input[aria-label="Offer price"]')).toHaveClass(/input--simulated/);
-  await page.locator('.target-sweep-slider').first().evaluate((el) => { el.value = '10'; el.dispatchEvent(new Event('input', { bubbles: true })); });
-  await capModeBtn2.click();
-  await expect(page.locator('.deal-strip input[aria-label="Offer price"]')).not.toHaveClass(/input--simulated/);
-  await expect(page.locator('.deal-strip input[aria-label="Offer price"]')).toHaveValue('1300000');
-  await expect.poll(async () => (await kpis(page))['CAP']).toBe(before['CAP']);
-
-  // locking the dashboard disables both sweep switches and forces it off
-  await capModeBtn2.click();
-  await expect(page.locator('.deal-strip input[aria-label="Offer price"]')).toHaveClass(/input--simulated/);
-  await page.locator('.dash-lock-btn').click();
-  await expect(page.locator('.cap-mode-btn').first()).toBeDisabled();
-  await expect(page.locator('.cap-mode-btn').nth(1)).toBeDisabled();
-  await expect(page.locator('.deal-strip input[aria-label="Offer price"]')).not.toHaveClass(/input--simulated/);
-});
-
-test('Target CAP and Target DSCR sweeps stack (one cell) and are mutually exclusive', async ({ page }) => {
-  await loadSample(page);
-  const offer = page.locator('.deal-strip input[aria-label="Offer price"]');
-  const capModeBtn = page.locator('.cap-mode-btn').first();
-  const dscrModeBtn = page.locator('.cap-mode-btn').nth(1);
   const capSlider = page.locator('.target-sweep-slider').first();
   const dscrSlider = page.locator('.target-sweep-slider').nth(1);
 
-  // both rows live in one combined cell now, Target CAP above Target DSCR
+  // both rows live in one combined cell, Target CAP above Target DSCR
   await expect(page.locator('.deal-cell--target-combo')).toHaveCount(1);
   await expect(page.locator('.deal-cell--target-combo .target-row')).toHaveCount(2);
 
-  // DSCR sweep: fixed 1-5 range, fine (0.01) steps
+  // fixed 5%-20% range, 0.05% steps for CAP; 1-5, 0.01 steps for DSCR
+  await expect(capSlider).toHaveAttribute('min', '5');
+  await expect(capSlider).toHaveAttribute('max', '20');
+  await expect(capSlider).toHaveAttribute('step', '0.05');
   await expect(dscrSlider).toHaveAttribute('min', '1');
   await expect(dscrSlider).toHaveAttribute('max', '5');
   await expect(dscrSlider).toHaveAttribute('step', '0.01');
-  await dscrModeBtn.click();
-  await expect(dscrModeBtn).toHaveAttribute('aria-pressed', 'true');
-  await dscrSlider.evaluate((el) => { el.value = '2'; el.dispatchEvent(new Event('input', { bubbles: true })); });
-  await expect.poll(async () => (await kpis(page))['DSCR']).toBe('2.00');
-  expect(await offer.inputValue()).not.toBe('1300000');
-  await expect(offer).toHaveClass(/input--simulated/);
 
-  // turning on the CAP sweep turns the DSCR sweep off — only one can drive
-  // the simulated offer at a time
-  await capModeBtn.click();
-  await expect(capModeBtn).toHaveAttribute('aria-pressed', 'true');
-  await expect(dscrModeBtn).toHaveAttribute('aria-pressed', 'false');
-  await capSlider.evaluate((el) => { el.value = '10'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  // dragging fires 'change' only on release (one commit, one undo step) — not
+  // 'input', which would fire continuously mid-drag
+  await capSlider.evaluate((el) => { el.value = '10'; el.dispatchEvent(new Event('change', { bubbles: true })); });
   await expect.poll(async () => (await kpis(page))['CAP']).toBe('10.00%');
+  // a real, permanent edit — no simulated styling, and it survives a reload
+  await expect(offer).not.toHaveClass(/input--simulated/);
+  const offerAfterCap = await offer.inputValue();
+  expect(offerAfterCap).not.toBe('1300000');
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForSelector('.kpi-strip');
+  await expect.poll(async () => (await kpis(page))['CAP']).toBe('10.00%');
+  await expect(page.locator('.deal-strip input[aria-label="Offer price"]')).toHaveValue(offerAfterCap);
+  // a reload is a fresh entry (S35) — force-locked; unlock to continue testing
+  await page.locator('.dash-lock-btn').click();
 
-  // and switching to the DSCR sweep turns the CAP sweep back off
-  await dscrModeBtn.click();
-  await expect(dscrModeBtn).toHaveAttribute('aria-pressed', 'true');
-  await expect(capModeBtn).toHaveAttribute('aria-pressed', 'false');
+  // the DSCR slider commits independently the same way
+  await page.locator('.target-sweep-slider').nth(1).evaluate((el) => { el.value = '2'; el.dispatchEvent(new Event('change', { bubbles: true })); });
+  await expect.poll(async () => (await kpis(page))['DSCR']).toBe('2.00');
+
+  // locking the dashboard disables both sliders (and the readout fields, via
+  // the generic lock loop — no special-casing needed anymore)
+  await page.locator('.dash-lock-btn').click();
+  await expect(page.locator('.target-sweep-slider').first()).toBeDisabled();
+  await expect(page.locator('.target-sweep-slider').nth(1)).toBeDisabled();
+  await expect(page.locator('input[aria-label="Target CAP"]')).not.toBeEditable();
 });
 
 test('Asking price seeds the offer — editing Asking Price sets Offer Price to it (workbook parity)', async ({ page }) => {
@@ -445,9 +395,11 @@ test('Asking price seeds the offer — editing Asking Price sets Offer Price to 
   // Editing Asking Price (Property Info) seeds the Offer Price to the same value…
   await setField(page, 'input[aria-label="Asking"]', '1450000');
   await expect(offer).toHaveValue('1450000');
-  // …the CAP recomputes off the new offer, and the Target override stays empty.
-  await expect.poll(async () => (await kpis(page))['CAP']).not.toBe('—');
-  await expect(targetCap).toHaveValue('');
+  // …the CAP recomputes off the new offer, and the Target CAP readout — a live
+  // mirror of the actual CAP, not a separately stored override — tracks it.
+  const cap = (await kpis(page))['CAP'];
+  expect(cap).not.toBe('—');
+  await expect(targetCap).toHaveValue(parseFloat(cap).toFixed(2));
 });
 
 test('Use-default toggle — tax = offer×0.012, insurance = SF × property-type rate; checked fills the formula, cleared zeroes, typed value locks', async ({ page }) => {
@@ -593,16 +545,18 @@ test('Pills check the FIXED 8% / 1.25 benchmark — a Target goal-seek moves act
   await expect(capPill).toHaveClass(/pill--fail/);
 });
 
-test('Target is a transient goal-seek — always renders empty on reload, never a stored default', async ({ page }) => {
+test('Target CAP/DSCR are live readouts of the actual value — not a separately stored target', async ({ page }) => {
   await loadSample(page);
-  await expect(page.locator('.deal-strip input[aria-label="Target CAP"]')).toHaveValue('');   // empty on load
-  // Goal-seeking to 9% moves the ACTUAL CAP, but the field is never a saved setting…
+  // on load the field shows the deal's live actual CAP (5.13%), not blank
+  await expect(page.locator('.deal-strip input[aria-label="Target CAP"]')).toHaveValue('5.13');
+  // typing 9% permanently commits — a real edit, so it persists across reload
+  // (unlike the old ephemeral goal-seek/sweep, there's no separate transient state)
   await setField(page, '.deal-strip input[aria-label="Target CAP"]', '9');
   await expect.poll(async () => (await kpis(page))['CAP']).toBe('9.00%');
-  // …so after a reload it renders empty again — no value ever reads as a default.
   await page.reload();
   await page.waitForSelector('.kpi-strip');
-  await expect(page.locator('.deal-strip input[aria-label="Target CAP"]')).toHaveValue('');
+  await expect.poll(async () => (await kpis(page))['CAP']).toBe('9.00%');
+  await expect(page.locator('.deal-strip input[aria-label="Target CAP"]')).toHaveValue('9.00');
 });
 
 test('S16 change marker — affected values get a corner marker on edit, not on load or inert edits', async ({ page }) => {

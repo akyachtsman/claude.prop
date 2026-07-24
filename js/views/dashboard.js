@@ -80,13 +80,11 @@ export function renderDashboard(container, ctx) {
 
   // Soft "this value just changed" cue: the values changed by the latest edit
   // keep a faint highlight until the next edit, which clears them and marks the
-  // newly-changed ones. Suppressed on the initial render, and on cap-sweep
-  // drags (a live preview, not a committed edit — see below).
+  // newly-changed ones. Suppressed on the initial render.
   const flashed = [];
-  let suppressFlash = false;
   function clearFlashes() { flashed.forEach((n) => n.classList.remove('flash')); flashed.length = 0; }
   function flash(node) {
-    if (!node || suppressFlash) return;
+    if (!node) return;
     node.classList.add('flash');
     flashed.push(node);
   }
@@ -99,55 +97,13 @@ export function renderDashboard(container, ctx) {
     if (!firstPaint && !noFlash) flash(node);
   }
 
-  // Target sweep: an ephemeral, non-destructive "what if" preview, entered via
-  // either the Target CAP or Target DSCR mode switch (see makeTargetRow
-  // below). The two are mutually exclusive — only one can drive the preview
-  // at a time — tracked by a single sweepKind ('cap' | 'dscr' | null) rather
-  // than two independent flags. While a sweep is on, every refresh()
-  // recomputes the ENTIRE dashboard off a simulated Offer Price:
-  //  - cap sweep: offer = NOI ÷ swept-cap, holding each loan's DOLLAR amount
-  //    fixed at its real value (so NOI/rent/DSCR/payment never move, only the
-  //    valuation/equity side does — mirrors a real appraisal sensitivity
-  //    table, which floats value + LTV against a fixed loan).
-  //  - dscr sweep: offer = the same PV(loan) ÷ LTV solve the DSCR goal-seek
-  //    already uses (solveOfferForTarget), letting the loan amount float
-  //    naturally with it — DSCR is fundamentally about debt sizing, so
-  //    holding the loan fixed here wouldn't make sense.
-  // Neither ever touches prop.offer.offerPrice or prop.loans, never calls
-  // onEdit/onCommit, never persisted — always off on a fresh render, same
-  // transient spirit as the goal-seek fields themselves (S15).
-  let sweepKind = null;
-  let sweepValue = null;
-
   function refresh() {
-    const realM = compute(prop);
-    let m = realM, simOffer = null;
-    if (sweepKind && sweepValue > 0) {
-      const so = solveOfferForTarget(sweepKind, sweepValue, realM);
-      if (Number.isFinite(so) && so > 0) {
-        simOffer = so;
-        if (sweepKind === 'cap') {
-          const simLoans = prop.loans.map((ln, i) => {
-            const realAmt = realM.loans[i] ? realM.loans[i].amount : 0;
-            return { ...ln, ltv: simOffer > 0 ? realAmt / simOffer : (Number(ln.ltv) || 0) };
-          });
-          m = compute({ ...prop, offer: { ...prop.offer, offerPrice: simOffer }, loans: simLoans });
-        } else {
-          m = compute({ ...prop, offer: { ...prop.offer, offerPrice: simOffer } });
-        }
-      }
-    }
-    ctx.setHeaderVerdicts(m, prop);        // topbar pills reflect whatever's currently on screen
+    const m = compute(prop);
+    ctx.setHeaderVerdicts(m, prop);        // topbar pills
     if (!firstPaint) clearFlashes();       // drop the prior edit's highlights before marking new ones
-    const wasSuppressing = suppressFlash;
-    suppressFlash = !!sweepKind;           // dragging a sweep is a live preview, not an S16 edit
     paintKPIs(m);
     paintDerived(m);
-    suppressFlash = wasSuppressing;
-    offerInputs.offerPrice.forEach((n) => {
-      n.value = String(Math.round(simOffer !== null ? simOffer : (prop.offer.offerPrice ?? 0)));
-      n.classList.toggle('input--simulated', simOffer !== null);
-    });
+    paintTargetRows(m);                    // Target CAP/DSCR sliders + readouts track the live actual value
   }
   function onEdit() {
     if (ctx.onCommit) ctx.onCommit();   // snapshot the pre-edit state for undo (one call per committed edit)
@@ -353,8 +309,6 @@ export function renderDashboard(container, ctx) {
       if (node.tagName === 'SELECT' || node.type === 'checkbox' || node.type === 'range') node.disabled = locked;
       else node.readOnly = locked;
     });
-    targetModeBtns.forEach((b) => { b.disabled = locked; });   // sweeps aren't caught by the generic loop above (they're <button>s)
-    if (locked && sweepKind) { sweepKind = null; sweepValue = null; paintTargetRows(); refresh(); }
     dashLockBtn.textContent = locked ? '🔒' : '🔓';
     dashLockBtn.classList.toggle('dash-lock-btn--locked', locked);
     dashLockBtn.title = locked ? 'Unlock every field in this deal' : 'Lock every field to prevent accidental edits';
@@ -373,82 +327,56 @@ export function renderDashboard(container, ctx) {
   // a value never reads as a default the user didn't set. The verdict pills check
   // the fixed benchmark, independent of this field.
   //
-  // Target CAP and Target DSCR each additionally have a second mode, flipped
-  // by their own mode button: instead of a typed goal-seek that permanently
-  // moves the offer (above), Sweep mode swaps in a slider that live-previews
-  // a RANGE of values (see sweepKind/sweepValue + the sweep block in
-  // refresh()) without ever touching the saved deal. Goal-seek stays the
-  // default and is unchanged from before. The two sweeps are mutually
-  // exclusive (sweepKind holds at most one), so turning one on turns the
-  // other off — both ultimately drive the same simulated Offer Price, so
-  // only one can sensibly be "live" at a time.
-  // sweepValue is always stored in TARGET units (the same units
-  // solveOfferForTarget/goalSeekOffer already use: a decimal ratio for cap,
-  // a plain ratio for dscr) — NOT the slider's own display units. The slider
-  // itself runs in friendlier display units (whole-ish percent for cap: 5-20,
-  // not 0.05-0.20), so each row converts between the two via toTarget/
-  // fromTarget rather than assuming they're the same scale.
-  const targetModeBtns = [];
-  function makeTargetRow(kind, label, goalField, sweepOpts) {
-    const { toTarget, fromTarget } = sweepOpts;
+  // Target CAP / Target DSCR: a slider plus a directly-editable readout field,
+  // both driving the SAME permanent back-solve (goalSeekOffer) — dragging the
+  // slider to release, or typing a precise figure into the readout and
+  // committing (Enter/blur), each move the real, saved Offer Price exactly
+  // like the original goal-seek. No separate mode: the readout always shows
+  // the deal's live actual CAP/DSCR (recomputed on every refresh, never a
+  // separately stored "target"), and the slider position mirrors it
+  // (clamped into its fixed range) — so both controls double as a live
+  // display AND an editor for the same number.
+  function makeTargetRow(kind, label, opts) {
+    const { toTarget, fromTarget } = opts;
+    function commit(target) { goalSeekOffer(kind, target); onEdit(); }
     const slider = el('input', {
-      type: 'range', class: 'target-sweep-slider', 'aria-label': `Sweep ${label}`,
-      min: String(sweepOpts.min), max: String(sweepOpts.max), step: String(sweepOpts.step),
+      type: 'range', class: 'target-sweep-slider', 'aria-label': `${label} slider`,
+      min: String(opts.min), max: String(opts.max), step: String(opts.step),
     });
-    const readout = el('span', { class: 'target-sweep-readout' });
-    slider.addEventListener('input', () => {
-      sweepValue = toTarget(parseFloat(slider.value));
-      readout.textContent = sweepOpts.format(sweepValue);
-      refresh();
-    });
-    const sweepControl = el('div', { class: 'target-sweep-control' }, [slider, readout]);
-    const modeBtn = el('button', { class: 'cap-mode-btn', type: 'button' });
-    targetModeBtns.push(modeBtn);
-    function paint() {
-      const on = sweepKind === kind;
-      goalField.style.display = on ? 'none' : '';
-      sweepControl.style.display = on ? '' : 'none';
-      modeBtn.textContent = on ? '🎚' : '🎯';
-      modeBtn.classList.toggle('cap-mode-btn--on', on);
-      modeBtn.title = on
-        ? `Switch back to a typed Target ${label} (permanently moves the offer)`
-        : `Switch to a ${label} sweep (live preview, never saved)`;
-      modeBtn.setAttribute('aria-label', on ? `Disable ${label} sweep` : `Enable ${label} sweep`);
-      modeBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    // 'change' (fires on release), not 'input' — one commit (one undo step)
+    // per drag gesture, matching how every other field here commits on
+    // Enter/blur rather than per keystroke.
+    slider.addEventListener('change', () => { commit(toTarget(parseFloat(slider.value))); });
+    const fieldWrap = opts.buildField(commit);
+    const fieldInput = opts.getInput(fieldWrap);
+    function paint(m) {
+      const actual = opts.currentValue(m);
+      if (!Number.isFinite(actual)) return;
+      slider.value = String(Math.min(opts.max, Math.max(opts.min, fromTarget(actual))));
+      if (document.activeElement !== fieldInput) fieldInput.value = opts.fieldDisplay(actual);
     }
-    modeBtn.addEventListener('click', () => {
-      if (sweepKind === kind) {
-        sweepKind = null; sweepValue = null;
-      } else {
-        sweepKind = kind;
-        const currentTarget = sweepOpts.currentValue(compute(prop));
-        const targetMin = toTarget(sweepOpts.min), targetMax = toTarget(sweepOpts.max);
-        const anchor = Math.min(targetMax, Math.max(targetMin, Number.isFinite(currentTarget) ? currentTarget : targetMin));
-        sweepValue = anchor;
-        slider.value = String(fromTarget(anchor));
-        readout.textContent = sweepOpts.format(anchor);
-      }
-      paintTargetRows();
-      refresh();
-    });
     return { row: el('div', { class: 'target-row' }, [
-      el('span', { class: 'target-row__label', text: label }), modeBtn, goalField, sweepControl,
+      el('span', { class: 'target-row__label', text: label }), slider, fieldWrap,
     ]), paint };
   }
-  const capRow = makeTargetRow('cap', 'Target CAP',
-    fieldPercent(null, (v) => { goalSeekOffer('cap', v); onEdit(); }, { label: 'Target CAP' }), {
-      min: 5, max: 20, step: 0.05,
-      toTarget: (v) => v / 100, fromTarget: (v) => v * 100,
-      format: (v) => fmt.percent2(v), currentValue: (m) => m.cap ?? BENCHMARK_CAP,
-    });
-  const dscrRow = makeTargetRow('dscr', 'Target DSCR',
-    fieldNum(null, (v) => { goalSeekOffer('dscr', v); onEdit(); }, { label: 'Target DSCR', step: '0.01' }), {
-      min: 1, max: 5, step: 0.01,
-      toTarget: (v) => v, fromTarget: (v) => v,
-      format: (v) => fmt.ratio(v), currentValue: (m) => m.dscr ?? BENCHMARK_DSCR,
-    });
-  function paintTargetRows() { capRow.paint(); dscrRow.paint(); }
-  paintTargetRows();
+  const capRow = makeTargetRow('cap', 'Target CAP', {
+    min: 5, max: 20, step: 0.05,
+    toTarget: (v) => v / 100, fromTarget: (v) => v * 100,
+    buildField: (onChange) => fieldPercent(null, onChange, { label: 'Target CAP' }),
+    getInput: (wrap) => wrap.firstChild,
+    fieldDisplay: (actual) => (actual * 100).toFixed(2),   // 2dp, matching the KPI strip's own CAP display
+    currentValue: (m) => m.cap,
+  });
+  const dscrRow = makeTargetRow('dscr', 'Target DSCR', {
+    min: 1, max: 5, step: 0.01,
+    toTarget: (v) => v, fromTarget: (v) => v,
+    buildField: (onChange) => fieldNum(null, onChange, { label: 'Target DSCR', step: '0.01' }),
+    getInput: (wrap) => wrap,
+    fieldDisplay: (actual) => actual.toFixed(2),
+    currentValue: (m) => m.dscr,
+  });
+  function paintTargetRows(m) { capRow.paint(m); dscrRow.paint(m); }
+  paintTargetRows(compute(prop));
   const dealStrip = el('div', { class: 'deal-strip', 'aria-label': 'Deal summary' }, [
     dealCell('Offer Price', offerPriceField),
     dealCell('All-In Cost', allInSummaryCell, true),
