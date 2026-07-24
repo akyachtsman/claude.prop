@@ -345,24 +345,25 @@ test('S15 goal-seek — typing Target CAP/DSCR back-solves the offer so the ACTU
 test('Cap-rate sweep — a live, non-destructive preview distinct from the Target CAP goal-seek', async ({ page }) => {
   await loadSample(page);
   const offer = page.locator('.deal-strip input[aria-label="Offer price"]');
-  const modeBtn = page.locator('.cap-mode-btn');
+  const capModeBtn = page.locator('.cap-mode-btn').first();   // Target CAP row is first in DOM order
   const before = await kpis(page);
 
-  await expect(modeBtn).toHaveAttribute('aria-pressed', 'false');
-  await modeBtn.click();
-  await expect(modeBtn).toHaveAttribute('aria-pressed', 'true');
+  await expect(capModeBtn).toHaveAttribute('aria-pressed', 'false');
+  await capModeBtn.click();
+  await expect(capModeBtn).toHaveAttribute('aria-pressed', 'true');
   // entering sweep mode immediately marks the offer as simulated (burgundy),
   // anchored at the deal's own current CAP so nothing visibly jumps yet
   await expect(offer).toHaveClass(/input--simulated/);
   await expect(offer).toHaveValue('1300000');
 
-  const slider = page.locator('.cap-sweep-slider');
-  const min = parseFloat(await slider.getAttribute('min'));
-  // range steps are anchored at min (min + n*step), not at zero — align to that grid
-  const target = (min + Math.round(1.5 / 0.25) * 0.25).toFixed(2);
-  await slider.evaluate((el, v) => { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); }, target);
+  const slider = page.locator('.target-sweep-slider').first();
+  // fixed 5%-20% range, 0.05% steps
+  await expect(slider).toHaveAttribute('min', '5');
+  await expect(slider).toHaveAttribute('max', '20');
+  await expect(slider).toHaveAttribute('step', '0.05');
+  await slider.evaluate((el) => { el.value = '10'; el.dispatchEvent(new Event('input', { bubbles: true })); });
 
-  await expect.poll(async () => (await kpis(page))['CAP']).toBe(target + '%');
+  await expect.poll(async () => (await kpis(page))['CAP']).toBe('10.00%');
   const swept = await kpis(page);
   // NOI/DSCR/loan amount never move — the loan's dollar amount is held fixed,
   // mirroring a real appraisal sensitivity table (value/LTV float, not the loan)
@@ -382,20 +383,59 @@ test('Cap-rate sweep — a live, non-destructive preview distinct from the Targe
   await page.locator('.dash-lock-btn').click();
 
   // switching off reverts to real data without a reload
-  await page.locator('.cap-mode-btn').click();
+  const capModeBtn2 = page.locator('.cap-mode-btn').first();
+  await capModeBtn2.click();
   await expect(page.locator('.deal-strip input[aria-label="Offer price"]')).toHaveClass(/input--simulated/);
-  await page.locator('.cap-sweep-slider').evaluate((el, v) => { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); }, target);
-  await page.locator('.cap-mode-btn').click();
+  await page.locator('.target-sweep-slider').first().evaluate((el) => { el.value = '10'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await capModeBtn2.click();
   await expect(page.locator('.deal-strip input[aria-label="Offer price"]')).not.toHaveClass(/input--simulated/);
   await expect(page.locator('.deal-strip input[aria-label="Offer price"]')).toHaveValue('1300000');
   await expect.poll(async () => (await kpis(page))['CAP']).toBe(before['CAP']);
 
-  // locking the dashboard disables the sweep switch and forces it off
-  await page.locator('.cap-mode-btn').click();
+  // locking the dashboard disables both sweep switches and forces it off
+  await capModeBtn2.click();
   await expect(page.locator('.deal-strip input[aria-label="Offer price"]')).toHaveClass(/input--simulated/);
   await page.locator('.dash-lock-btn').click();
-  await expect(page.locator('.cap-mode-btn')).toBeDisabled();
+  await expect(page.locator('.cap-mode-btn').first()).toBeDisabled();
+  await expect(page.locator('.cap-mode-btn').nth(1)).toBeDisabled();
   await expect(page.locator('.deal-strip input[aria-label="Offer price"]')).not.toHaveClass(/input--simulated/);
+});
+
+test('Target CAP and Target DSCR sweeps stack (one cell) and are mutually exclusive', async ({ page }) => {
+  await loadSample(page);
+  const offer = page.locator('.deal-strip input[aria-label="Offer price"]');
+  const capModeBtn = page.locator('.cap-mode-btn').first();
+  const dscrModeBtn = page.locator('.cap-mode-btn').nth(1);
+  const capSlider = page.locator('.target-sweep-slider').first();
+  const dscrSlider = page.locator('.target-sweep-slider').nth(1);
+
+  // both rows live in one combined cell now, Target CAP above Target DSCR
+  await expect(page.locator('.deal-cell--target-combo')).toHaveCount(1);
+  await expect(page.locator('.deal-cell--target-combo .target-row')).toHaveCount(2);
+
+  // DSCR sweep: fixed 1-5 range, fine (0.01) steps
+  await expect(dscrSlider).toHaveAttribute('min', '1');
+  await expect(dscrSlider).toHaveAttribute('max', '5');
+  await expect(dscrSlider).toHaveAttribute('step', '0.01');
+  await dscrModeBtn.click();
+  await expect(dscrModeBtn).toHaveAttribute('aria-pressed', 'true');
+  await dscrSlider.evaluate((el) => { el.value = '2'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await expect.poll(async () => (await kpis(page))['DSCR']).toBe('2.00');
+  expect(await offer.inputValue()).not.toBe('1300000');
+  await expect(offer).toHaveClass(/input--simulated/);
+
+  // turning on the CAP sweep turns the DSCR sweep off — only one can drive
+  // the simulated offer at a time
+  await capModeBtn.click();
+  await expect(capModeBtn).toHaveAttribute('aria-pressed', 'true');
+  await expect(dscrModeBtn).toHaveAttribute('aria-pressed', 'false');
+  await capSlider.evaluate((el) => { el.value = '10'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await expect.poll(async () => (await kpis(page))['CAP']).toBe('10.00%');
+
+  // and switching to the DSCR sweep turns the CAP sweep back off
+  await dscrModeBtn.click();
+  await expect(dscrModeBtn).toHaveAttribute('aria-pressed', 'true');
+  await expect(capModeBtn).toHaveAttribute('aria-pressed', 'false');
 });
 
 test('Asking price seeds the offer — editing Asking Price sets Offer Price to it (workbook parity)', async ({ page }) => {
