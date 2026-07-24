@@ -34,8 +34,6 @@
   --color-neutral-bg:     #E8EDF4;
   --color-neutral-text:   #44566E;
   --gen-shade:            #E2E9F2;   /* consistent fill marking a generated (computed) field */
-  --color-simulated:      #7B1E3A;   /* burgundy — a cap-rate-swept Offer Price, never a real/saved value */
-  --color-simulated-bg:   #F5E7EC;
 
   /* color — data marks (validated: CVD + contrast, light & dark surface) */
   --chart-1:              #3E6FAE;   /* cashflow */
