@@ -283,9 +283,17 @@ body {
 .dash-lock-btn:hover, .dash-lock-btn:focus-visible { border-color: var(--color-border-hover); background: var(--color-bg); }
 .dash-lock-btn--locked { background: var(--color-bg); border-color: var(--color-border-hover); color: var(--color-navy); }
 
-/* Target CAP's two modes: a typed goal-seek (default, unchanged) or a
-   cap-rate sweep — a compact icon toggle plus whichever control is active. */
-.cap-sweep-wrap { display: flex; align-items: center; gap: 4px; min-width: 0; }
+/* Target CAP + Target DSCR share one wider deal-cell, stacked one above the
+   other (each keeps its own two modes: a typed goal-seek, default/unchanged,
+   or a sweep — a compact icon toggle plus whichever control is active),
+   using the freed-up width for a full-length slider. */
+.deal-cell--target-combo { display: flex; flex-direction: column; gap: 4px; justify-content: center; }
+.target-row { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.target-row + .target-row { padding-top: 4px; border-top: 1px solid var(--color-border); }
+.target-row__label {
+  flex: none; font-size: 9px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.03em; color: var(--color-text-secondary); width: 52px;
+}
 .cap-mode-btn {
   flex: none; width: 26px; height: 26px; padding: 0; line-height: 1;
   display: flex; align-items: center; justify-content: center;
@@ -296,9 +304,9 @@ body {
 .cap-mode-btn:hover, .cap-mode-btn:focus-visible { border-color: var(--color-border-hover); background: var(--color-bg); }
 .cap-mode-btn--on { background: var(--color-simulated-bg); border-color: var(--color-simulated); color: var(--color-simulated); }
 .cap-mode-btn:disabled { cursor: not-allowed; opacity: 0.6; }
-.cap-sweep-control { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
-.cap-sweep-slider { flex: 1; min-width: 0; }
-.cap-sweep-readout { flex: none; font-size: var(--font-xs); font-weight: 700; color: var(--color-simulated); white-space: nowrap; }
+.target-sweep-control { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+.target-sweep-slider { flex: 1; min-width: 0; }
+.target-sweep-readout { flex: none; font-size: var(--font-xs); font-weight: 700; color: var(--color-simulated); white-space: nowrap; }
 /* Offer Price while the sweep is live: burgundy, distinct from every other
    field state (plain white editable, generated shade, estimate tint), so a
    simulated figure never reads as the real saved offer. */
@@ -540,19 +548,27 @@ body {
 @media (pointer: coarse) { .check-row { min-height: 44px; } }
 .check-row .amount-input { flex: none; }
 
-/* deal summary — full-width framed band above the cards (mirrors workbook) */
+/* deal summary — full-width framed band above the cards (mirrors workbook).
+   5 cells: Offer Price carries the lock icon, so it gets a wider column;
+   Target CAP + Target DSCR share one combined, double-wide cell (stacked
+   rows, see .deal-cell--target-combo) so their sweep sliders get the full
+   length freed up by no longer being two separate cells. */
 .deal-strip {
-  /* Offer Price carries the lock icon alongside its input, so it gets a wider
-     column; the other five cells give up a little width to make room. */
-  display: grid; grid-template-columns: 1.35fr repeat(5, 0.93fr);
+  display: grid; grid-template-columns: 1.35fr repeat(3, 0.93fr) 1.86fr;
   background: var(--color-surface); border: 1px solid var(--color-border);
   border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
   overflow: hidden; margin-bottom: var(--space-2);
 }
 .deal-strip .deal-cell { padding: 5px var(--space-3); border-left: 1px solid var(--color-border); }
 .deal-strip .deal-cell:first-child { border-left: none; }
-@media (max-width: 1100px) { .deal-strip { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 760px) { .deal-strip { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 1100px) {
+  .deal-strip { grid-template-columns: repeat(3, 1fr); }
+  .deal-cell--target-combo { grid-column: span 2; }
+}
+@media (max-width: 760px) {
+  .deal-strip { grid-template-columns: repeat(2, 1fr); }
+  .deal-cell--target-combo { grid-column: span 2; }
+}
 .deal-strip .input { min-height: 28px; padding: 2px var(--space-2); font-size: var(--font-sm); }
 @media (pointer: coarse) { .deal-strip .input { min-height: 44px; font-size: 16px; } }
 .deal-cell { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
