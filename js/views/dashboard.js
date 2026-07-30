@@ -343,9 +343,16 @@ export function renderDashboard(container, ctx) {
       type: 'range', class: 'target-sweep-slider', 'aria-label': `${label} slider`,
       min: String(opts.min), max: String(opts.max), step: String(opts.step),
     });
-    // 'change' (fires on release), not 'input' — one commit (one undo step)
-    // per drag gesture, matching how every other field here commits on
-    // Enter/blur rather than per keystroke.
+    // 'input' (every drag tick) only updates the readout's displayed text —
+    // cheap, local, just formatting the slider's own current position, so the
+    // number visibly tracks the handle instead of freezing until release.
+    // The actual permanent commit (which cascades through the whole
+    // dashboard) stays on 'change' (fires once, on release) — one commit,
+    // one undo step, per drag gesture, matching how every other field here
+    // commits on Enter/blur rather than per keystroke.
+    slider.addEventListener('input', () => {
+      fieldInput.value = opts.fieldDisplay(toTarget(parseFloat(slider.value)));
+    });
     slider.addEventListener('change', () => { commit(toTarget(parseFloat(slider.value))); });
     const fieldWrap = opts.buildField(commit);
     const fieldInput = opts.getInput(fieldWrap);
