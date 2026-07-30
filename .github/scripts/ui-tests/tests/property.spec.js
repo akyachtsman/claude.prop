@@ -361,8 +361,9 @@ test('Target CAP/DSCR sliders — dragging (release) permanently commits, same a
   await expect(dscrSlider).toHaveAttribute('max', '5');
   await expect(dscrSlider).toHaveAttribute('step', '0.01');
 
-  // dragging fires 'change' only on release (one commit, one undo step) — not
-  // 'input', which would fire continuously mid-drag
+  // the permanent commit fires on 'change' (release) only — one commit, one
+  // undo step, per drag gesture (S21) — even though the readout itself
+  // updates live on every 'input' tick (see the dedicated test below)
   await capSlider.evaluate((el) => { el.value = '10'; el.dispatchEvent(new Event('change', { bubbles: true })); });
   await expect.poll(async () => (await kpis(page))['CAP']).toBe('10.00%');
   // a real, permanent edit — no simulated styling, and it survives a reload
@@ -386,6 +387,27 @@ test('Target CAP/DSCR sliders — dragging (release) permanently commits, same a
   await expect(page.locator('.target-sweep-slider').first()).toBeDisabled();
   await expect(page.locator('.target-sweep-slider').nth(1)).toBeDisabled();
   await expect(page.locator('input[aria-label="Target CAP"]')).not.toBeEditable();
+});
+
+test('Target CAP/DSCR readout updates live while dragging, before the drag commits', async ({ page }) => {
+  await loadSample(page);
+  const capSlider = page.locator('.target-sweep-slider').first();
+  const capField = page.locator('input[aria-label="Target CAP"]');
+  const offer = page.locator('.deal-strip input[aria-label="Offer price"]');
+
+  await expect(capField).toHaveValue('5.13');
+  // a drag tick ('input') updates the readout text immediately — it must not
+  // freeze until release, or the slider feels unresponsive while dragging
+  await capSlider.evaluate((el) => { el.value = '12'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await expect(capField).toHaveValue('12.00');
+  // but nothing is committed yet — the real offer/CAP are untouched until release
+  await expect(offer).toHaveValue('1300000');
+  await expect.poll(async () => (await kpis(page))['CAP']).toBe('5.13%');
+
+  // releasing ('change') commits it for real
+  await capSlider.evaluate((el) => { el.dispatchEvent(new Event('change', { bubbles: true })); });
+  await expect.poll(async () => (await kpis(page))['CAP']).toBe('12.00%');
+  await expect(offer).not.toHaveValue('1300000');
 });
 
 test('Asking price seeds the offer — editing Asking Price sets Offer Price to it (workbook parity)', async ({ page }) => {
