@@ -54,6 +54,30 @@ jobs:
       - name: Secret scan
         uses: ./.github/actions/secret-scan
 
+      # ── Root-absolute path guard ───────────────────────────────────────────
+      # Pages serves this project under /claude.prop/, so a leading-slash URL
+      # resolves to the domain root and 404s. Such a path is green against the
+      # local server (rooted at /) and red only against the live site, so the
+      # local tier structurally cannot catch it — this guard can.
+      - name: No root-absolute paths (breaks the /claude.prop/ Pages sub-path)
+        run: |
+          set -euo pipefail
+          # Fail loudly if a scanned path vanishes — grep's exit 2 would
+          # otherwise read as "no hits" and the guard would stop guarding.
+          for path in .github/scripts/ui-tests/tests index.html js styles; do
+            [ -e "$path" ] || { echo "ERROR: guard cannot scan missing $path"; exit 1; }
+          done
+          hits=$(
+            { grep -rnE "(import|goto|fetch)\(\s*['\"]/" .github/scripts/ui-tests/tests || true; } 
+            { grep -rnE "(from|import\(|src=|href=)\s*['\"]/[a-zA-Z]" index.html js styles || true; }
+          )
+          if [ -n "$hits" ]; then
+            echo "$hits"
+            echo "ERROR: root-absolute path found — use an app-relative URL"
+            echo "       (e.g. new URL('js/store.js', document.baseURI).href)"
+            exit 1
+          fi
+
       # ── Contrast guardrail ───────────────────────────────────────────────────
       # WCAG AA check against styles/tokens.css (this project's design tokens).
       # Exits with a notice (no failure) until /design-intake creates tokens.css.

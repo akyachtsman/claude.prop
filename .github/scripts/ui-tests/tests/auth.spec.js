@@ -80,7 +80,11 @@ test('S26 signed-in — email + Sign out shown; store is on the cloud backend; g
   await expect(page.locator('.account__email')).toHaveText('tester@example.com');
   await expect(page.locator('#topbar-account button', { hasText: 'Sign out' })).toBeVisible();
   await expect(page.locator('.authgate__title')).toHaveCount(0);
-  const kind = await page.evaluate(async () => (await import('/js/store.js')).backendKind());
+  // App-relative, never root-absolute: Pages serves this project under
+  // /claude.prop/, so a leading-slash specifier resolves to the domain root
+  // and 404s — green against the local server, red against the live site.
+  const kind = await page.evaluate(async () =>
+    (await import(new URL('js/store.js', document.baseURI).href)).backendKind());
   expect(kind).toBe('cloud');
   expect(errors).toEqual([]);
 });
@@ -130,7 +134,7 @@ test('S28 first-sign-in seed — a fresh account is seeded with the sample + dem
   await installSignedIn(page, { seed: [], reconcile: true });
   await page.goto('./', { waitUntil: 'load' });
   await page.waitForFunction(async () => {
-    try { return (await import('/js/store.js')).list().length >= 4; } catch (e) { return false; }
+    try { return (await import(new URL('js/store.js', document.baseURI).href)).list().length >= 4; } catch (e) { return false; }
   }, null, { timeout: 15000 }).catch(() => {});
   await page.reload({ waitUntil: 'load' });
   await page.waitForSelector('.lcard');
