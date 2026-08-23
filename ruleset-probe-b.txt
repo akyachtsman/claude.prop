@@ -1,7 +1,0 @@
-Disposable probe for the default-branch ruleset.
-
-Probe (b): proves an ordinary PR can still MERGE after the ruleset went up.
-An over-tight ruleset (Required approvals 1, or Restrict updates with an empty
-bypass) blocks PR merges too, which probe (a) alone cannot detect.
-
-Removed immediately in the follow-up PR.
