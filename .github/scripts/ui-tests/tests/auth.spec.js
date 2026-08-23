@@ -131,13 +131,79 @@ test('S28 first-sign-in seed — a fresh account is seeded with the sample + dem
   // the real fixtures via the browser's own imports). It upserts 4 rows into the
   // stateful mock; a reload then reads that persisted account, so the assertion
   // is independent of first-paint timing across engines (chromium/webkit).
-  await installSignedIn(page, { seed: [], reconcile: true });
+  // The config's 30s budget cannot hold a REAL 15s persistence wait plus a reload
+  // plus a 10s card poll — the test-wide timeout would kill the run before either
+  // poll could report what it saw, and "Test timeout of 30000ms exceeded" says
+  // nothing about the seed. Neither budget below is widened; this only makes room
+  // for the two of them to actually run and report.
+  test.setTimeout(45_000);
+  const { rows } = await installSignedIn(page, { seed: [], reconcile: true });
   await page.goto('./', { waitUntil: 'load' });
-  await page.waitForFunction(async () => {
-    try { return (await import(new URL('js/store.js', document.baseURI).href)).list().length >= 4; } catch (e) { return false; }
-  }, null, { timeout: 15000 }).catch(() => {});
+  const SEED_WAIT_MS = 15_000;
+  const CARD_WAIT_MS = 10_000;
+
+  // Wait for the seed to be PERSISTED, not merely cached.
+  //
+  // The cloud store's save() writes its browser cache synchronously and only then
+  // fires an UNAWAITED ops.upsert() (js/store.js:162-167), and store.list() reads
+  // that cache — so polling the page reports 4 rows while the POSTs are still in
+  // flight, and the reload below can abort writes that never reached the route
+  // handler. That leaves in place the bare-reload race this test keeps losing. The
+  // mock's Node-side `rows` map is the persisted truth, and is exactly what the
+  // post-reload GET reads, so gate the reload on that instead (Codex, #108).
+  //
+  // Polling from Node also removes the previous version's whole error-shape
+  // problem: these helpers return counts rather than throwing, so nothing has to
+  // tell a wait's own timeout apart from an interruption. A real infrastructure
+  // failure propagates out of the Playwright call unchanged.
+  const pollPersisted = async (want, budgetMs) => {
+    const deadline = Date.now() + budgetMs;
+    while (rows.size < want && Date.now() < deadline) await page.waitForTimeout(150);
+    return rows.size;
+  };
+  const pollCards = async (budgetMs) => {
+    const deadline = Date.now() + budgetMs;
+    let n = await page.locator('.lcard').count();
+    while (n === 0 && Date.now() < deadline) {
+      await page.waitForTimeout(150);
+      n = await page.locator('.lcard').count();
+    }
+    return n;
+  };
+
+  // THE RELOAD BELOW IS NOT A RETRY. Three rounds of this PR assumed it was, on my
+  // reading that reconcile() writes its RECON_KEY only after the seed completes —
+  // so a slow pass would leave the flag unset and get a second attempt. That reading
+  // conflated the seed CODE completing with the seed PERSISTING. js/account.js:54-56
+  // is `missingFixtures(...).forEach((f) => store.save(f))` followed immediately by
+  // `setItem(RECON_KEY, ...)` with no await between them, and save() returns as soon
+  // as it has written the browser cache (js/store.js:162-167). So the flag is set
+  // milliseconds in, survives the reload, and the new realm's reconcile() returns at
+  // js/account.js:45 without reseeding — the in-memory `reconciledUids` reset does
+  // not matter, because the localStorage guard has already closed.
+  //
+  // Confirmed empirically too: under a 400ms-per-POST throttle the previous version
+  // reloaded before any write landed and still reported 0 rows AFTER the reload. A
+  // reseed would have re-saved them.
+  //
+  // So a persistence shortfall is reported HERE, where it is true and actionable.
+  // Reloading first and then blaming a recovery that cannot happen is the same
+  // misreporting this PR exists to remove (Codex, #108).
+  const seedRows = await pollPersisted(4, SEED_WAIT_MS);
+  if (seedRows < 4) {
+    throw new Error('first-sign-in seed did not persist: the account holds ' + seedRows
+      + ' of 4 rows after ' + SEED_WAIT_MS + 'ms. A reload cannot recover this — reconcile() '
+      + 'has already written its RECON_KEY and will not reseed.');
+  }
+
+  // The reload's real job: make the assertion read the PERSISTED account rather than
+  // first paint, so it holds identically on chromium and webkit.
   await page.reload({ waitUntil: 'load' });
-  await page.waitForSelector('.lcard');
+
+  if (await pollCards(CARD_WAIT_MS) === 0) {
+    throw new Error('the seed persisted (' + rows.size + ' rows in the account) but no .lcard '
+      + 'rendered within ' + CARD_WAIT_MS + 'ms — this is a rendering failure, not a seed failure.');
+  }
   await expect(page.locator('.lcard')).toHaveCount(4);   // 715 Plumas sample + 3 demos
   for (const name of ['715 Plumas', '2201 Del Paso', '88 Capitol Mall', '540 N Street']) {
     await expect(page.locator('.lcard__name', { hasText: name })).toHaveCount(1);
