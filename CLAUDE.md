@@ -89,6 +89,16 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
 - Every displayed value reads from `js/format.js`; no ad-hoc number formatting.
 - Any change to the financial model must keep `js/sample.js` `EXPECTED` in sync
   and pass the S5 fidelity test.
+- **No root-absolute paths** in app source or test specs — Pages serves this
+  project under `/claude.prop/`, so a leading slash points at the domain root.
+  Use an app-relative URL (`new URL('js/store.js', document.baseURI).href`).
+  `qa.yml`'s **"No root-absolute paths"** step in `static-checks` enforces this;
+  it is a **deliberate local customization** of the upstream `qa.yml` template —
+  `/refresh-repo` must preserve it, not treat it as drift to overwrite.
+  **Known limit:** a path assembled from a bare slash (`fetch('/' + p)`) is not
+  detected — matching a standalone `'/'` would flag every legitimate one
+  (`split('/')`, path joins). Closing it needs syntax-aware scanning, not a
+  regex. Reviewers should still catch that form by eye.
 
 ## Agent Workflow
 1. Use a `claude/<name>` feature branch

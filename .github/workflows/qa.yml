@@ -54,6 +54,50 @@ jobs:
       - name: Secret scan
         uses: ./.github/actions/secret-scan
 
+      # ── Root-absolute path guard ───────────────────────────────────────────
+      # Pages serves this project under /claude.prop/, so a leading-slash URL
+      # resolves to the domain root and 404s. Such a path is green against the
+      # local server (rooted at /) and red only against the live site, so the
+      # local tier structurally cannot catch it — this guard can.
+      - name: No root-absolute paths (breaks the /claude.prop/ Pages sub-path)
+        run: |
+          set -euo pipefail
+          # Fail loudly if a scanned path vanishes — grep's exit 2 would
+          # otherwise read as "no hits" and the guard would stop guarding.
+          for path in .github/scripts/ui-tests/tests index.html js styles; do
+            [ -e "$path" ] || { echo "ERROR: guard cannot scan missing $path"; exit 1; }
+          done
+          # Match the SHAPE of a root-absolute URL, not a list of consumers:
+          #   1. a root-absolute literal in any of JS's three string forms
+          #      (' " `), in a value position;
+          #   2. CSS url() unquoted, which carries no delimiter;
+          #   3. an unquoted HTML attribute — constrained to markup context
+          #      (inside a <tag ...>), because without that `const src = /re/`
+          #      in plain JS reads as an attribute and the guard rejects valid
+          #      code. js/vendor/ is skipped: a pinned third-party bundle whose
+          #      own paths resolve against its host, not this Pages sub-path.
+          #
+          # KNOWN LIMIT: a path assembled from a bare slash — fetch('/' + p) —
+          # is not detected. Matching a standalone '/' would flag every
+          # legitimate one (split('/'), path joins). Closing that needs
+          # syntax-aware scanning, not a regex; see CLAUDE.md.
+          rc=0
+          hits=$(grep -rnE "(^|[[:space:](=,:[])['\"\`]/[^/'\"\`[:space:]]|url\(\s*/[^/[:space:])]|<[a-zA-Z][^>]*[[:space:]](src|href|action|poster|srcset|formaction|manifest)[[:space:]]*=[[:space:]]*/[^/[:space:]>]" \
+                   --exclude-dir=vendor \
+                   .github/scripts/ui-tests/tests index.html js styles) || rc=$?
+          # grep: 0 = matched, 1 = no match, >=2 = operational error. Treating
+          # >=2 as "no match" (what `|| true` does) lets a broken matcher pass
+          # the blocking gate silently — the failure this guard exists to avoid.
+          if [ "$rc" -ge 2 ]; then
+            echo "ERROR: guard did not run (grep exit $rc) — matcher or paths are broken"
+            exit 1
+          fi
+          if [ -n "$hits" ]; then
+            echo "$hits"
+            echo "ERROR: root-absolute path found — use an app-relative URL"
+            echo "       (e.g. new URL('js/store.js', document.baseURI).href)"
+            exit 1
+          fi
       # ── Contrast guardrail ───────────────────────────────────────────────────
       # WCAG AA check against styles/tokens.css (this project's design tokens).
       # Exits with a notice (no failure) until /design-intake creates tokens.css.
