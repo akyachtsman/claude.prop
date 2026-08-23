@@ -110,7 +110,16 @@ const pairs = [
   // resting state passed themes that go nearly-black-on-dark the moment a
   // pointer touches the control.
   [t['--color-on-accent'], t['--color-accent-hover'], AA, 'on-accent / accent-hover (button hover)'],
-  [t['--color-accent'], t['--color-surface'], AA_LARGE, 'accent / surface (large)'],
+  // PROJECT-SPECIFIC (see CLAUDE.md). Upstream checks accent/surface at the LARGE-text
+  // floor (3.0). In this app --color-accent is a SMALL-text colour in eight places —
+  // .authgate__brand (:783), .authgate__status--ok (:790), .authgate__link (:798),
+  // .modal__status--ok (:842), .photos-btn:hover (:859), .archive-restore:hover (:710),
+  // .th-sort__caret (:725), .link-open (:865) — at --font-sm 13px / --font-xs 12px,
+  // neither of which is WCAG large text. So the normal-text floor applies, and the
+  // page background is checked too. At 3.0 a palette scoring 3.54 passed while every
+  // one of those labels failed AA. (Codex, #109.)
+  [t['--color-accent'], t['--color-surface'], AA, 'accent small text / surface'],
+  [t['--color-accent'], t['--color-bg'], AA, 'accent small text / bg'],
   // PROJECT-SPECIFIC (see CLAUDE.md). --color-on-accent is NOT the only foreground
   // rendered over accent. `.switcher__btn` (components.css:45,51) and
   // `.topbar__action` (:104 via .topbar__link, :740) keep --color-on-navy while

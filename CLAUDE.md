@@ -100,7 +100,7 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   (`split('/')`, path joins). Closing it needs syntax-aware scanning, not a
   regex. Reviewers should still catch that form by eye.
 
-- **`check-contrast.js` carries four deliberate local edits** on top of the upstream
+- **`check-contrast.js` carries five deliberate local edits** on top of the upstream
   template — `/refresh-repo` must diff them, not revert them. (1) `--color-danger`
   is checked as `#fff` **on** danger, because this app's only use of it is
   `.gallery__del:hover`'s *background* under a hard-coded `color: #fff`
@@ -130,6 +130,17 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   is unchanged**. Re-deriving after the fix finds zero token pairs below AA.
   A hand-maintained pair list cannot be complete; re-run that derivation when
   `components.css` gains a new fg/bg pairing.
+  (5) `accent / surface` is checked at the **normal-text** floor (4.5), not upstream's
+  large-text 3.0, and `accent / bg` is added — because `--color-accent` is a SMALL-text
+  colour here in eight places (`.authgate__brand` `:783`, `.authgate__status--ok` `:790`,
+  `.authgate__link` `:798`, `.modal__status--ok` `:842`, `.photos-btn:hover` `:859`,
+  `.archive-restore:hover` `:710`, `.th-sort__caret` `:725`, `.link-open` `:865`) at
+  `--font-sm` 13px / `--font-xs` 12px, neither of which is WCAG large text. At 3.0 a
+  palette scoring 3.54 was certified `OK — 9/9` while every one of those labels failed AA.
+  **Limitation of the derivation in (4):** it only sees rules declaring BOTH a `color:`
+  and a `background:`, so text that sets a colour and inherits its background — which is
+  all eight of these — is invisible to it. Deriving beats enumerating but is not
+  complete either; treat both as aids, not proofs.
 
 ## Agent Workflow
 1. Use a `claude/<name>` feature branch
