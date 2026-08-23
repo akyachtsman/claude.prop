@@ -77,10 +77,18 @@ for (const m of css.matchAll(/(--color-[a-z-]+)\s*:\s*(#[0-9a-fA-F]+)\s*;/g)) {
 const lin = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
 function lum(hex) {
   let h = hex.replace('#', '');
-  // The token regex admits #RGBA / #RRGGBBAA — drop the alpha channel so the
-  // channel pairs below stay aligned (alpha-blended contrast isn't computed here).
-  if (h.length === 4) h = h.slice(0, 3);
-  if (h.length === 8) h = h.slice(0, 6);
+  // PROJECT-SPECIFIC (see CLAUDE.md). Upstream DROPS the alpha channel here so the
+  // channel pairs stay aligned. Dropping it silently is a vacuous green: a fully
+  // transparent `#0000` foreground becomes opaque black and scores 21:1 against
+  // white, certifying invisible text as maximum contrast. Nothing composites the
+  // token against its background, so the honest move is to refuse the input rather
+  // than score it wrong. (Codex, #109.)
+  if (h.length === 4 || h.length === 8) {
+    console.error(`::error::alpha-bearing colour token "${hex}" cannot be contrast-checked — `
+      + 'compositing against its background is not implemented, and ignoring the alpha '
+      + 'would score transparent text as high contrast. Use an opaque hex.');
+    process.exit(1);
+  }
   if (h.length === 3) h = h.split('').map((x) => x + x).join('');
   return 0.2126 * lin(parseInt(h.slice(0, 2), 16)) + 0.7152 * lin(parseInt(h.slice(2, 4), 16)) + 0.0722 * lin(parseInt(h.slice(4, 6), 16));
 }
@@ -103,10 +111,16 @@ const pairs = [
   // pointer touches the control.
   [t['--color-on-accent'], t['--color-accent-hover'], AA, 'on-accent / accent-hover (button hover)'],
   [t['--color-accent'], t['--color-surface'], AA_LARGE, 'accent / surface (large)'],
-  // design.md's error-message copy rule creates --color-danger; it carries meaning,
-  // so it needs the same AA floor as any other body text.
-  [t['--color-danger'], t['--color-surface'], AA, 'danger / surface'],
-  [t['--color-danger'], t['--color-bg'], AA, 'danger / bg'],
+  // PROJECT-SPECIFIC (see CLAUDE.md). Upstream checks --color-danger as a
+  // FOREGROUND over the page surfaces. This app never renders it that way: its one
+  // use is `.gallery__del:hover { background: var(--color-danger) }`
+  // (styles/components.css:887), under a hard-coded `color: #fff` (:884). So the
+  // rendered relationship is #fff ON danger, and upstream's pairs describe nothing
+  // on screen. They agree numerically only while --color-surface stays light —
+  // contrast is symmetric — and a dark theme with `--color-danger: #fff` would pass
+  // both upstream pairs at 21:1 while the delete control went white-on-white.
+  // Check what is drawn. (Codex, #109.)
+  ['#FFFFFF', t['--color-danger'], AA, 'gallery delete glyph (hard-coded #fff) / danger hover fill'],
 ];
 
 let failed = false;

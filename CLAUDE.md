@@ -100,6 +100,20 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   (`split('/')`, path joins). Closing it needs syntax-aware scanning, not a
   regex. Reviewers should still catch that form by eye.
 
+- **`check-contrast.js` carries two deliberate local edits** on top of the upstream
+  template — `/refresh-repo` must diff them, not revert them. (1) `--color-danger`
+  is checked as `#fff` **on** danger, because this app's only use of it is
+  `.gallery__del:hover`'s *background* under a hard-coded `color: #fff`
+  (`components.css:884,887`); upstream checks danger as a foreground over the page
+  surfaces, which this app never renders. The two agree numerically only while
+  `--color-surface` is light — contrast is symmetric — so a dark theme with
+  `--color-danger: #fff` passes upstream at 17.30/18.50 while the delete glyph goes
+  white-on-white. (2) An alpha-bearing token (`#RGBA`/`#RRGGBBAA`) is **rejected**
+  rather than having its alpha silently dropped; dropping it scores a transparent
+  `#FFFFFF00` foreground as 5.09 and passing. Both were verified by forcing the
+  scenario: upstream exits 0 on each, the local copy exits 1. Handed upstream — the
+  alpha half is generic; the danger half is project-shape-specific.
+
 ## Agent Workflow
 1. Use a `claude/<name>` feature branch
 2. For a non-trivial feature, run `/sdd-loop` (`specify` → `clarify` → `plan` → `tasks`) before coding — separate WHAT from HOW; trivial changes skip to step 3
