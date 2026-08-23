@@ -38,8 +38,19 @@ export default defineConfig({
       // Tablet is its own class, not an interpolation between the two: global.md
       // requires laptop, tablet AND phone, and Pixel 5 + iPhone 12 are both phone
       // profiles, so a tablet-only breakpoint regression was invisible.
+      // PORTRAIT (810 wide), not landscape (1080). Upstream switched to portrait
+      // because a conventional tablet band is max-width: 1023px, which 1080
+      // CLEARS — rendering the DESKTOP layout under a tablet name, a project that
+      // tests nothing while looking like coverage (measured in apfp.claude,
+      // 2026-08-23). Upstream says to check this against your own breakpoints,
+      // so it was checked: this project's bands are 1100/760, not 1023/1024, and
+      // BOTH 810 and 1080 land inside 761-1100 — verified by rendering the app at
+      // six widths and reading matchMedia. So landscape was not dead here. 810 is
+      // taken anyway: it sits mid-band with margin on both sides, where 1080 sits
+      // 20px under the edge and would silently become desktop coverage the day
+      // anyone moves that breakpoint to the conventional 1024.
       name: 'tablet',
-      use: { ...devices['iPad (gen 7) landscape'] },
+      use: { ...devices['iPad (gen 7)'] },
     },
     {
       name: 'mobile-chrome',

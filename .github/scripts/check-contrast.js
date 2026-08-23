@@ -4,15 +4,62 @@
 // .github/scripts/ and run it from qa.yml. If styles/tokens.css doesn't exist yet
 // (before /design-intake), it prints a notice and exits 0 — safe in a fresh repo.
 // CommonJS (matches the other .github/scripts/ helpers, e.g. notify-email.js).
-const { readFileSync, existsSync } = require('fs');
+const { readFileSync, existsSync, readdirSync } = require('fs');
+const { join } = require('path');
 
-const FILE = 'styles/tokens.css';
-if (!existsSync(FILE)) {
-  console.log(`::notice::${FILE} not found — run /design-intake to establish this project's look. Skipping contrast check.`);
-  process.exit(0);
+// styles/tokens.css is the design contract's single home (design.md -> Tokens &
+// components). Kept as a list so a project with a second token file can add it
+// here; every candidate that exists is checked, never just the first.
+const CANDIDATES = ['styles/tokens.css'];
+const FILES = CANDIDATES.filter((f) => existsSync(f));
+if (FILES.length === 0) {
+  // A repo with no CSS at all has nothing to check (a fresh scaffold before
+  // /design-intake). A repo that HAS stylesheets but none at a known token path
+  // is a real gap: failing here is the whole point of a guardrail.
+  //
+  // "Has CSS" must mean an actual .css file. Treating index.html — or a `styles/`
+  // directory that exists but is empty — as proof of CSS failed the static-check
+  // job for a fresh project that had a page and no stylesheet yet, contradicting
+  // the bootstrap behaviour documented at the top of this file.
+  // Recursive, because projects keep stylesheets in src/, public/css/,
+  // assets/styles/ and elsewhere. A shallow look at styles/ + app/ + root
+  // answered "no CSS" for those and exited 0 — the vacuous green this branch
+  // exists to reject.
+  const IGNORED_DIRS = new Set(['node_modules', 'dist', 'build', 'out', 'coverage', '.next', 'vendor']);
+  // No depth cap. A cutoff turns "I stopped looking" into "there is no CSS" —
+  // a monorepo keeping its only stylesheet at packages/client/src/features/…
+  // would have passed green. The ignore list below bounds the walk instead,
+  // and the search short-circuits on the first .css file found.
+  const hasCssUnder = (dir) => {
+    let entries;
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return false;
+    }
+    for (const e of entries) {
+      if (e.isFile() && e.name.endsWith('.css')) return true;
+      if (e.isDirectory() && !e.name.startsWith('.') && !IGNORED_DIRS.has(e.name)) {
+        if (hasCssUnder(join(dir, e.name))) return true;
+      }
+    }
+    return false;
+  };
+  const hasCss = hasCssUnder('.');
+  if (!hasCss) {
+    console.log(`::notice::no stylesheet yet — run /design-intake to establish this project's look. Skipping contrast check.`);
+    process.exit(0);
+  }
+  console.error(`FAIL  this project has CSS but no tokens file at ${CANDIDATES.join(' or ')}.`);
+  console.error('      design.md makes tokens.css the single source of truth — the contrast');
+  console.error('      guardrail cannot run without it. Create one via /design-intake.');
+  process.exit(1);
 }
 
+let exitCode = 0;
+for (const FILE of FILES) {
 const css = readFileSync(FILE, 'utf8');
+console.log(`\n── ${FILE}`);
 const t = {};
 // Capture every color token, then validate its hex length (3/4/6/8). A 5- or
 // 7-digit value is malformed: fail loudly rather than silently skip it — a
@@ -30,10 +77,18 @@ for (const m of css.matchAll(/(--color-[a-z-]+)\s*:\s*(#[0-9a-fA-F]+)\s*;/g)) {
 const lin = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
 function lum(hex) {
   let h = hex.replace('#', '');
-  // The token regex admits #RGBA / #RRGGBBAA — drop the alpha channel so the
-  // channel pairs below stay aligned (alpha-blended contrast isn't computed here).
-  if (h.length === 4) h = h.slice(0, 3);
-  if (h.length === 8) h = h.slice(0, 6);
+  // PROJECT-SPECIFIC (see CLAUDE.md). Upstream DROPS the alpha channel here so the
+  // channel pairs stay aligned. Dropping it silently is a vacuous green: a fully
+  // transparent `#0000` foreground becomes opaque black and scores 21:1 against
+  // white, certifying invisible text as maximum contrast. Nothing composites the
+  // token against its background, so the honest move is to refuse the input rather
+  // than score it wrong. (Codex, #109.)
+  if (h.length === 4 || h.length === 8) {
+    console.error(`::error::alpha-bearing colour token "${hex}" cannot be contrast-checked — `
+      + 'compositing against its background is not implemented, and ignoring the alpha '
+      + 'would score transparent text as high contrast. Use an opaque hex.');
+    process.exit(1);
+  }
   if (h.length === 3) h = h.split('').map((x) => x + x).join('');
   return 0.2126 * lin(parseInt(h.slice(0, 2), 16)) + 0.7152 * lin(parseInt(h.slice(2, 4), 16)) + 0.0722 * lin(parseInt(h.slice(4, 6), 16));
 }
@@ -41,20 +96,83 @@ const ratio = (a, b) => { const la = lum(a), lb = lum(b); return (Math.max(la, l
 
 const AA = 4.5, AA_LARGE = 3.0;
 const pairs = [
-  ['#FFFFFF', t['--color-accent'], AA, 'white / accent (button)'],
+  // No `|| '#FFFFFF'` fallback: substituting a default made the pair "evaluable"
+  // while measuring a colour the page may not use, so a project that DROPPED the
+  // token still scored 8/8. A missing required token must fail like any other.
+  [t['--color-on-accent'], t['--color-accent'], AA, 'on-accent / accent (button)'],
   [t['--color-text-primary'], t['--color-bg'], AA, 'text-primary / bg'],
   [t['--color-text-primary'], t['--color-surface'], AA, 'text-primary / surface'],
   [t['--color-text-secondary'], t['--color-bg'], AA, 'text-secondary / bg'],
   [t['--color-text-secondary'], t['--color-surface'], AA, 'text-secondary / surface'],
-  [t['--color-accent'], t['--color-surface'], AA_LARGE, 'accent / surface (large)'],
+  // Both button templates render the on-accent foreground over accent-hover on
+  // hover (and the static one on keyboard focus), so the hover background is a
+  // real background for this text and needs its own pair. Checking only the
+  // resting state passed themes that go nearly-black-on-dark the moment a
+  // pointer touches the control.
+  [t['--color-on-accent'], t['--color-accent-hover'], AA, 'on-accent / accent-hover (button hover)'],
+  // PROJECT-SPECIFIC (see CLAUDE.md). Upstream checks accent/surface at the LARGE-text
+  // floor (3.0). In this app --color-accent is a SMALL-text colour in eight places —
+  // .authgate__brand (:783), .authgate__status--ok (:790), .authgate__link (:798),
+  // .modal__status--ok (:842), .photos-btn:hover (:859), .archive-restore:hover (:710),
+  // .th-sort__caret (:725), .link-open (:865) — at --font-sm 13px / --font-xs 12px,
+  // neither of which is WCAG large text. So the normal-text floor applies, and the
+  // page background is checked too. At 3.0 a palette scoring 3.54 passed while every
+  // one of those labels failed AA. (Codex, #109.)
+  [t['--color-accent'], t['--color-surface'], AA, 'accent small text / surface'],
+  [t['--color-accent'], t['--color-bg'], AA, 'accent small text / bg'],
+  // PROJECT-SPECIFIC (see CLAUDE.md). --color-on-accent is NOT the only foreground
+  // rendered over accent. `.switcher__btn` (components.css:45,51) and
+  // `.topbar__action` (:104 via .topbar__link, :740) keep --color-on-navy while
+  // their hover fill becomes --color-accent. Upstream's on-accent pair therefore
+  // leaves those controls unchecked, and the two tokens agree today only because
+  // both happen to be #FFFFFF — accent #888888 with on-accent #000000 passes every
+  // other pair while these render white on grey at 3.54:1. (Codex, #109.)
+  [t['--color-on-navy'], t['--color-accent'], AA, 'on-navy controls (switcher/topbar action) / accent hover fill'],
+  // PROJECT-SPECIFIC (see CLAUDE.md). Found by DERIVING pairs from components.css
+  // rather than enumerating them: `.rt-chip--noi` (:397) renders accent text on
+  // accent-light and scored 4.32:1 at 11px bold — a real AA failure that none of
+  // the hand-written pairs above could see, because no pair described it.
+  [t['--color-accent-hover'], t['--color-accent-light'], AA, 'NOI chip text / accent-light fill'],
+  // PROJECT-SPECIFIC (see CLAUDE.md). Upstream checks --color-danger as a
+  // FOREGROUND over the page surfaces. This app never renders it that way: its one
+  // use is `.gallery__del:hover { background: var(--color-danger) }`
+  // (styles/components.css:887), under a hard-coded `color: #fff` (:884). So the
+  // rendered relationship is #fff ON danger, and upstream's pairs describe nothing
+  // on screen. They agree numerically only while --color-surface stays light —
+  // contrast is symmetric — and a dark theme with `--color-danger: #fff` would pass
+  // both upstream pairs at 21:1 while the delete control went white-on-white.
+  // Check what is drawn. (Codex, #109.)
+  ['#FFFFFF', t['--color-danger'], AA, 'gallery delete glyph (hard-coded #fff) / danger hover fill'],
 ];
 
 let failed = false;
+let evaluated = 0;
 for (const [fg, bg, thr, name] of pairs) {
   if (!fg || !bg) { console.log(`  skip  ${name} (token missing)`); continue; }
+  evaluated++;
   const r = ratio(fg, bg), ok = r >= thr;
   if (!ok) failed = true;
   console.log(`${ok ? '  ok' : 'FAIL'}  ${name.padEnd(30)} ${r.toFixed(2)} (need ${thr.toFixed(1)})`);
 }
-console.log(failed ? '\ncheck-contrast: FAIL — fix styles/tokens.css' : '\ncheck-contrast: OK — all pairs meet WCAG AA');
-if (failed) process.exit(1);
+
+// A green report on zero evaluated pairs is the worst outcome available: it
+// certifies WCAG AA having measured nothing. The token regex only reads #hex,
+// so a tokens.css written in oklch()/rgb()/hsl()/var() skips every pair —
+// exactly the palettes /design-intake now produces.
+// ALL six pairs must be evaluable, not merely one. These are the standard token
+// contract, and every pair is a required check — warning on a partial run let a
+// palette be certified while normal-text contrast was never measured at all,
+// which is the same vacuous pass as measuring nothing.
+if (evaluated < pairs.length) {
+  const missing = pairs.filter(([fg, bg]) => !fg || !bg).map(([, , , name]) => name);
+  console.error(`\ncheck-contrast: FAIL — ${FILE}: only ${evaluated}/${pairs.length} pairs were evaluable.`);
+  console.error(`  Not measured: ${missing.join('; ')}`);
+  console.error('  Each needs both tokens declared in #hex form (oklch()/rgb()/hsl()/var()');
+  console.error('  are not parsed). Declare the missing tokens, or extend this script.');
+  exitCode = 1;
+  continue;
+}
+console.log(failed ? `check-contrast: FAIL — fix ${FILE}` : `check-contrast: OK — ${evaluated}/${pairs.length} pairs meet WCAG AA in ${FILE}`);
+if (failed) exitCode = 1;
+}
+process.exit(exitCode);

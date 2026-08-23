@@ -100,6 +100,48 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   (`split('/')`, path joins). Closing it needs syntax-aware scanning, not a
   regex. Reviewers should still catch that form by eye.
 
+- **`check-contrast.js` carries five deliberate local edits** on top of the upstream
+  template — `/refresh-repo` must diff them, not revert them. (1) `--color-danger`
+  is checked as `#fff` **on** danger, because this app's only use of it is
+  `.gallery__del:hover`'s *background* under a hard-coded `color: #fff`
+  (`components.css:884,887`); upstream checks danger as a foreground over the page
+  surfaces, which this app never renders. The two agree numerically only while
+  `--color-surface` is light — contrast is symmetric — so a dark theme with
+  `--color-danger: #fff` passes upstream at 17.30/18.50 while the delete glyph goes
+  white-on-white. (2) An alpha-bearing token (`#RGBA`/`#RRGGBBAA`) is **rejected**
+  rather than having its alpha silently dropped; dropping it scores a transparent
+  `#FFFFFF00` foreground as 5.09 and passing. Both were verified by forcing the
+  scenario: upstream exits 0 on each, the local copy exits 1. Handed upstream — the
+  alpha half is generic; the danger half is project-shape-specific.
+  (3) `--color-on-navy` is checked against `--color-accent`, because
+  `--color-on-accent` is **not** the only foreground rendered over accent:
+  `.switcher__btn` (`components.css:45,51`) and `.topbar__action` (`:104` via
+  `.topbar__link`, `:740`) keep `--color-on-navy` while their hover fill becomes
+  `--color-accent`. Both tokens are `#FFFFFF` today, so they agree by coincidence —
+  accent `#888888` with on-accent `#000000` passes every other pair while those
+  controls render white on grey at 3.54:1.
+  (4) An `accent-hover / accent-light` pair covers the **NOI chip**. It was found by
+  DERIVING pairs from `components.css` (every rule declaring both a `color:` and a
+  `background:` from tokens) rather than enumerating them — `.rt-chip--noi` (`:397`,
+  rendered at `dashboard.js:482`) was shipping `--color-accent` on
+  `--color-accent-light` at **4.32:1**, a real WCAG AA failure at 11px bold, which
+  no hand-written pair described. The chip now uses `--color-accent-hover` (6.07),
+  an already-approved token from the same family — **the Banker Navy palette itself
+  is unchanged**. Re-deriving after the fix finds zero token pairs below AA.
+  A hand-maintained pair list cannot be complete; re-run that derivation when
+  `components.css` gains a new fg/bg pairing.
+  (5) `accent / surface` is checked at the **normal-text** floor (4.5), not upstream's
+  large-text 3.0, and `accent / bg` is added — because `--color-accent` is a SMALL-text
+  colour here in eight places (`.authgate__brand` `:783`, `.authgate__status--ok` `:790`,
+  `.authgate__link` `:798`, `.modal__status--ok` `:842`, `.photos-btn:hover` `:859`,
+  `.archive-restore:hover` `:710`, `.th-sort__caret` `:725`, `.link-open` `:865`) at
+  `--font-sm` 13px / `--font-xs` 12px, neither of which is WCAG large text. At 3.0 a
+  palette scoring 3.54 was certified `OK — 9/9` while every one of those labels failed AA.
+  **Limitation of the derivation in (4):** it only sees rules declaring BOTH a `color:`
+  and a `background:`, so text that sets a colour and inherits its background — which is
+  all eight of these — is invisible to it. Deriving beats enumerating but is not
+  complete either; treat both as aids, not proofs.
+
 ## Agent Workflow
 1. Use a `claude/<name>` feature branch
 2. For a non-trivial feature, run `/sdd-loop` (`specify` → `clarify` → `plan` → `tasks`) before coding — separate WHAT from HOW; trivial changes skip to step 3
