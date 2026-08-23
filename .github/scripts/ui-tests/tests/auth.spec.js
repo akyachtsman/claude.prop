@@ -133,20 +133,30 @@ test('S28 first-sign-in seed — a fresh account is seeded with the sample + dem
   // is independent of first-paint timing across engines (chromium/webkit).
   await installSignedIn(page, { seed: [], reconcile: true });
   await page.goto('./', { waitUntil: 'load' });
+  let seedTimedOut = false;
   await page.waitForFunction(async () => {
     try { return (await import(new URL('js/store.js', document.baseURI).href)).list().length >= 4; } catch (e) { return false; }
-  }, null, { timeout: 15000 }).catch(() => {
-    // Do NOT swallow this. The swallow did not make the seed reliable — it made the
-    // failure lie: a slow reconcile fell through to the .lcard assertions below and
-    // surfaced as "expected 4, received 0", sending the reader after a rendering bug
-    // that does not exist. Failing here names the real cause. NOTE: this does not
-    // reduce the failure RATE, only the time spent misdiagnosing it.
-    throw new Error(
-      'first-sign-in seed never landed: store.list() did not reach 4 rows within 15s. '
-      + 'This is the seed/reconcile timing out, NOT a missing-card rendering failure.');
+  }, null, { timeout: 15000 }).catch((e) => {
+    // Translate ONLY this wait's own timeout. Any other rejection — the browser
+    // closing, or the test-wide 30s timeout interrupting this poll — is a real
+    // error, and relabelling it "seed timed out" would be the same lie the old
+    // `.catch(() => {})` told, just louder (Codex, #108).
+    if (!/\b15000ms\b/.test(String((e && e.message) || e))) throw e;
+    seedTimedOut = true;
   });
+  // DO NOT throw before this reload. It is an implicit RETRY, not a rendering
+  // step: reconcile()'s `reconciledUids` guard is in-memory and a reload builds a
+  // new module realm, while its localStorage RECON_KEY is written only AFTER the
+  // seed completes — so a slow first pass legitimately gets a second chance here.
+  // Throwing above turned recoverable runs into failures (Codex, #108).
   await page.reload({ waitUntil: 'load' });
-  await page.waitForSelector('.lcard');
+  await page.waitForSelector('.lcard').catch(() => {
+    throw new Error(seedTimedOut
+      ? 'first-sign-in seed never landed: store.list() did not reach 4 rows within 15s, '
+        + 'and the post-reload retry produced no cards either.'
+      : 'no property cards after reload, although the seed poll saw 4+ rows — '
+        + 'this is a rendering failure, not a seed failure.');
+  });
   await expect(page.locator('.lcard')).toHaveCount(4);   // 715 Plumas sample + 3 demos
   for (const name of ['715 Plumas', '2201 Del Paso', '88 Capitol Mall', '540 N Street']) {
     await expect(page.locator('.lcard__name', { hasText: name })).toHaveCount(1);
