@@ -1,7 +1,18 @@
 # qa-live.yml — Playwright against the live deployed URL.
-# Copy to .github/workflows/qa-live.yml in your project.
+# Copy to .github/workflows/qa-live.yml in your project, along with the
+# ui-suite composite from templates/actions/ into .github/actions/.
 # Triggers automatically after GitHub Pages deploys, or manually via workflow_dispatch.
-# pages-build-deployment is auto-created by GitHub when Pages is enabled — no extra setup.
+#
+# ⚠️ RULE W2 — Pages has two sources and only one name is ours to pre-fill.
+# ACTION: if Settings -> Pages -> Source is "GitHub Actions", add your own deploy
+# workflow's exact `name:` to the list below. Do not invent one.
+# ACTION: the job's `if:` gate needs NO workflow-name condition — it reads
+# workflow_run.conclusion, which is agnostic to which workflow fired it.
+# Why: docs/standards/automations.md -> Watcher Rules (W2).
+#
+# The job's `if:` gate below needs NO workflow-name condition — it reads
+# `github.event.workflow_run.conclusion`, which is agnostic to which workflow
+# fired it. Do not "helpfully" add one; that re-breaks exactly what this fixes.
 #
 # Required setup:
 #   - Add TEST_AUTH_CREDENTIAL as a repository secret — skip if the project has
@@ -9,12 +20,17 @@
 #   - Add APP_URL as a repository variable: Settings → Secrets and variables → Variables
 #     e.g. https://<your-username>.github.io/<your-repo>/
 #   - Set UI_TESTS_DIR below to the path of your Playwright test directory
+#
+# Note: the ui-suite composite cannot carry per-step timeout-minutes (the old
+# 8/12-minute sub-timeouts are gone); the job-level timeout-minutes below still
+# bounds the whole run.
 
 name: QA — UI Tests (live)
 
 on:
   workflow_run:
-    workflows: [pages-build-deployment]
+    # + your Actions deploy workflow's `name:` if that is your Pages source
+    workflows: ['pages-build-deployment']
     types: [completed]
   workflow_dispatch:
     inputs:
@@ -45,18 +61,26 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # ⚠️ 40, NOT 20. This job runs ui-suite, whose COLD-cache path is
+    # `playwright install --with-deps chromium webkit` — measured at 21m25s
+    # (apfp.claude, run 32267163505). A 20-minute bound therefore killed every
+    # cold run before the tests began, and because `actions/cache` saves at job
+    # END the kill also skipped the save, leaving the next run equally cold. A
+    # bound below the work it bounds does not protect anything; it fails on a
+    # schedule. Warm runs finish in ~5 minutes, so this ceiling only ever applies
+    # to the cold path it exists to survive.
+    timeout-minutes: 40
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Blocking: the live URL is fully reachable, so a failure fails the check.
-      # workflow_dispatch input overrides the repo variable when provided.
-      - name: UI suite (live URL)
-        uses: ./.github/actions/ui-suite
+      # Blocking — this is the authoritative live UI gate.
+      - uses: ./.github/actions/ui-suite
         with:
           tests-dir: ${{ env.UI_TESTS_DIR }}
+          # workflow_dispatch input overrides repo variable if provided
           app-url: ${{ github.event.inputs.app_url || vars.APP_URL }}
           test-auth-credential: ${{ secrets.TEST_AUTH_CREDENTIAL }}
           artifact-name: playwright-results-live
+          app-pages: ${{ vars.APP_PAGES }}
