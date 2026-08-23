@@ -67,11 +67,16 @@ jobs:
           for path in .github/scripts/ui-tests/tests index.html js styles; do
             [ -e "$path" ] || { echo "ERROR: guard cannot scan missing $path"; exit 1; }
           done
-          # ONE pattern over both trees. Two patterns drifted apart: the spec
-          # half matched fetch( and the app half did not, so fetch('/x') in js/
-          # sailed through (caught by Codex on PR #101). Covers module/fetch
-          # consumers, HTML attributes with any spacing, and CSS url().
-          hits=$(grep -rnE "(from|import\(|fetch\(|goto\()\s*['\"]/[a-zA-Z]|(src|href|action|poster|srcset)\s*=\s*['\"]?/[a-zA-Z]|url\(\s*['\"]?/[a-zA-Z]" \
+          # Match the SHAPE of a root-absolute URL, not a list of consumers.
+          # Enumerating consumers missed fetch(), then bare `import "/x"`
+          # (both found by Codex on PR #101) — such a list is never finished.
+          # So: any root-absolute string literal in a value position, plus
+          # CSS url() in its unquoted form. Requiring the quote to OPEN a
+          # string keeps JS regex literals like )"/i from tripping it.
+          # js/vendor/ is excluded — a pinned third-party bundle whose own
+          # paths resolve against its host, not this Pages sub-path.
+          hits=$(grep -rnE "(^|[[:space:](=,:[])['\"]/[a-zA-Z]|url\(\s*/[a-zA-Z]" \
+                   --exclude-dir=vendor \
                    .github/scripts/ui-tests/tests index.html js styles || true)
           if [ -n "$hits" ]; then
             echo "$hits"
