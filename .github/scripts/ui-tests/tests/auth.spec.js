@@ -135,7 +135,16 @@ test('S28 first-sign-in seed — a fresh account is seeded with the sample + dem
   await page.goto('./', { waitUntil: 'load' });
   await page.waitForFunction(async () => {
     try { return (await import(new URL('js/store.js', document.baseURI).href)).list().length >= 4; } catch (e) { return false; }
-  }, null, { timeout: 15000 }).catch(() => {});
+  }, null, { timeout: 15000 }).catch(() => {
+    // Do NOT swallow this. The swallow did not make the seed reliable — it made the
+    // failure lie: a slow reconcile fell through to the .lcard assertions below and
+    // surfaced as "expected 4, received 0", sending the reader after a rendering bug
+    // that does not exist. Failing here names the real cause. NOTE: this does not
+    // reduce the failure RATE, only the time spent misdiagnosing it.
+    throw new Error(
+      'first-sign-in seed never landed: store.list() did not reach 4 rows within 15s. '
+      + 'This is the seed/reconcile timing out, NOT a missing-card rendering failure.');
+  });
   await page.reload({ waitUntil: 'load' });
   await page.waitForSelector('.lcard');
   await expect(page.locator('.lcard')).toHaveCount(4);   // 715 Plumas sample + 3 demos
