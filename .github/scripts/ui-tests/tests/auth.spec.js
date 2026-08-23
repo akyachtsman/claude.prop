@@ -8,19 +8,6 @@ import { installSignedIn } from './_supabase-mock.js';
 
 test.use({ viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false });
 
-// Tell a wait's OWN timeout apart from an interruption WITHOUT matching Playwright's
-// wording. Previously this was a regex against the message text — a string match on
-// phrasing that would break silently, and in the bad direction: a real timeout would
-// stop being recognised. Two properties instead, both stable: Playwright rejects a
-// timed-out wait with `name === 'TimeoutError'` (verified for both waitForSelector
-// and waitForFunction), and a wait's own timeout can only fire once its full budget
-// has elapsed. An interruption — the test-wide timeout, a closed browser — either is
-// not a TimeoutError or arrives early, so it propagates unchanged. (Measured slack:
-// a 600ms budget rejects at 602ms.)
-function isOwnTimeout(err, startedAt, budgetMs) {
-  return !!err && err.name === 'TimeoutError' && Date.now() - startedAt >= budgetMs - 250;
-}
-
 // Stub Supabase for LOGGED-OUT cases (no session injected). Register the
 // catch-all FIRST and specifics LAST — Playwright's last-registered route wins.
 async function stubLoggedOut(page, { signInOk = true, resetOk = true } = {}) {
@@ -144,75 +131,64 @@ test('S28 first-sign-in seed — a fresh account is seeded with the sample + dem
   // the real fixtures via the browser's own imports). It upserts 4 rows into the
   // stateful mock; a reload then reads that persisted account, so the assertion
   // is independent of first-paint timing across engines (chromium/webkit).
-  // The default 30s test budget cannot hold a 15s seed poll, a reload AND a card
-  // wait long enough for the card wait's OWN timeout to fire — the test-wide
-  // timeout would win and overwrite the diagnosis below with "Test timeout of
-  // 30000ms exceeded", which is the swallow again in a third costume. The seed
-  // budget itself is unchanged at 15s; this only buys room to report (Codex, #108).
+  // The config's 30s budget cannot hold a REAL 15s persistence wait plus a reload
+  // plus a 10s card poll — the test-wide timeout would kill the run before either
+  // poll could report what it saw, and "Test timeout of 30000ms exceeded" says
+  // nothing about the seed. Neither budget below is widened; this only makes room
+  // for the two of them to actually run and report.
   test.setTimeout(45_000);
-  await installSignedIn(page, { seed: [], reconcile: true });
+  const { rows } = await installSignedIn(page, { seed: [], reconcile: true });
   await page.goto('./', { waitUntil: 'load' });
   const SEED_WAIT_MS = 15_000;
   const CARD_WAIT_MS = 10_000;
 
-  // How many rows the store holds, read through the page.
+  // Wait for the seed to be PERSISTED, not merely cached.
   //
-  // `page.evaluate` DOES await an async page function. `page.waitForFunction` does
-  // NOT: its poller tests the returned value for truthiness, and a Promise is always
-  // truthy, so an `async` callback resolves the wait on the very first tick. Measured
-  // against this Playwright build: `waitForFunction(async () => false)` given a
-  // 1500ms budget resolved in 27ms. The 15s seed poll this replaces was written that
-  // way, so it never polled — it returned immediately on every run, and the test has
-  // in fact been racing the seed against a bare reload the whole time. Same family as
-  // the `.catch(() => {})` this PR opened against: a check that reads as verification
-  // and verifies nothing.
+  // The cloud store's save() writes its browser cache synchronously and only then
+  // fires an UNAWAITED ops.upsert() (js/store.js:162-167), and store.list() reads
+  // that cache — so polling the page reports 4 rows while the POSTs are still in
+  // flight, and the reload below can abort writes that never reached the route
+  // handler. That leaves in place the bare-reload race this test keeps losing. The
+  // mock's Node-side `rows` map is the persisted truth, and is exactly what the
+  // post-reload GET reads, so gate the reload on that instead (Codex, #108).
   //
-  // So poll from Node, where the await is real. A shortfall is returned as data
-  // rather than thrown — the reload below is a retry and must still happen.
-  const storeRows = () => page.evaluate(async () => {
-    // Only "the module is not up yet" is caught here — a legitimate not-ready
-    // signal, reported as -1 so the caller keeps waiting. Every other rejection
-    // (context destroyed, browser closed) propagates out of page.evaluate.
-    try { return (await import(new URL('js/store.js', document.baseURI).href)).list().length; }
-    catch (e) { return -1; }
-  });
-  const pollRows = async (want, budgetMs) => {
+  // Polling from Node also removes the previous version's whole error-shape
+  // problem: these helpers return counts rather than throwing, so nothing has to
+  // tell a wait's own timeout apart from an interruption. A real infrastructure
+  // failure propagates out of the Playwright call unchanged.
+  const pollPersisted = async (want, budgetMs) => {
     const deadline = Date.now() + budgetMs;
-    let n = await storeRows();
-    while (n < want && Date.now() < deadline) {
-      await page.waitForTimeout(200);
-      n = await storeRows();
+    while (rows.size < want && Date.now() < deadline) await page.waitForTimeout(150);
+    return rows.size;
+  };
+  const pollCards = async (budgetMs) => {
+    const deadline = Date.now() + budgetMs;
+    let n = await page.locator('.lcard').count();
+    while (n === 0 && Date.now() < deadline) {
+      await page.waitForTimeout(150);
+      n = await page.locator('.lcard').count();
     }
     return n;
   };
 
-  const seedRows = await pollRows(4, SEED_WAIT_MS);
-  const seedTimedOut = seedRows < 4;
-  // DO NOT throw before this reload. It is an implicit RETRY, not a rendering
-  // step: reconcile()'s `reconciledUids` guard is in-memory and a reload builds a
-  // new module realm, while its localStorage RECON_KEY is written only AFTER the
-  // seed completes — so a slow first pass legitimately gets a second chance here.
-  // Throwing above turned recoverable runs into failures (Codex, #108).
+  const seedRows = await pollPersisted(4, SEED_WAIT_MS);
+  // DO NOT throw on a shortfall here. This reload is an implicit RETRY, not a
+  // rendering step: reconcile()'s `reconciledUids` guard is in-memory and a reload
+  // builds a new module realm, while its localStorage RECON_KEY is written only
+  // AFTER the seed completes — so a slow first pass legitimately gets a second
+  // chance. Throwing above turned recoverable runs into failures (Codex, #108).
   await page.reload({ waitUntil: 'load' });
 
-  const cardStart = Date.now();
-  await page.waitForSelector('.lcard', { timeout: CARD_WAIT_MS }).catch(async (e) => {
-    if (!isOwnTimeout(e, cardStart, CARD_WAIT_MS)) throw e;
-    // `seedTimedOut` describes the PRE-reload attempt only, and the reload is a
-    // retry — so a timed-out poll followed by a successful retry and a rendering
-    // failure would be misreported as "seed never landed". Ask the store what it
-    // holds NOW rather than naming a cause from a stale flag (Codex, #108).
-    // Only here is a read failure absorbed: this is the diagnostic path, and
-    // "unreadable" is reported in the message rather than replacing it.
-    const rows = await storeRows().catch(() => -1);
-    const held = rows < 0 ? 'an unreadable store' : rows + ' row(s)';
-    throw new Error(rows >= 4
-      ? 'the seed landed (store.list() holds ' + held + ') but no .lcard rendered within '
-        + CARD_WAIT_MS + 'ms — this is a rendering failure, not a seed failure.'
-      : 'first-sign-in seed never landed: store.list() holds ' + held + ' after the post-reload '
-        + 'retry (the pre-reload ' + SEED_WAIT_MS + 'ms poll '
-        + (seedTimedOut ? 'stopped at ' + seedRows : 'had reached ' + seedRows) + ' row(s)).');
-  });
+  if (await pollCards(CARD_WAIT_MS) === 0) {
+    // Read the account's state NOW rather than from the pre-reload count: the
+    // reload is a retry, so a slow first pass followed by a successful second one
+    // and then a rendering failure must not be reported as a seed failure.
+    throw new Error(rows.size >= 4
+      ? 'the seed persisted (' + rows.size + ' rows in the account) but no .lcard rendered '
+        + 'within ' + CARD_WAIT_MS + 'ms — this is a rendering failure, not a seed failure.'
+      : 'first-sign-in seed never landed: the account holds ' + rows.size + ' row(s) after the '
+        + 'post-reload retry (the pre-reload ' + SEED_WAIT_MS + 'ms wait saw ' + seedRows + ').');
+  }
   await expect(page.locator('.lcard')).toHaveCount(4);   // 715 Plumas sample + 3 demos
   for (const name of ['715 Plumas', '2201 Del Paso', '88 Capitol Mall', '540 N Street']) {
     await expect(page.locator('.lcard__name', { hasText: name })).toHaveCount(1);
