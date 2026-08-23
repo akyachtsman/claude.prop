@@ -100,7 +100,7 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   (`split('/')`, path joins). Closing it needs syntax-aware scanning, not a
   regex. Reviewers should still catch that form by eye.
 
-- **`check-contrast.js` carries two deliberate local edits** on top of the upstream
+- **`check-contrast.js` carries three deliberate local edits** on top of the upstream
   template — `/refresh-repo` must diff them, not revert them. (1) `--color-danger`
   is checked as `#fff` **on** danger, because this app's only use of it is
   `.gallery__del:hover`'s *background* under a hard-coded `color: #fff`
@@ -113,6 +113,13 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   `#FFFFFF00` foreground as 5.09 and passing. Both were verified by forcing the
   scenario: upstream exits 0 on each, the local copy exits 1. Handed upstream — the
   alpha half is generic; the danger half is project-shape-specific.
+  (3) `--color-on-navy` is checked against `--color-accent`, because
+  `--color-on-accent` is **not** the only foreground rendered over accent:
+  `.switcher__btn` (`components.css:45,51`) and `.topbar__action` (`:104` via
+  `.topbar__link`, `:740`) keep `--color-on-navy` while their hover fill becomes
+  `--color-accent`. Both tokens are `#FFFFFF` today, so they agree by coincidence —
+  accent `#888888` with on-accent `#000000` passes every other pair while those
+  controls render white on grey at 3.54:1.
 
 ## Agent Workflow
 1. Use a `claude/<name>` feature branch

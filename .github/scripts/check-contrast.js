@@ -111,6 +111,14 @@ const pairs = [
   // pointer touches the control.
   [t['--color-on-accent'], t['--color-accent-hover'], AA, 'on-accent / accent-hover (button hover)'],
   [t['--color-accent'], t['--color-surface'], AA_LARGE, 'accent / surface (large)'],
+  // PROJECT-SPECIFIC (see CLAUDE.md). --color-on-accent is NOT the only foreground
+  // rendered over accent. `.switcher__btn` (components.css:45,51) and
+  // `.topbar__action` (:104 via .topbar__link, :740) keep --color-on-navy while
+  // their hover fill becomes --color-accent. Upstream's on-accent pair therefore
+  // leaves those controls unchecked, and the two tokens agree today only because
+  // both happen to be #FFFFFF — accent #888888 with on-accent #000000 passes every
+  // other pair while these render white on grey at 3.54:1. (Codex, #109.)
+  [t['--color-on-navy'], t['--color-accent'], AA, 'on-navy controls (switcher/topbar action) / accent hover fill'],
   // PROJECT-SPECIFIC (see CLAUDE.md). Upstream checks --color-danger as a
   // FOREGROUND over the page surfaces. This app never renders it that way: its one
   // use is `.gallery__del:hover { background: var(--color-danger) }`
