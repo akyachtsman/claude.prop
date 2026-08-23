@@ -119,6 +119,11 @@ const pairs = [
   // both happen to be #FFFFFF — accent #888888 with on-accent #000000 passes every
   // other pair while these render white on grey at 3.54:1. (Codex, #109.)
   [t['--color-on-navy'], t['--color-accent'], AA, 'on-navy controls (switcher/topbar action) / accent hover fill'],
+  // PROJECT-SPECIFIC (see CLAUDE.md). Found by DERIVING pairs from components.css
+  // rather than enumerating them: `.rt-chip--noi` (:397) renders accent text on
+  // accent-light and scored 4.32:1 at 11px bold — a real AA failure that none of
+  // the hand-written pairs above could see, because no pair described it.
+  [t['--color-accent-hover'], t['--color-accent-light'], AA, 'NOI chip text / accent-light fill'],
   // PROJECT-SPECIFIC (see CLAUDE.md). Upstream checks --color-danger as a
   // FOREGROUND over the page surfaces. This app never renders it that way: its one
   // use is `.gallery__del:hover { background: var(--color-danger) }`

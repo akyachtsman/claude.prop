@@ -100,7 +100,7 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   (`split('/')`, path joins). Closing it needs syntax-aware scanning, not a
   regex. Reviewers should still catch that form by eye.
 
-- **`check-contrast.js` carries three deliberate local edits** on top of the upstream
+- **`check-contrast.js` carries four deliberate local edits** on top of the upstream
   template — `/refresh-repo` must diff them, not revert them. (1) `--color-danger`
   is checked as `#fff` **on** danger, because this app's only use of it is
   `.gallery__del:hover`'s *background* under a hard-coded `color: #fff`
@@ -120,6 +120,16 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   `--color-accent`. Both tokens are `#FFFFFF` today, so they agree by coincidence —
   accent `#888888` with on-accent `#000000` passes every other pair while those
   controls render white on grey at 3.54:1.
+  (4) An `accent-hover / accent-light` pair covers the **NOI chip**. It was found by
+  DERIVING pairs from `components.css` (every rule declaring both a `color:` and a
+  `background:` from tokens) rather than enumerating them — `.rt-chip--noi` (`:397`,
+  rendered at `dashboard.js:482`) was shipping `--color-accent` on
+  `--color-accent-light` at **4.32:1**, a real WCAG AA failure at 11px bold, which
+  no hand-written pair described. The chip now uses `--color-accent-hover` (6.07),
+  an already-approved token from the same family — **the Banker Navy palette itself
+  is unchanged**. Re-deriving after the fix finds zero token pairs below AA.
+  A hand-maintained pair list cannot be complete; re-run that derivation when
+  `components.css` gains a new fg/bg pairing.
 
 ## Agent Workflow
 1. Use a `claude/<name>` feature branch
