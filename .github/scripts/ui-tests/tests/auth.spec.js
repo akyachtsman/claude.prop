@@ -171,23 +171,38 @@ test('S28 first-sign-in seed — a fresh account is seeded with the sample + dem
     return n;
   };
 
+  // THE RELOAD BELOW IS NOT A RETRY. Three rounds of this PR assumed it was, on my
+  // reading that reconcile() writes its RECON_KEY only after the seed completes —
+  // so a slow pass would leave the flag unset and get a second attempt. That reading
+  // conflated the seed CODE completing with the seed PERSISTING. js/account.js:54-56
+  // is `missingFixtures(...).forEach((f) => store.save(f))` followed immediately by
+  // `setItem(RECON_KEY, ...)` with no await between them, and save() returns as soon
+  // as it has written the browser cache (js/store.js:162-167). So the flag is set
+  // milliseconds in, survives the reload, and the new realm's reconcile() returns at
+  // js/account.js:45 without reseeding — the in-memory `reconciledUids` reset does
+  // not matter, because the localStorage guard has already closed.
+  //
+  // Confirmed empirically too: under a 400ms-per-POST throttle the previous version
+  // reloaded before any write landed and still reported 0 rows AFTER the reload. A
+  // reseed would have re-saved them.
+  //
+  // So a persistence shortfall is reported HERE, where it is true and actionable.
+  // Reloading first and then blaming a recovery that cannot happen is the same
+  // misreporting this PR exists to remove (Codex, #108).
   const seedRows = await pollPersisted(4, SEED_WAIT_MS);
-  // DO NOT throw on a shortfall here. This reload is an implicit RETRY, not a
-  // rendering step: reconcile()'s `reconciledUids` guard is in-memory and a reload
-  // builds a new module realm, while its localStorage RECON_KEY is written only
-  // AFTER the seed completes — so a slow first pass legitimately gets a second
-  // chance. Throwing above turned recoverable runs into failures (Codex, #108).
+  if (seedRows < 4) {
+    throw new Error('first-sign-in seed did not persist: the account holds ' + seedRows
+      + ' of 4 rows after ' + SEED_WAIT_MS + 'ms. A reload cannot recover this — reconcile() '
+      + 'has already written its RECON_KEY and will not reseed.');
+  }
+
+  // The reload's real job: make the assertion read the PERSISTED account rather than
+  // first paint, so it holds identically on chromium and webkit.
   await page.reload({ waitUntil: 'load' });
 
   if (await pollCards(CARD_WAIT_MS) === 0) {
-    // Read the account's state NOW rather than from the pre-reload count: the
-    // reload is a retry, so a slow first pass followed by a successful second one
-    // and then a rendering failure must not be reported as a seed failure.
-    throw new Error(rows.size >= 4
-      ? 'the seed persisted (' + rows.size + ' rows in the account) but no .lcard rendered '
-        + 'within ' + CARD_WAIT_MS + 'ms — this is a rendering failure, not a seed failure.'
-      : 'first-sign-in seed never landed: the account holds ' + rows.size + ' row(s) after the '
-        + 'post-reload retry (the pre-reload ' + SEED_WAIT_MS + 'ms wait saw ' + seedRows + ').');
+    throw new Error('the seed persisted (' + rows.size + ' rows in the account) but no .lcard '
+      + 'rendered within ' + CARD_WAIT_MS + 'ms — this is a rendering failure, not a seed failure.');
   }
   await expect(page.locator('.lcard')).toHaveCount(4);   // 715 Plumas sample + 3 demos
   for (const name of ['715 Plumas', '2201 Del Paso', '88 Capitol Mall', '540 N Street']) {
