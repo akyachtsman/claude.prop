@@ -67,17 +67,18 @@ jobs:
           for path in .github/scripts/ui-tests/tests index.html js styles; do
             [ -e "$path" ] || { echo "ERROR: guard cannot scan missing $path"; exit 1; }
           done
-          hits=$(
-            { grep -rnE "(import|goto|fetch)\(\s*['\"]/" .github/scripts/ui-tests/tests || true; } 
-            { grep -rnE "(from|import\(|src=|href=)\s*['\"]/[a-zA-Z]" index.html js styles || true; }
-          )
+          # ONE pattern over both trees. Two patterns drifted apart: the spec
+          # half matched fetch( and the app half did not, so fetch('/x') in js/
+          # sailed through (caught by Codex on PR #101). Covers module/fetch
+          # consumers, HTML attributes with any spacing, and CSS url().
+          hits=$(grep -rnE "(from|import\(|fetch\(|goto\()\s*['\"]/[a-zA-Z]|(src|href|action|poster|srcset)\s*=\s*['\"]?/[a-zA-Z]|url\(\s*['\"]?/[a-zA-Z]" \
+                   .github/scripts/ui-tests/tests index.html js styles || true)
           if [ -n "$hits" ]; then
             echo "$hits"
             echo "ERROR: root-absolute path found — use an app-relative URL"
             echo "       (e.g. new URL('js/store.js', document.baseURI).href)"
             exit 1
           fi
-
       # ── Contrast guardrail ───────────────────────────────────────────────────
       # WCAG AA check against styles/tokens.css (this project's design tokens).
       # Exits with a notice (no failure) until /design-intake creates tokens.css.
