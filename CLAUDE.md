@@ -95,6 +95,10 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   `qa.yml`'s **"No root-absolute paths"** step in `static-checks` enforces this;
   it is a **deliberate local customization** of the upstream `qa.yml` template —
   `/refresh-repo` must preserve it, not treat it as drift to overwrite.
+  **Known limit:** a path assembled from a bare slash (`fetch('/' + p)`) is not
+  detected — matching a standalone `'/'` would flag every legitimate one
+  (`split('/')`, path joins). Closing it needs syntax-aware scanning, not a
+  regex. Reviewers should still catch that form by eye.
 
 ## Agent Workflow
 1. Use a `claude/<name>` feature branch
