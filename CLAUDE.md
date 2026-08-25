@@ -156,8 +156,8 @@ Read by `ui-tester` and the Playwright kit at runtime — fill in before invokin
 | Key | Value |
 |---|---|
 | App URL | `https://akyachtsman.github.io/claude.prop/` |
-| Valid test credential | _none — no auth in v1 (local-first app)_ |
-| Invalid test credential | _n/a_ |
+| Valid test credential | **`TEST_AUTH_CREDENTIAL` repo secret only — never written here.** The app has been gated behind login since 2026-07-16, so the old "none, no auth in v1" note was stale. `app.spec.js` reads that env var and nothing else: upstream removed the CLAUDE.md fallback because it was a standing instruction to commit a credential, and because its regex could match a table LABEL and type that prose into the first text input. Unset = no credential, and the auth scenarios self-skip (12 of 208 on the live tier) rather than typing anything. |
+| Invalid test credential | _n/a — the suite never asserts a rejected login_ |
 | Primary nav button | `Load sample deal` (first-run) / `+ New property` |
 | Primary content selector | `.kpi-strip` (dashboard) · `.lcard` (list) · `.compare-table` (compare) |
 | Nav cards | header action bar `['Compare', 'Archive', '+ New property', 'Import a listing']` (list view only) + static nav `['Properties', 'Backup', 'Restore']` |
