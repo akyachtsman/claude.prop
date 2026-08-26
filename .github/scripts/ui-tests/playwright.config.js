@@ -1,6 +1,6 @@
-// Playwright configuration for this static HTML app.
-// Live URL comes from the APP_URL repo variable in CI; the fallback below
-// is this project's GitHub Pages URL.
+// Playwright configuration template for static HTML apps.
+// Copy to .github/scripts/ui-tests/playwright.config.js and customize.
+// Replace all REPLACE_* placeholders before use.
 
 import { defineConfig, devices } from '@playwright/test';
 
@@ -10,10 +10,14 @@ export default defineConfig({
   retries: 1,
   reporter: [['list'], ['json', { outputFile: '../../../.agent-reports/playwright-results.json' }]],
   use: {
+    // REPLACE_WITH_YOUR_APP_URL — e.g. https://yourname.github.io/your-repo/
     // Extra HTML entry points (admin/vendor consoles): set APP_PAGES to a
     // comma-separated list of paths relative to APP_URL — the ENTRY scenario
     // load-gates each one (test.md → UI coverage gates).
     baseURL: (process.env.APP_URL || 'https://akyachtsman.github.io/claude.prop/').replace(/\/?$/, '/'),
+    // PROJECT-SPECIFIC: use a preinstalled Chromium when PW_EXECUTABLE is set
+    // (remote sandboxes ship one and block the browser download).
+    launchOptions: process.env.PW_EXECUTABLE ? { executablePath: process.env.PW_EXECUTABLE } : undefined,
     headless: true,
     // ⚠️ BOTH OF THESE DEFAULT TO 0 = NO TIMEOUT IN PLAYWRIGHT TEST, and that is
     // the whole reason they are here. Left unset, an action or a navigation is
@@ -55,12 +59,19 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     video: 'off',
     trace: 'on-first-retry',
-    // PROJECT-SPECIFIC (see CLAUDE.md). Local-only escape hatch: point at a
-    // preinstalled browser when the runner can't fetch Playwright's pinned build
-    // (offline sandbox). Unset in CI, so CI uses `npx playwright install`.
-    launchOptions: process.env.PW_EXECUTABLE ? { executablePath: process.env.PW_EXECUTABLE } : undefined,
   },
   outputDir: '../../../.agent-reports/screenshots',
+  // THIS LIST IS THE ONLY THING THAT DECIDES WHAT WIDTHS THIS APP IS EVER
+  // RENDERED AT. One spec set (tests/app.spec.js) runs against two targets — the
+  // bundled local server in qa.yml, the live URL in qa-live.yml/qa-response.yml —
+  // and both inherit this list; exactly one test sets a viewport of its own (S4,
+  // at 390). There is no second tier to compensate, so trimming this to phone
+  // profiles leaves nothing anywhere rendering the app at laptop width, and CI
+  // stays green while it happens: a viewport never instantiated produces no
+  // failing test. claude.prop's copy of this file lost its laptop and tablet
+  // profiles exactly that way, and nothing reported it.
+  // check-ui-viewports.js (run by the ui-suite composite) now fails the build on
+  // it, by IMPORTING this file rather than reading it as text.
   projects: [
     // Desktop first: global.md requires laptop + tablet + phone coverage, and
     // test.md → Layered UI mandates before/during/after screenshots at

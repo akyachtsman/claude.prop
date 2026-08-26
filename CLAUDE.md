@@ -224,12 +224,19 @@ logged-out gate states + fresh-account seed live in `auth.spec.js` (S23–S28) w
 the auth client stubbed (register the `**/auth/v1/**` catch-all route FIRST and
 `token`/`recover` specifics LAST — Playwright's last-registered route wins).
 
-**The generic auth scenarios (S2/S3/S4 in `app.spec.js`) skip BY DESIGN here — a skip
-is the correct state, not a coverage gap, and "fixing" it by setting
-`TEST_AUTH_CREDENTIAL`/`TEST_AUTH_EMAIL` makes the signal strictly worse.** They are
+**The generic auth scenario `S2` skips BY DESIGN here — a skip is the correct state,
+not a coverage gap, and "fixing" it by setting
+`TEST_AUTH_CREDENTIAL`/`TEST_AUTH_EMAIL` makes the signal strictly worse.** It is
 structurally redundant with S23–S28 above, which exercise the *real* gate (only the
 backend is stubbed) deterministically and without credentials — see the credential row
-in the UI Test Configuration table for the measurement. Do **not** add a local
+in the UI Test Configuration table for the measurement. **Precise scope, measured
+2026-08-26 on the refreshed kit:** exactly ONE of the three desktop skips is S2. The
+other two are `NAV` (no multi-level drill-down with an in-app back control) and `ENTRY`
+(no extra `APP_PAGES` declared) — structural, nothing to do with auth. **S3 and S4 do
+NOT skip**: they carry no credential guard and run unconditionally, exercising their
+real subjects (interactive elements; 390px overflow) with the auth step a no-op. An
+earlier note here said "S2/S3/S4 skip" and "three auth scenarios" — both wrong on the
+count and the names, though the decision they supported is unchanged. Do **not** add a local
 `expect(mechanism).not.toBe('none')` guard either: the upstream kit carries one that
 discriminates (gate absent **with** credentials configured → fail, naming the
 contradiction; gate absent **without** them → a visible skip), so a local copy would
