@@ -18,6 +18,12 @@
 #   - Add TEST_AUTH_CREDENTIAL as a repository secret — skip if the project has
 #     (email+password gates need TEST_AUTH_EMAIL as well — directives#304)
 #     no auth; the empty secret makes auth tests self-skip
+#     ⚠️ LOCAL OVERRIDE — DO NOT set either secret on this repo. The generic
+#     suite signs itself in (app.spec.js beforeEach -> installSignedIn), so no
+#     gate is ever on screen, mechanism resolves to 'none', and both auth
+#     verifiers are no-ops on 'none'. Setting the secret converts three honest
+#     skips into three vacuous passes. Measured: S2 passes in 7.1s with a
+#     deliberately wrong password. See the credential row in CLAUDE.md.
 #   - Set UI_TESTS_DIR below to the path of your Playwright test directory
 #   - Adjust the UI_PATHS regex in the ui-changes job to your project layout
 
