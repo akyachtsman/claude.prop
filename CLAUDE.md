@@ -156,7 +156,7 @@ Read by `ui-tester` and the Playwright kit at runtime — fill in before invokin
 | Key | Value |
 |---|---|
 | App URL | `https://akyachtsman.github.io/claude.prop/` |
-| Valid test credential | **LEAVE BOTH UNSET — setting them buys nothing here and manufactures a false green.** Verified 2026-08-26 on `4933e97`: the generic suite's `beforeEach` signs every test in via `installSignedIn` (`app.spec.js:20`), so by the time S2 navigates there is **no gate on screen** (measured: 0 visible password inputs, 0 `.authgate` nodes). `detectAuthGate()` therefore returns false, `mechanism` becomes `'none'` (`:799`), and both checks that would judge the login are explicitly no-ops on `'none'` — the shared verifier (`:571 if (mechanism === 'none') return;`) and S2's own acceptance check (`:868 if (mechanism !== 'none' && …)`). Proof: with `TEST_AUTH_CREDENTIAL` set to a deliberately wrong password, **S2 passed in 7.1s**. Unset, the three auth scenarios self-skip; set, they pass without exercising auth — a skip reports "not covered", a vacuous pass reports "covered", so setting them makes the signal strictly worse. `ui-suite` runs `npx playwright test` unfiltered, so this holds on the **live tier too**, not just locally. Real gate coverage already lives in `auth.spec.js` S23–S28 (auth client stubbed, gate un-stubbed). If the generic auth scenarios are ever to mean anything here, the fix is structural — the suite must reach a real gate — not a credential. Never write either value in this file. |
+| Valid test credential | **LEAVE BOTH UNSET — and that is the correct answer, not a compromise.** Two independent reasons. **(1) Redundant:** the generic S2/S3/S4 would duplicate coverage `auth.spec.js` already has deterministically. S24 is not a mocked assertion about auth — `stubLoggedOut` (`auth.spec.js:13`) routes only the *network* (`/auth/v1/**`, `/rest/v1/properties`) and injects **no session**, so the app boots genuinely logged out, the **real `.authgate` renders**, S24 fills its own `input[type=email]` + `[type=password]`, clicks the real Sign in, and asserts `.account__email` + `.authgate__title` gone. Only the backend response is stubbed — which is exactly what generic S2 claims to do. **(2) Costly:** real Supabase sign-ins from CI runners would put live auth traffic in a *blocking* job — new flake bought with credentials, for coverage that already exists. Verified 2026-08-26 that setting them would also be actively *wrong* here: the generic suite's `beforeEach` signs every test in via `installSignedIn` (`app.spec.js:20`), so no gate is on screen (measured: 0 visible password inputs, 0 `.authgate` nodes), `mechanism` resolves to `'none'` (`:799`), and both judges are explicit no-ops on it (`:571` shared verifier, `:868` S2's own check) — with a deliberately wrong password, **S2 passed in 7.1s**. ⚠️ `TEST_AUTH_EMAIL` would not be a secret even if set: it is typed into a *visible* input, so failure screenshots record it where log masking cannot reach. Never write either value in this file. |
 | Invalid test credential | _n/a — the suite never asserts a rejected login_ |
 | Primary nav button | `Load sample deal` (first-run) / `+ New property` |
 | Primary content selector | `.kpi-strip` (dashboard) · `.lcard` (list) · `.compare-table` (compare) |
@@ -222,8 +222,24 @@ reloads), and suppresses the first-sign-in reconcile so a signed-in empty accoun
 behaves like the old local first-run (same "Load sample deal"/"+ New" flow). The
 logged-out gate states + fresh-account seed live in `auth.spec.js` (S23–S28) with
 the auth client stubbed (register the `**/auth/v1/**` catch-all route FIRST and
-`token`/`recover` specifics LAST — Playwright's last-registered route wins). The
-store layer (backend swap, offline choke-point, first-sign-in upload/dedup) is
+`token`/`recover` specifics LAST — Playwright's last-registered route wins).
+
+**The generic auth scenarios (S2/S3/S4 in `app.spec.js`) skip BY DESIGN here — a skip
+is the correct state, not a coverage gap, and "fixing" it by setting
+`TEST_AUTH_CREDENTIAL`/`TEST_AUTH_EMAIL` makes the signal strictly worse.** They are
+structurally redundant with S23–S28 above, which exercise the *real* gate (only the
+backend is stubbed) deterministically and without credentials — see the credential row
+in the UI Test Configuration table for the measurement. Do **not** add a local
+`expect(mechanism).not.toBe('none')` guard either: the upstream kit carries one that
+discriminates (gate absent **with** credentials configured → fail, naming the
+contradiction; gate absent **without** them → a visible skip), so a local copy would
+fork the kit to get something worse and the next `/refresh-repo` would have to diff it
+back out. Worth carrying generally: there are two ways an auth scenario goes vacuous —
+never *reaching* the gate (a public landing route), or being *mocked past* it (this
+repo's file-wide `installSignedIn`). Same symptom, `mechanism` `'none'` and a green
+run; different cause.
+
+The store layer (backend swap, offline choke-point, first-sign-in upload/dedup) is
 covered by Node unit tests in `tests/*.test.mjs` (run `node --test
 tests/store.test.mjs tests/reconcile.test.mjs`; also a blocking CI step in
 `qa.yml`). RLS isolation + authenticated-role upsert are proven at the DB via the
