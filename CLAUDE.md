@@ -254,6 +254,43 @@ Supabase MCP (impersonated, rolled-back). The password-reset email round-trip is
 verified **manually** (owner must set Auth Site URL + Redirect URLs to the Pages
 URL and `http://localhost:8099`).
 
+## Sandbox Limits (measured 2026-09-01 — re-derive, don't trust past its expiry)
+`test.md` → *Sandboxed local runs* requires each project to record what it cannot
+run in an agent sandbox, **with the causes and what would make this wrong**. For
+this repo the answer is unusually short, and the reason is worth keeping.
+
+| Can it run here? | Detail |
+|---|---|
+| **Full UI suite** | **Yes** — 49 passed / 3 skipped on desktop, against a local server |
+| Live-URL run | **No** — `page.goto` gets `net::ERR_CONNECTION_RESET` on the Pages URL while `curl` gets **200** on that same URL, seconds apart. Browser-only, not a host outage |
+| Unit tests, all static guards | **Yes** — no network |
+
+**Why the suite still runs in full:** this app has **no runtime CDN import**.
+`js/supabase.js:11` loads the client from `./vendor/supabase-js.js` (720KB, zero
+`esm.sh` references), and there are **zero** remote imports in `js/` or
+`index.html` outside `vendor/`. `esm.sh` is blocked here (`000`) while
+`raw.githubusercontent.com` returns `200` — the block is **selective**, so "no
+network" is the wrong model. A project that imports its client from a CDN at
+runtime gets a page that serves 200 with an app that never boots
+(`claude.insurance`, 26 of 36 local failures, CI 0 failed). Vendoring is what
+makes local runs meaningful here; it is not luck.
+
+**The remedy for the live-URL limit — supply the missing thing, never lower the
+bar:** `python3 -m http.server 8099` and `APP_URL=http://127.0.0.1:8099/`, every
+assertion intact against the same built tree. Never relax an assertion, add a
+retry, skip a case, disable TLS verification, or unset `HTTPS_PROXY` to make a
+sandbox run green. For the browser path specifically, `global.md` → *Network
+Access Playbook* rung 6 governs; use `PW_EXECUTABLE=/opt/pw-browsers/chromium`
+(a **symlink** — do not append a subpath to it, and prefer it over the versioned
+`chromium-<n>` directory, which moves on every browser bump).
+
+**What would make this wrong:** adding any runtime CDN import to app source
+(kills the "suite runs in full" row); the egress allowlist changing (the live-URL
+row could start passing, or `raw.githubusercontent.com` could start failing); a
+browser bump changing `/opt/pw-browsers/` layout; or the Pages URL becoming
+browser-reachable. Re-measure rather than trusting this table — a local failure
+is not evidence about the suite until CI has ruled on the same commit.
+
 ## Reporting Requirements
 Agents write evidence to `.agent-reports/`:
 - `implementation-summary.md`, `test-report.md`, `ui-test-report.md`
