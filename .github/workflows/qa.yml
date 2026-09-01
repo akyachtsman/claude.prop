@@ -138,6 +138,14 @@ jobs:
         # which only claude.directives has, and says so.
         run: python3 .github/scripts/check-job-bounds.py
 
+      - name: Tracked Python compiles without warnings
+        # A `\` in a plain (non-raw) docstring is invisible on 3.11, a
+        # SyntaxWarning on 3.12, and a SyntaxError on 3.15 — at which point the
+        # guard carrying it stops running and stops checking. This compiles every
+        # tracked .py with warnings promoted to errors, so the class cannot come
+        # back silently on a future interpreter. Cheap: no imports, no execution.
+        run: python3 .github/scripts/check-py-warnings.py
+
       # ── Store unit tests (PROJECT-SPECIFIC — see CLAUDE.md) ─────────────────
       # Node-native tests for the storage layer, reconcile, math input, media
       # and import parsing. Browser-free — shims localStorage/navigator — so
