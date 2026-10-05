@@ -881,7 +881,7 @@ body.is-readonly #view button:not(.topbar__link):not(.switcher__btn) {
 }
 .gallery__del {
   position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border: none;
-  border-radius: var(--radius-pill); background: rgba(19, 46, 78, 0.72); color: #fff;
+  border-radius: var(--radius-pill); background: rgba(19, 46, 78, 0.72); color: var(--color-on-danger);
   font-size: 15px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center;
 }
 .gallery__del:hover, .gallery__del:focus-visible { background: var(--color-danger); }

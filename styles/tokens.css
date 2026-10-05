@@ -17,6 +17,7 @@
   --color-accent-light:   #DFF0EC;
   --color-on-accent:      #FFFFFF;   /* text/icon on an accent fill (WCAG AA) */
   --color-danger:         #B3372A;
+  --color-on-danger:      #FFFFFF;   /* glyph on a danger fill (.gallery__del:hover) */
 
   /* color — brand structure */
   --color-navy:           #132E4E;   /* top bar, display headings */

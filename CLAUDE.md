@@ -254,18 +254,42 @@ Supabase MCP (impersonated, rolled-back). The password-reset email round-trip is
 verified **manually** (owner must set Auth Site URL + Redirect URLs to the Pages
 URL and `http://localhost:8099`).
 
-## Sandbox Limits (measured 2026-09-01 — re-derive, don't trust past its expiry)
+## Sandbox Limits (measured 2026-10-05 — re-derive, don't trust past its expiry)
 `test.md` → *Sandboxed local runs* requires each project to record what it cannot
-run in an agent sandbox, **with the causes and what would make this wrong**. For
-this repo the answer is unusually short, and the reason is worth keeping.
+run in an agent sandbox, **with the causes and what would make this wrong**.
 
-| Can it run here? | Detail |
-|---|---|
-| **Full UI suite** | **Yes** — 49 passed / 3 skipped on desktop, against a local server |
-| Live-URL run | **No** — `page.goto` gets `net::ERR_CONNECTION_RESET` on the Pages URL while `curl` gets **200** on that same URL, seconds apart. Browser-only, not a host outage |
-| Unit tests, all static guards | **Yes** — no network |
+⚠️ **CORRECTION to the 2026-09-01 version of this section, which said "Full UI
+suite — Yes".** That was measured with `--project=desktop` only and overstated
+what runs here. Two of the four Playwright projects are **webkit**
+(`tablet` = iPad gen 7, `iphone` = iPhone 12); the other two are chromium.
 
-**Why the suite still runs in full:** this app has **no runtime CDN import**.
+| Project | Band | Runs here? |
+|---|---|---|
+| `desktop` (chromium) | laptop | **Yes** — 49 passed / 3 skipped |
+| `mobile-chrome` (chromium) | phone | **Yes** — 49 passed / 3 skipped |
+| `tablet` (webkit) | tablet | **No** — `browserType.launch` fails, 52/52 |
+| `iphone` (webkit) | phone | **No** — same cause |
+| Unit tests, all static guards | — | **Yes** — no network |
+| Live-URL run (any project) | — | **No** — `page.goto` gets `ERR_CONNECTION_RESET` on the Pages URL while `curl` gets **200** on it seconds apart. Browser-only, not a host outage |
+
+**Why webkit fails, and why "absent" was the wrong diagnosis.** `npx playwright
+install webkit` **succeeds** — `webkit-2359` lands in `/opt/pw-browsers` and the
+command **exits 0** — while printing a `validateDependenciesLinux` error. The
+binary is there; its OS libraries are not, and `install-deps` needs root apt.
+This is `test.md` → *grade on whether a thing WORKS, not a cheaper stand-in*,
+hitting both of its named traps at once: **a present binary is not a browser that
+launches, and an install that exits 0 is not a browser that launches.** Measured,
+not inferred — the 52 failures are all `browserType.launch`.
+
+**Consequence for the #348 executed-coverage gate.** `check-ui-viewports.js
+--declared … --report …` verifies each width class actually *ran*, not merely that
+it was declared. Locally it therefore **cannot pass**: the tablet band can never
+produce a result here. That is not a project defect — CI's `ui-suite` composite
+installs chromium **and** webkit with their deps and runs the full matrix, where
+all three bands get results. Locally, verify with `--project=desktop` and
+`--project=mobile-chrome` and let CI arbitrate the tablet band.
+
+**Why the chromium projects run at all:** this app has **no runtime CDN import**.
 `js/supabase.js:11` loads the client from `./vendor/supabase-js.js` (720KB, zero
 `esm.sh` references), and there are **zero** remote imports in `js/` or
 `index.html` outside `vendor/`. `esm.sh` is blocked here (`000`) while
@@ -279,17 +303,24 @@ makes local runs meaningful here; it is not luck.
 bar:** `python3 -m http.server 8099` and `APP_URL=http://127.0.0.1:8099/`, every
 assertion intact against the same built tree. Never relax an assertion, add a
 retry, skip a case, disable TLS verification, or unset `HTTPS_PROXY` to make a
-sandbox run green. For the browser path specifically, `global.md` → *Network
-Access Playbook* rung 6 governs; use `PW_EXECUTABLE=/opt/pw-browsers/chromium`
-(a **symlink** — do not append a subpath to it, and prefer it over the versioned
-`chromium-<n>` directory, which moves on every browser bump).
+sandbox run green. For the browser path, `global.md` → *Network Access Playbook*
+rung 6 governs; use `PW_EXECUTABLE=/opt/pw-browsers/chromium` (a **symlink** — do
+not append a subpath, and prefer it to the versioned `chromium-<n>` directory,
+which moves on every browser bump). **Do not pass `--reporter=line` when the JSON
+report is needed**: a CLI reporter *replaces* the config's list, so the json
+reporter never writes and the #348 gate has nothing to read.
 
-**What would make this wrong:** adding any runtime CDN import to app source
-(kills the "suite runs in full" row); the egress allowlist changing (the live-URL
-row could start passing, or `raw.githubusercontent.com` could start failing); a
-browser bump changing `/opt/pw-browsers/` layout; or the Pages URL becoming
-browser-reachable. Re-measure rather than trusting this table — a local failure
-is not evidence about the suite until CI has ruled on the same commit.
+**What would make this wrong:** webkit's OS deps becoming present (the two webkit
+rows would flip); adding any runtime CDN import to app source; the egress
+allowlist changing; a browser bump changing `/opt/pw-browsers/` layout; or the
+Pages URL becoming browser-reachable. Re-measure rather than trusting this table
+— and a local failure is not evidence about the suite until CI has ruled on the
+same commit.
+
+**KD-1 (UI-test kit defects list):** `CLEAR` as of 2026-10-05 — the kit carries
+upstream's own guard shape at `app.spec.js` (`if (!s2Gated) { … if
+(authConfigured) { throw …`). Nothing declined; `/refresh-repo` re-runs every
+entry every time regardless.
 
 ## Reporting Requirements
 Agents write evidence to `.agent-reports/`:

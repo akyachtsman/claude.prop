@@ -22,10 +22,10 @@
 #     no auth; the empty secret makes auth tests self-skip
 #     ⚠️ LOCAL OVERRIDE — DO NOT set either secret on this repo. The generic
 #     suite signs itself in (app.spec.js beforeEach -> installSignedIn), so no
-#     gate is ever on screen, mechanism resolves to 'none', and both auth
-#     verifiers are no-ops on 'none'. Setting the secret converts S2's honest
-#     skip into a vacuous pass. Measured: S2 passes in 7.1s with a
-#     deliberately wrong password. See the credential row in CLAUDE.md.
+#     gate is ever on screen, mechanism resolves to 'none', and S2 skips by
+#     design. Setting the secret converts that honest skip into a vacuous pass.
+#     Measured: S2 passes in 7.1s with a deliberately wrong password. See the
+#     credential row in CLAUDE.md.
 #   - Set UI_TESTS_DIR below to the path of your Playwright test directory
 #   - Adjust the UI_PATHS regex in the ui-changes job to your project layout
 
@@ -114,8 +114,10 @@ jobs:
           fi
 
       # ── Contrast guardrail ───────────────────────────────────────────────────
-      # WCAG AA check against styles/tokens.css (this project's design tokens).
-      # Exits with a notice (no failure) until /design-intake creates tokens.css.
+      # WCAG AA check against this project's design tokens — styles/tokens.css or
+      # css/tokens.css by default; elsewhere, append `--tokens <file>` (repeat it
+      # per theme file). Exits with a notice (no failure) until /design-intake
+      # creates tokens.css.
       - name: Contrast guardrail (WCAG AA)
         run: node .github/scripts/check-contrast.js
 
@@ -380,6 +382,12 @@ jobs:
           app-url: http://localhost:8080
           test-auth-credential: ${{ secrets.TEST_AUTH_CREDENTIAL }}
           test-auth-email: ${{ secrets.TEST_AUTH_EMAIL }}
+          # VARIABLES, not secrets: selectors and a URL substring, and a masked one
+          # is unreadable in a failure message. Empty keeps the windowed answer (#320)
+          # and S2 reading the gate clearing as success (#379).
+          test-auth-ready-selector: ${{ vars.TEST_AUTH_READY_SELECTOR }}
+          test-auth-ready-request: ${{ vars.TEST_AUTH_READY_REQUEST }}
+          test-auth-success-selector: ${{ vars.TEST_AUTH_SUCCESS_SELECTOR }}
           artifact-name: playwright-results-local
           app-pages: ${{ vars.APP_PAGES }}
           start-local-server: 'true'
