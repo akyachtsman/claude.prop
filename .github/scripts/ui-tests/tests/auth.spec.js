@@ -155,6 +155,10 @@ test('S29 upload prompt — shows once with local deals and dismisses cleanly (n
 // AND clears that key on every navigation, so each reload earns a genuine prompt;
 // `reconciledUids` is module state and resets with the page anyway.
 test('DISMISS account modal — the local-deals prompt closes by control, Escape AND backdrop', async ({ page }) => {
+  // BUDGET — derived, same convention. MEASURED on 7a5e3a9: mobile-chrome 1.4s ·
+  // iphone 6.8s. Three full reloads (the prompt is once-per-account, so each path
+  // needs a fresh one), and webkit on this runner is the slow case. 60s is ~9x.
+  test.setTimeout(60_000);
   const localDeal = {
     id: 'p-local-dismiss', schemaVersion: 1, name: 'Dismiss Fixture',
     info: { askingPrice: 500000, rentableSF: 5000, lotSize: '', yearBuilt: '', zoning: '', hvacAge: '', roofAge: '', parking: '', ceilingHeight: '', appraisedValue: 0, apn: '', bedrooms: '', baths: '' },

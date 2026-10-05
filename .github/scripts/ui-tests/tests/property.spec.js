@@ -890,6 +890,12 @@ test('S32b archive persists across reload — an archived deal stays out of the 
 // counts below are therefore load-bearing: each step sets up the data state that
 // selects the branch it means to click.
 test('NAV back-flow — every drill-down returns to Properties and never revisits the page just left', async ({ page }) => {
+  // BUDGET — derived, same convention as above. MEASURED on 7a5e3a9: desktop 5.1s
+  // · mobile-chrome 4.9s · tablet 7.3s · iphone 11.0s. It PASSED everywhere, but
+  // 11.0s against the inherited 30_000 default is only ~2.7x on the slowest engine,
+  // and this scenario grew from three drill-downs to five when the four back-button
+  // branches were covered. 90s is ~8x the slowest observed run.
+  test.setTimeout(90_000);
   const errors = watchErrors(page);
   const backToList = async (gone) => {
     await page.click('button:has-text("Back to properties")');
@@ -970,6 +976,23 @@ test('NAV back-flow — every drill-down returns to Properties and never revisit
 // centred panel — because clicking the overlay's centre hits the panel instead and
 // the handlers deliberately only close on `e.target === overlay`.
 test('DISMISS project overlays — gallery, lightbox, Listing details and Import each close by control, Escape AND backdrop', async ({ page }) => {
+  // BUDGET — derived, per the kit's own convention (app.spec.js: "Every scenario
+  // below sets its own test.setTimeout and derives it"); its DISMISS carries
+  // 300_000. This one carried NOTHING and inherited the config's 30_000, which is
+  // why it timed out on `iphone` in CI while passing everywhere else.
+  //
+  // MEASURED on 7a5e3a9, same commit, same code: desktop 3.4s · mobile-chrome 2.2s
+  // · tablet (webkit) 19.7s · iphone (webkit) >31.4s, killed by the 30s test
+  // timeout mid-action. Note what the two attempts prove: the first died on the
+  // backdrop click and the retry on the `Done` click — DIFFERENT steps, which is
+  // the signature of a clock running out, not of a broken dismissal path. tablet
+  // is the same engine and passed all twelve cycles.
+  //
+  // 12 open-dismiss cycles, and webkit on this runner is ~1.5-1.7x the tablet cost
+  // (NAV back-flow 7.3s -> 11.0s; Photos gallery 9.4s -> 16.1s), so the slowest
+  // engine needs ~33s. 180s is ~5x that. Re-derive if a sixth overlay is added:
+  // the cost is per cycle, not per test.
+  test.setTimeout(180_000);
   const errors = watchErrors(page);
   // Serve a real pixel for the fixture photo URLs. test.md -> "stub the
   // collaborators, never the subject": the subject here is DISMISSAL, the image is
