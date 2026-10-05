@@ -10,13 +10,71 @@
 // are present in HTML but not visible to Playwright, check for dvh units in CSS and
 // replace with vh.
 
-import { test, expect } from '@playwright/test';
+import { test as base, expect } from '@playwright/test';
 import { installSignedIn } from './_supabase-mock.js';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RENDER WITNESS — evidence that a test BODY started at its project's width (#348)
+// ─────────────────────────────────────────────────────────────────────────────
+// check-ui-viewports.js reads the run's JSON report. A result there proves a test
+// was SCHEDULED in a project declaring a width; it does not prove a page was ever
+// that wide, because a hook that throws before the body still leaves a result.
+// This fixture is the stronger evidence. It yields a FUNCTION and records nothing
+// at setup; the test body CALLS it as its first statement, and the call records
+// `page.viewportSize()` on the result as a `rendered-viewport` annotation (once
+// per test, however often it is called). Only code running inside the test
+// callback can make that call, so a witness means the callback was ENTERED with
+// the page at that width. The gate reports RENDERED for a width class only where
+// such a witness carries a width inside that class.
+//
+// WHY THE CALL AND NOT THE REQUEST (Codex, #384 round 1). The first version
+// recorded at fixture SETUP, on the measurement that a fixture requested only by
+// the body is created after the beforeAll/beforeEach hooks. That holds, but
+// setup is still not body entry: a SIBLING test-scoped fixture set up after the
+// witness can throw, and Playwright then never invokes the callback while the
+// witness is already recorded — a false RENDERED, reproduced on 1.63.0.
+//
+// Measured on 1.63.0 (2026-09-24), one laptop project at 1280x800, for the
+// setup-time version — each still holds for the call, which runs later:
+//   * a beforeEach that throws; a beforeEach that requests `page`, NAVIGATES and
+//     throws; a beforeAll that throws on a test marked to fail — NO witness in
+//     any of the three. An honest failing body DOES get one.
+//   * the annotation reaches the JSON report on BOTH `results[].annotations`
+//     and `tests[].annotations`.
+//   * `{ auto: true }` destroyed the setup-time signal (an auto fixture is
+//     created before the beforeEach hooks). Keep it NOT auto anyway: the body
+//     must request it to call it, and an auto fixture invites a hook to.
+//   * a hook or another fixture that requests it and CALLS it records a witness
+//     without the body — that is forgery, out of scope per directives#349.
+//
+// ⚠️ It records the width the body STARTS at. A setViewportSize() later in the
+// body is not seen, which is why S4 keeps its `viewport-override` marker. EVERY
+// scenario below requests `renderWitness` AND calls `renderWitness();` as its
+// first statement; a test you add should do both. Requesting it without calling
+// it records nothing, so that test can only ever count as SCHEDULED.
+// The gate's cases build their fixture specs from the text between the two
+// marker lines below, so keep the block self-contained and the markers intact.
+// >>> render-witness
+const test = base.extend({
+  renderWitness: async ({ page }, use, testInfo) => {
+    // Records NOTHING at setup: the body's own call is the witness (#384).
+    let recorded = false;
+    await use(() => {
+      if (recorded) return;
+      recorded = true;
+      const vp = page.viewportSize();
+      testInfo.annotations.push({ type: 'rendered-viewport',
+        description: JSON.stringify(vp ? { width: vp.width, height: vp.height } : null) });
+    });
+  },
+});
+// <<< render-witness
 
 // PROJECT-SPECIFIC (see CLAUDE.md). The app is gated behind login, so the generic
 // exploration must run as an authenticated user. Boot every scenario signed in
 // against the stubbed Supabase (the password-reset email isn't CI-automatable).
 // The dedicated logged-out gate states are covered in auth.spec.js.
+// Placed AFTER `const test = base.extend(…)` — `test` does not exist before it.
 test.beforeEach(async ({ page }) => { await installSignedIn(page); });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -81,6 +139,16 @@ const AUTH_EMAIL = process.env.TEST_AUTH_EMAIL || null;
 // ambiguity this surface exists to remove.
 const AUTH_READY_SELECTOR = process.env.TEST_AUTH_READY_SELECTOR || null;
 const AUTH_READY_REQUEST  = process.env.TEST_AUTH_READY_REQUEST  || null;
+
+// AUTH SUCCESS — what a signed-in page looks like, stated by the project (#379).
+// READY above is BEFORE the attempt (is the gate decided?); this is AFTER it
+// (did the credential land on the signed-in view?). Unset, S2 reads the gate
+// clearing as success, exactly as before. Set, S2 requires this selector to be
+// VISIBLE after the post-auth settle and fails loudly when it is not — the same
+// no-silent-fallback rule as the readiness condition. Name something only the
+// signed-in view renders (the app shell, a sign-out control), never something
+// the login screen shares.
+const AUTH_SUCCESS_SELECTOR = process.env.TEST_AUTH_SUCCESS_SELECTOR || null;
 
 async function awaitAuthReady(page) {
   if (!AUTH_READY_SELECTOR && !AUTH_READY_REQUEST) {
@@ -1069,7 +1137,7 @@ async function expectGateCleared(page, mechanism, gateViewBefore) {
     test.info().attach('auth-unverified', {
       body: JSON.stringify({
         mechanism,
-        note: 'Text/access-code attempts are not verified post-attempt: the text-gate heuristic (single visible auth-ish input) fails in both directions as a verdict, so neither its presence nor its absence is treated as proof. If this scenario then measures a rejection screen, start here. directives#302 tracks the per-project condition that verifies this properly.',
+        note: 'Text/access-code attempts are not verified post-attempt: the text-gate heuristic (single visible auth-ish input) fails in both directions as a verdict, so neither its presence nor its absence is treated as proof. If this scenario then measures a rejection screen, start here. Set TEST_AUTH_SUCCESS_SELECTOR to verify this (directives#379): S2 asserts it after the attempt.',
       }, null, 2),
       contentType: 'application/json',
     });
@@ -1094,6 +1162,10 @@ async function expectGateCleared(page, mechanism, gateViewBefore) {
   // SATISFIED, this mechanism is not a failure at all (an identifier-only SSO
   // that lands signed in), and the callers' skip below must not fire. That is
   // the seam; it is written here so #302's author finds it.
+  // LANDED FOR S2 ONLY (#379): TEST_AUTH_SUCCESS_SELECTOR is that condition. S2
+  // evaluates it once, after its post-auth settle and before calling this, and
+  // does not take its incomplete-auth skip when it holds. The other callers do
+  // not read it yet, so this function's behaviour is unchanged.
   // 'no-credential' (#312) joins it on the same grounds and by the same route:
   // a gate stood, nothing was submitted, and that is a fact about the SUITE.
   // The set is the carrier so the next mechanism of this kind cannot be added
@@ -1104,7 +1176,7 @@ async function expectGateCleared(page, mechanism, gateViewBefore) {
         mechanism,
         note: mechanism === 'no-credential'
           ? 'An auth gate was on screen, TEST_AUTH_CREDENTIAL is unset, and the form shipped no credential of its own — so nothing was submitted. NO CREDENTIAL WAS ENTERED and nothing is claimed about the app. Set TEST_AUTH_CREDENTIAL, or — if this app\'s login legitimately ships a working credential and a human signs in by clicking the button — check that the prefilled field is a visible, editable input[type=password]: a prefilled TEXT or PIN gate is deliberately NOT read as a credential source, because a non-empty text input cannot be told from a search box with a default query (directives#312).'
-          : 'An identifier-first step was filled and submitted, but no credential step (password, PIN or text) appeared before the settle. NO CREDENTIAL WAS ENTERED. Causes this suite cannot tell apart: a rejected identifier, a passwordless/magic-link login, a credential step that rendered after LOAD_SETTLE_MS, or a submit control that did nothing. Scenarios that need an authenticated view skip on this rather than measuring the login screen. directives#302 tracks the per-project post-login condition that turns this into a verdict.',
+          : 'An identifier-first step was filled and submitted, but no credential step (password, PIN or text) appeared before the settle. NO CREDENTIAL WAS ENTERED. Causes this suite cannot tell apart: a rejected identifier, a passwordless/magic-link login, a credential step that rendered after LOAD_SETTLE_MS, or a submit control that did nothing. Scenarios that need an authenticated view skip on this rather than measuring the login screen. Set TEST_AUTH_SUCCESS_SELECTOR to verify this (directives#379): S2 asserts it after the attempt.',
       }, null, 2),
       contentType: 'application/json',
     });
@@ -1133,8 +1205,8 @@ async function expectGateCleared(page, mechanism, gateViewBefore) {
         body: JSON.stringify({
           mechanism,
           note: mechanism === 'pin-keypad'
-            ? 'PIN-keypad-like signals (>=9 digit buttons plus a dot/pin-class element) are still visible after the PIN attempt. This is EITHER the retained gate (rejected PIN) OR the app\'s own post-login numeric UI — a PIN-gated calculator or dial pad satisfies the same page-wide signals — and the signal cannot associate itself with the attempted gate, so this is a diagnostic rather than a failure. If downstream scenarios then measure a PIN screen, start here. directives#302 tracks the per-project post-login condition that verifies this properly.'
-            : 'The password attempt cleared the password field, but PIN-keypad-like signals are visible (>=9 digit buttons plus a dot/pin-class element). This is EITHER a second auth factor this suite cannot pass with a single credential, OR ordinary numeric UI (calculator, dial pad) on the post-login view — the signal cannot distinguish the two, so this is a diagnostic rather than a failure. If downstream scenarios then measure a PIN screen, start here. directives#302 tracks the per-project post-login condition that verifies this properly.',
+            ? 'PIN-keypad-like signals (>=9 digit buttons plus a dot/pin-class element) are still visible after the PIN attempt. This is EITHER the retained gate (rejected PIN) OR the app\'s own post-login numeric UI — a PIN-gated calculator or dial pad satisfies the same page-wide signals — and the signal cannot associate itself with the attempted gate, so this is a diagnostic rather than a failure. If downstream scenarios then measure a PIN screen, start here. Set TEST_AUTH_SUCCESS_SELECTOR to verify this (directives#379): S2 asserts it after the attempt.'
+            : 'The password attempt cleared the password field, but PIN-keypad-like signals are visible (>=9 digit buttons plus a dot/pin-class element). This is EITHER a second auth factor this suite cannot pass with a single credential, OR ordinary numeric UI (calculator, dial pad) on the post-login view — the signal cannot distinguish the two, so this is a diagnostic rather than a failure. If downstream scenarios then measure a PIN screen, start here. Set TEST_AUTH_SUCCESS_SELECTOR to verify this (directives#379): S2 asserts it after the attempt.',
         }, null, 2),
         contentType: 'application/json',
       });
@@ -1264,7 +1336,8 @@ function testValueFor(el) {
 // ─────────────────────────────────────────────────────────────────────────────
 // SCENARIO 1 — Page Load
 // ─────────────────────────────────────────────────────────────────────────────
-test('S1: page loads without JS errors', async ({ page }) => {
+test('S1: page loads without JS errors', async ({ page, renderWitness }) => {
+  renderWitness();
   // Sized for what this scenario can actually spend, which the 30s config
   // default is not: goto() may take navigationTimeout (30s) and the load-gate
   // wait below may take LOAD_SETTLE_MS (25s) before either assertion runs. On a
@@ -1293,7 +1366,8 @@ test('S1: page loads without JS errors', async ({ page }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // SCENARIO 2 — Auth Discovery & Login (with API diagnostics)
 // ─────────────────────────────────────────────────────────────────────────────
-test('S2: auth gate discovered and credential accepted', async ({ page }) => {
+test('S2: auth gate discovered and credential accepted', async ({ page, renderWitness }) => {
+  renderWitness();
   // THE SKIP MOVED BELOW THE PAGE LOAD (#312), and it had to: the second
   // credential source is the form itself, which cannot be read before the app
   // renders. The condition is now "no credential ANYWHERE", not "no env var".
@@ -1314,6 +1388,7 @@ test('S2: auth gate discovered and credential accepted', async ({ page }) => {
   // + detectAndAuth() (see its header)     ~53s at N=4    ~94s at N=8
   //     split-step gate (#310)            ~108s at N=4   ~149s at N=8
   // + LOAD_SETTLE_MS post-auth settle       25s
+  // + TEST_AUTH_SUCCESS_SELECTOR (#379)     ~0s when met; <=25s only on its FAIL path
   // + snapshots, error read, assertions      ~few s
   //   ------------------------------------------
   //   ~138s at N=4                          ~179s at N=8   single-step
@@ -1497,14 +1572,46 @@ test('S2: auth gate discovered and credential accepted', async ({ page }) => {
   // credential as accepted with the gate still on screen. The verifier the
   // rest of the suite trusts must not be bypassable by the scenario whose
   // whole job is the auth verdict.
-  try {
-    await expectGateCleared(page, mechanism, viewBefore);
-  } catch (gateErr) {
-    await attachAuthDiagnostics().catch(() => {});
-    throw gateErr;
+  //
+  // POST-LOGIN CONDITION (#379) — only when the project declared one. The gate
+  // going away is not the signed-in view arriving; this is the project saying
+  // what that view looks like. Evaluated ONCE, after the post-auth settle, never
+  // per step. Not met is a FAIL, not a fallback to the gate reading (same rule
+  // as awaitAuthReady). Met, it is the verdict the incomplete-auth skip below
+  // was waiting for. BUDGET: ~0s when it holds (the settle already ran); on
+  // failure it adds up to LOAD_SETTLE_MS, ~41s spare left at N=8 split-step.
+  // Met, it also REPLACES the generic heuristics below — expectGateCleared's
+  // retained-gate reading and the domChanged/onscreenError arm. Both are guesses
+  // for projects that declared nothing: a signed-in page with its own password
+  // field (change-password form) reads as a retained gate, and afterSnap was
+  // taken before this wait, so a slow signed-in view reads as "nothing changed".
+  // The project's own condition outranks both (#382).
+  let s2SuccessProven = false;
+  if (AUTH_SUCCESS_SELECTOR && mechanism !== 'none') {
+    try {
+      await page.waitForSelector(AUTH_SUCCESS_SELECTOR, { timeout: LOAD_SETTLE_MS, state: 'visible' });
+      s2SuccessProven = true;
+    } catch {
+      await attachAuthDiagnostics().catch(() => {});
+      throw new Error(
+        `S2 FAIL | TEST_AUTH_SUCCESS_SELECTOR (${AUTH_SUCCESS_SELECTOR}) never became visible within ` +
+        `${LOAD_SETTLE_MS}ms after the auth attempt at ${page.url()} (mechanism: ${mechanism}).\n` +
+        `  This project declared that selector as what a signed-in page shows, so the credential was not ` +
+        `accepted — or the selector names something the signed-in view does not render. See the ` +
+        `auth-diagnostics attachment (directives#379).`
+      );
+    }
+  }
+  if (!s2SuccessProven) {
+    try {
+      await expectGateCleared(page, mechanism, viewBefore);
+    } catch (gateErr) {
+      await attachAuthDiagnostics().catch(() => {});
+      throw gateErr;
+    }
   }
 
-  if (AUTH_INCOMPLETE.has(mechanism)) {
+  if (AUTH_INCOMPLETE.has(mechanism) && !s2SuccessProven) {
     await attachAuthDiagnostics().catch(() => {});
     test.skip(true, `${authIncompleteNote(mechanism)} "Credential accepted" cannot be asserted, so this is a SKIP rather than a failure — false-reddening a healthy app on a discovery-grade signal is the trade this file refuses (directives#302 is the verdict). See the auth-steps and auth-unverified attachments.`);
   }
@@ -1514,7 +1621,7 @@ test('S2: auth gate discovered and credential accepted', async ({ page }) => {
   // email screen it was trivially true, and the rejection arm below silently
   // stopped firing on split-step gates (#310).
   const domChanged = JSON.stringify(snapBefore) !== JSON.stringify(afterSnap);
-  if (mechanism !== 'none' && (!domChanged || onscreenError.length > 0)) {
+  if (mechanism !== 'none' && !s2SuccessProven && (!domChanged || onscreenError.length > 0)) {
     const diag = await attachAuthDiagnostics();
     throw new Error(
       `S2 FAIL | mechanism: ${mechanism} | onscreenError: "${onscreenError}" | ` +
@@ -1528,6 +1635,7 @@ test('S2: auth gate discovered and credential accepted', async ({ page }) => {
   // Auth passed or no auth required — record mechanism
   test.info().attach('auth-result', {
     body: JSON.stringify({ mechanism, credentialSource: credentialSource ?? 'none', domChanged,
+      successProven: s2SuccessProven,
       // 'windowed' = no gate was VISIBLE before the settle expired; 'proven' =
       // this project's own readiness condition resolved first. Recorded because
       // the two were indistinguishable, which is the whole of #302.
@@ -1539,7 +1647,8 @@ test('S2: auth gate discovered and credential accepted', async ({ page }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // SCENARIO 3 — Element Mapping & Interaction Sweep
 // ─────────────────────────────────────────────────────────────────────────────
-test('S3: interactive elements discovered and exercised without errors', async ({ page }) => {
+test('S3: interactive elements discovered and exercised without errors', async ({ page, renderWitness }) => {
+  renderWitness();
   // BUDGET — sized from the MATRIX, not from one profile. This sweep is
   // UNCAPPED: it visits every element discoverElements() returns, at ~1.5s
   // settle plus a networkidle wait (now bounded by IDLE_MS, 5s — it was bounded
@@ -1749,7 +1858,8 @@ test('S3: interactive elements discovered and exercised without errors', async (
 // ─────────────────────────────────────────────────────────────────────────────
 // SCENARIO 4 — Responsive Layout
 // ─────────────────────────────────────────────────────────────────────────────
-test('S4: no horizontal overflow at 390px mobile viewport', async ({ page }) => {
+test('S4: no horizontal overflow at 390px mobile viewport', async ({ page, renderWitness }) => {
+  renderWitness();
   // BUDGET — S4 had NONE and inherited the 30s config default, while running the
   // same load-and-authenticate preamble NAV prices at ~98s. Once this PR set
   // navigationTimeout: 30_000, goto() ALONE could consume the whole test.
@@ -1763,6 +1873,15 @@ test('S4: no horizontal overflow at 390px mobile viewport', async ({ page }) => 
   // verdict), which cost +40s and pushed ~179s against the previous 180_000.
   // 300_000, same as S2 and CTRL — one number for one shared preamble.
   test.setTimeout(300_000);
+  // DECLARE THE OVERRIDE. This test sets its own viewport, so it runs at 390 in
+  // EVERY project — it is evidence for the phone band and for no other. Without
+  // this annotation, a run that selected only S4 (a stray `.only`, a grep, a
+  // quarantine reporter) reports a result in the laptop and tablet projects too,
+  // and check-ui-viewports.js would certify widths nothing rendered at. It reads
+  // this annotation out of the JSON report and stops counting the result.
+  // test.md → UI coverage gates, fifth gate. Any test you add that calls
+  // setViewportSize() needs the same line.
+  test.info().annotations.push({ type: 'viewport-override', description: '390' });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('./');
   // LOAD_SETTLE_MS: scrollWidth is read below as a VERDICT. Content that renders
@@ -1973,7 +2092,8 @@ function backControlAll(page) {
 // tracks the last page visited instead of an origin-aware nav stack. Skips when
 // the app has no multi-level drill-down or no in-app back control (invariant N/A).
 // ─────────────────────────────────────────────────────────────────────────────
-test('NAV: back navigation strictly unwinds (no loop)', async ({ page }) => {
+test('NAV: back navigation strictly unwinds (no loop)', async ({ page, renderWitness }) => {
+  renderWitness();
   // BUDGET — SIZING ESTIMATE, and the previous version of this comment was
   // simply wrong. It said "bounded by DEPTH_CAP, not by element count". DEPTH_CAP
   // bounds SUCCESSFUL drill levels only; the candidate loop below tries every
@@ -2223,7 +2343,8 @@ test('NAV: back navigation strictly unwinds (no loop)', async ({ page }) => {
 // A duplicated primary CTA (e.g. two "Add asset" buttons) is a finding. Scans
 // visible add/new/create controls, groups by accessible name, flags any with >1.
 // ─────────────────────────────────────────────────────────────────────────────
-test('CTRL: no duplicated primary action control', async ({ page }) => {
+test('CTRL: no duplicated primary action control', async ({ page, renderWitness }) => {
+  renderWitness();
   // BUDGET — CTRL had NONE and inherited the 30s config default, while its first
   // statement is the gotoAndAuth() preamble. NAV and DISMISS budget for that call
   // explicitly; CTRL called the same function and was sized as if it were free.
@@ -2265,7 +2386,8 @@ test('CTRL: no duplicated primary action control', async ({ page }) => {
 // APP_PAGES="admin.html,vendor/console.html". Each gets the S1 load gate here;
 // pages with richer flows deserve their own suite (Scenario 5+ below).
 // ─────────────────────────────────────────────────────────────────────────────
-test('ENTRY: every deployed entry point renders without JS errors', async ({ page }) => {
+test('ENTRY: every deployed entry point renders without JS errors', async ({ page, renderWitness }) => {
+  renderWitness();
   const pages = (process.env.APP_PAGES || '').split(',').map(s => s.trim()).filter(Boolean);
   test.skip(pages.length === 0, 'No extra entry points declared (APP_PAGES) — the baseURL is covered by S1');
   // This loop had NO budget of its own and inherited the 30s config default,
@@ -2323,7 +2445,8 @@ test('ENTRY: every deployed entry point renders without JS errors', async ({ pag
 // (b) Escape — re-opened between checks — and (c) a backdrop click, asserted
 // only when a backdrop element exists (some designs omit it deliberately).
 // ─────────────────────────────────────────────────────────────────────────────
-test('DISMISS: overlays close via control, Escape, and backdrop', async ({ page }) => {
+test('DISMISS: overlays close via control, Escape, and backdrop', async ({ page, renderWitness }) => {
+  renderWitness();
   // BUDGET — bounded by TWO caps below, and the 180_000 it replaces sat under
   // its own. Per trigger the explicit waits total ~3.8s and there are five
   // click({ timeout: 2000 }) paths: ~13.8s worst case, x30 = ~414s against 180s.

@@ -7,6 +7,19 @@ import { test, expect } from '@playwright/test';
 import { installSignedIn } from './_supabase-mock.js';
 
 test.use({ viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false });
+// ⚠️ THE FILE-SCOPE `test.use({ viewport })` ABOVE REPLACES EVERY PROJECT'S WIDTH,
+// so these scenarios run at 1440x900 in the tablet and phone projects too —
+// verified: S11 ("fits 1440x900, no vertical scroll") passes under
+// --project=mobile-chrome, which declares 393x727. test.md -> UI coverage gates
+// requires any test that can end up at a width its project did not declare to
+// carry the marker, by EITHER route (setViewportSize OR the test.use/extend
+// fixture form), or check-ui-viewports.js counts the result toward a band this
+// test never rendered at. Pushed per-test from a hook so a scenario added later
+// inherits it instead of having to remember.
+test.beforeEach(() => {
+  test.info().annotations.push({ type: 'viewport-override', description: '1440' });
+});
+
 
 // Stub Supabase for LOGGED-OUT cases (no session injected). Register the
 // catch-all FIRST and specifics LAST — Playwright's last-registered route wins.
@@ -124,6 +137,56 @@ test('S29 upload prompt — shows once with local deals and dismisses cleanly (n
   await expect(page.locator('.modal__overlay')).toHaveCount(0);
   await page.waitForSelector('.lcard');
   await expect(page.locator('.lcard__name', { hasText: 'My Local Deal' })).toBeVisible();
+});
+
+// DISMISS (account modal) — the FIFTH overlay, and the one property.spec.js cannot
+// reach: `installSignedIn` suppresses the reconcile there, so the prompt never
+// renders. It belongs here, where reconcile can be switched on.
+//
+// Its three dismissal paths are independent handlers (js/account.js:19-25) and
+// nothing else asserts them: S29 above clicks only "Move them in", and the generic
+// DISMISS scenario's CLOSE selector does not match "Not now" while its backdrop
+// selector does not match `.modal__overlay` at all (Codex, #116).
+//
+// ⚠️ THE PROMPT IS DELIBERATELY ONCE-PER-ACCOUNT, so a three-path loop on one page
+// would see it once and then assert against nothing. `reconcile()` returns early on
+// a persisted `propanalytics.reconciled.<uid>` key (js/account.js:44-45) — which is
+// the behaviour S29 proves. The init script below therefore re-seeds the local deal
+// AND clears that key on every navigation, so each reload earns a genuine prompt;
+// `reconciledUids` is module state and resets with the page anyway.
+test('DISMISS account modal — the local-deals prompt closes by control, Escape AND backdrop', async ({ page }) => {
+  // BUDGET — derived, same convention. MEASURED on 7a5e3a9: mobile-chrome 1.4s ·
+  // iphone 6.8s. Three full reloads (the prompt is once-per-account, so each path
+  // needs a fresh one), and webkit on this runner is the slow case. 60s is ~9x.
+  test.setTimeout(60_000);
+  const localDeal = {
+    id: 'p-local-dismiss', schemaVersion: 1, name: 'Dismiss Fixture',
+    info: { askingPrice: 500000, rentableSF: 5000, lotSize: '', yearBuilt: '', zoning: '', hvacAge: '', roofAge: '', parking: '', ceilingHeight: '', appraisedValue: 0, apn: '', bedrooms: '', baths: '' },
+    targets: { desiredCap: 0.06, desiredDscr: 1.25 },
+    offer: { offerPrice: 450000, fees: 0, improvements: 0 },
+    loans: [{ ltv: 0.7, rate: 0.065, termYears: 25, maturityYears: 0, type: 'CONV' }, { ltv: 0, rate: 0.065, termYears: 25, maturityYears: 0, type: 'IO' }],
+    tenants: [], expenses: [],
+    assumptions: { minOppCostEquity: 0.15, taxRate: 0.28, collectionLoss: 0.05, cashflowAppr: 0.02, capitalAppr: 0.02 },
+  };
+  await page.addInitScript((d) => {
+    localStorage.setItem('propanalytics.v1', JSON.stringify(d));
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith('propanalytics.reconciled.'))
+      .forEach((k) => localStorage.removeItem(k));
+  }, [localDeal]);
+  await installSignedIn(page, { seed: [], reconcile: true });
+
+  for (const dismiss of [
+    async () => page.locator('button', { hasText: 'Not now' }).click(),   // the control
+    async () => page.keyboard.press('Escape'),
+    async () => page.locator('.modal__overlay').click({ position: { x: 5, y: 5 } }),
+  ]) {
+    await page.goto('./', { waitUntil: 'load' });
+    await expect(page.locator('.modal__overlay')).toHaveCount(1);
+    await expect(page.locator('.modal__title', { hasText: 'Move your local deals in?' })).toBeVisible();
+    await dismiss();
+    await expect(page.locator('.modal__overlay')).toHaveCount(0);
+  }
 });
 
 test('S28 first-sign-in seed — a fresh account is seeded with the sample + demos', async ({ page }) => {
