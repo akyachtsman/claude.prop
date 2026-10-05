@@ -303,7 +303,6 @@ that never launched cannot produce — and RENDERED never changes the exit code.
 read this gate's green as "all three bands rendered", locally or in CI**; the suite's own
 pass/fail is what says webkit ran. Locally use `--project=desktop` and
 `--project=mobile-chrome`; CI installs webkit with deps and arbitrates that band.
-**and** webkit with their deps — arbitrate the tablet band.
 
 **Why the chromium projects run at all:** this app has **no runtime CDN import**.
 `js/supabase.js:11` loads the client from `./vendor/supabase-js.js` (720KB, zero
