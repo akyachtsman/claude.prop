@@ -106,77 +106,50 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   (`split('/')`, path joins). Closing it needs syntax-aware scanning, not a
   regex. Reviewers should still catch that form by eye.
 
-- **`check-contrast.js` carries five deliberate local edits** on top of the upstream
-  template — `/refresh-repo` must diff them, not revert them. (1) `--color-danger`
-  is checked as `#fff` **on** danger, because this app's only use of it is
-  `.gallery__del:hover`'s *background* under a hard-coded `color: #fff`
-  (`components.css:884,887`); upstream checks danger as a foreground over the page
-  surfaces, which this app never renders. The two agree numerically only while
-  `--color-surface` is light — contrast is symmetric — so a dark theme with
-  `--color-danger: #fff` passes upstream at 17.30/18.50 while the delete glyph goes
-  white-on-white. (2) An alpha-bearing token (`#RGBA`/`#RRGGBBAA`) is **rejected**
-  rather than having its alpha silently dropped; dropping it scores a transparent
-  `#FFFFFF00` foreground as 5.09 and passing. Both were verified by forcing the
-  scenario: upstream exits 0 on each, the local copy exits 1. Handed upstream — the
-  alpha half is generic; the danger half is project-shape-specific.
-  (3) `--color-on-navy` is checked against `--color-accent`, because
-  `--color-on-accent` is **not** the only foreground rendered over accent:
-  `.switcher__btn` (`components.css:45,51`) and `.topbar__action` (`:104` via
-  `.topbar__link`, `:740`) keep `--color-on-navy` while their hover fill becomes
-  `--color-accent`. Both tokens are `#FFFFFF` today, so they agree by coincidence —
-  accent `#888888` with on-accent `#000000` passes every other pair while those
-  controls render white on grey at 3.54:1.
-  (4) An `accent-hover / accent-light` pair covers the **NOI chip**. It was found by
-  DERIVING pairs from `components.css` (every rule declaring both a `color:` and a
-  `background:` from tokens) rather than enumerating them — `.rt-chip--noi` (`:397`,
-  rendered at `dashboard.js:482`) was shipping `--color-accent` on
-  `--color-accent-light` at **4.32:1**, a real WCAG AA failure at 11px bold, which
-  no hand-written pair described. The chip now uses `--color-accent-hover` (6.07),
-  an already-approved token from the same family — **the Banker Navy palette itself
-  is unchanged**. Re-deriving after the fix finds zero token pairs below AA.
-  A hand-maintained pair list cannot be complete; re-run that derivation when
-  `components.css` gains a new fg/bg pairing.
-  (5) `accent / surface` is checked at the **normal-text** floor (4.5), not upstream's
-  large-text 3.0, and `accent / bg` is added — because `--color-accent` is a SMALL-text
-  colour here in eight places (`.authgate__brand` `:783`, `.authgate__status--ok` `:790`,
-  `.authgate__link` `:798`, `.modal__status--ok` `:842`, `.photos-btn:hover` `:859`,
-  `.archive-restore:hover` `:710`, `.th-sort__caret` `:725`, `.link-open` `:865`) at
-  `--font-sm` 13px / `--font-xs` 12px, neither of which is WCAG large text. At 3.0 a
-  palette scoring 3.54 was certified `OK — 9/9` while every one of those labels failed AA.
-  **Limitation of the derivation in (4):** it only sees rules declaring BOTH a `color:`
-  and a `background:`, so text that sets a colour and inherits its background — which is
-  all eight of these — is invisible to it. Deriving beats enumerating but is not
-  complete either; treat both as aids, not proofs.
+- **`check-contrast.js` carries FOUR deliberate local pairs**, each marked
+  `// PROJECT-SPECIFIC` in the file — `/refresh-repo` must diff them, not revert them.
+  Grep that marker rather than trusting this list; the file is authoritative.
+  1. **`accent / surface` at the normal-text floor (4.5), not upstream's 3.0, plus
+     `accent / bg`** — `--color-accent` is a SMALL-text colour here in eight places
+     (`.authgate__brand`, `.authgate__status--ok`, `.authgate__link`,
+     `.modal__status--ok`, `.photos-btn:hover`, `.archive-restore:hover`,
+     `.th-sort__caret`, `.link-open`) at 13px/12px, neither of which is WCAG large text.
+  2. **`on-navy / accent`** — `--color-on-accent` is not the only foreground over
+     accent: `.switcher__btn` and `.topbar__action` keep `--color-on-navy` while
+     their hover fill becomes `--color-accent`.
+  3. **`accent-hover / accent-light`** — the NOI chip (`.rt-chip--noi`, rendered at
+     `dashboard.js:482`). Found by DERIVING pairs from `components.css` (every rule
+     declaring both a `color:` and a `background:` from tokens), not by enumerating:
+     it was shipping 4.32:1 at 11px bold and no hand-written pair described it.
+  4. **`on-danger / danger`** — the gallery delete glyph on its hover fill. This app
+     never renders `--color-danger` as a foreground, which is what upstream checks.
 
-- **`ui-suite/action.yml` names a guard this repo does not have.** It cites
-  `check-ui-suite-env.py` **nine times** — "enforces exact env parity across the sequence",
-  "enforces that adjacency mechanically" — and that script does not run here. It is real, but
-  lives at upstream's `.github/scripts/check-ui-suite-env.py`, **outside `templates/`**; its own
-  docstring says so ("NOT exported: `.github/` is outside every EXPORTS.json category path").
-  So upstream's CI guards upstream's copy of the template and **nothing guards this one**.
-  Codex flagged one reference on #115; there are ten, and it went unaddressed until 2026-10-05.
-  This is **not** a live breakage — the composite here is verbatim upstream and the invariant
-  currently holds — but the comments tell anyone editing the composite that a hand-edit would be
-  caught mechanically, and here it would not be: insert a step between the Playwright run and a
-  viewport gate, or add an env var to only one of them, and every local check stays green while
-  the gate inspects a different configuration than the run.
-  **So run it by hand when touching the composite or the kit.** It takes the target as `argv[1]`
-  and the spec files as `argv[2:]`, so it works against this tree unmodified:
+  **Two edits this file previously listed are GONE and must not be re-added:** the
+  alpha-channel rejection (upstream adopted a better version, exempting fully-opaque
+  `FF`/`F`), and a pair naming the `#FFFFFF` literal — `.gallery__del` now uses
+  `var(--color-on-danger)`, so the pair scores by name at 6.01 with no exception.
+
+  **Re-run the derivation in (3) whenever `components.css` gains a new fg/bg
+  pairing.** Its limit: it only sees rules declaring BOTH a `color:` and a
+  `background:`, so text that sets a colour and inherits its background — all eight
+  in (1) — is invisible to it. Deriving beats enumerating; neither is a proof.
+- **`ui-suite/action.yml` cites `check-ui-suite-env.py` nine times as enforcing step
+  adjacency and exact env parity — and that script does not run here.** It is real but
+  lives at upstream's `.github/scripts/`, outside `templates/`, so upstream's CI guards
+  upstream's copy of the template and **nothing guards this one**. Not a live breakage
+  (the composite is verbatim upstream), but the comments promise an editor a mechanical
+  catch they will not get: insert a step between the Playwright run and a viewport gate,
+  or add an env var to only one of them, and every local check stays green.
+  **So run it by hand when touching the composite or the kit** — it takes the target as
+  `argv[1]` and the spec files as `argv[2:]`, so it works against this tree unmodified:
   `python3 check-ui-suite-env.py .github/actions/ui-suite/action.yml <kit .js files>`.
-  Doing that on 2026-10-05 produced a **true finding in one second** that no gate here can see:
-  `PW_EXECUTABLE` is read by `playwright.config.js:38` while the composite's run step never sets
-  it. The correct resolution is the guard's **`ENV_EXEMPT`** branch, **not** an input — it is a
-  local-sandbox hatch that arrives from the developer's own shell, and giving CI an input to pin
-  the browser executable would invert `global.md`'s *supply the missing thing, never lower the
-  bar*. CI leaving it unset is the right behaviour (`launchOptions: undefined` → Playwright's own
-  installed browser), which is why the green runs were never wrong.
-  **Not forked locally, deliberately:** without its case suite it becomes "the guard nobody
-  exercises" (its own line 70 says a branch verified in round 9 broke in round 10 for exactly
-  that reason), and with it that is ~1,500 lines of upstream CI for every future `/refresh-repo`
-  to diff by hand. Handed upstream instead — export the guard **and** its cases to `templates/`,
-  because downstream is where local specs live and therefore where the #320 class actually bites.
-  The three local specs here (`property.spec.js`, `auth.spec.js`, and `app.spec.js`'s bootstrap)
-  are invisible to upstream's run of it.
+  Doing that on 2026-10-05 found a true finding no gate here can see: `PW_EXECUTABLE` is
+  read by `playwright.config.js:38` and the composite's run step never sets it. Resolve
+  that through the guard's **`ENV_EXEMPT`**, never an input — it is a local-sandbox hatch
+  from the developer's own shell, and letting CI pin the browser executable would invert
+  *supply the missing thing, never lower the bar*. CI leaving it unset is correct.
+  Deliberately **not** forked in: without its case suite it is the guard nobody
+  exercises, and with it, ~1,500 lines for every refresh to diff. Handed upstream.
 
 ## Agent Workflow
 1. Use a `claude/<name>` feature branch
@@ -192,7 +165,7 @@ Read by `ui-tester` and the Playwright kit at runtime — fill in before invokin
 | Key | Value |
 |---|---|
 | App URL | `https://akyachtsman.github.io/claude.prop/` |
-| Valid test credential | **LEAVE BOTH UNSET — and that is the correct answer, not a compromise.** Two independent reasons. **(1) Redundant:** the generic S2/S3/S4 would duplicate coverage `auth.spec.js` already has deterministically. S24 is not a mocked assertion about auth — `stubLoggedOut` (`auth.spec.js:13`) routes only the *network* (`/auth/v1/**`, `/rest/v1/properties`) and injects **no session**, so the app boots genuinely logged out, the **real `.authgate` renders**, S24 fills its own `input[type=email]` + `[type=password]`, clicks the real Sign in, and asserts `.account__email` + `.authgate__title` gone. Only the backend response is stubbed — which is exactly what generic S2 claims to do. **(2) Costly:** real Supabase sign-ins from CI runners would put live auth traffic in a *blocking* job — new flake bought with credentials, for coverage that already exists. Setting them is also actively *wrong* here: the generic suite's `beforeEach` signs every test in via `installSignedIn` (`app.spec.js:78`, imported `:14`), so no gate is on screen (0 visible password inputs, 0 `.authgate` nodes) and `mechanism` resolves to `'none'`, which the shared verifier treats as an explicit no-op (`:1125`). ⚠️ **RE-MEASURED 2026-10-05 and the result has INVERTED — the 2026-08-26 note here said "with a deliberately wrong password, S2 passed in 7.1s", and it no longer does.** Upstream has since added a *discriminating* guard (`:1464`, throw at `:1467`): a gate absent **with** credentials configured is now a hard FAIL naming the contradiction, not a vacuous pass. Verified by setting a deliberately wrong credential — S2 **failed**, on the first run and the retry. The decision is unchanged and the argument is now **stronger**: setting these does not buy a silent green, it buys a red CI job that is correct about a contradiction this project creates on purpose. ⚠️ `TEST_AUTH_EMAIL` would not be a secret even if set: it is typed into a *visible* input, so failure screenshots record it where log masking cannot reach. Never write either value in this file. |
+| Valid test credential | **LEAVE BOTH UNSET.** Redundant with `auth.spec.js` S23–S28, which exercise the real gate (only the backend stubbed, no credentials), and costly — live Supabase sign-ins would put real auth traffic in a *blocking* job. ⚠️ **Setting one now makes CI FAIL, re-measured 2026-10-05:** `installSignedIn` leaves no gate on screen, and upstream's discriminating guard turns "credentials configured but no gate" into a hard error. So a red S2 right after someone sets a secret means the secret IS the cause. (The 2026-08-26 note claiming a *vacuous pass* here was true of the older kit and is now inverted.) ⚠️ `TEST_AUTH_EMAIL` would not be a secret even if set — it is typed into a *visible* input, so failure screenshots record it where log masking cannot reach. Never write either value in this file. |
 | Invalid test credential | _n/a — the suite never asserts a rejected login_ |
 | Primary nav button | `Load sample deal` (first-run) / `+ New property` |
 | Primary content selector | `.kpi-strip` (dashboard) · `.lcard` (list) · `.compare-table` (compare) |
@@ -270,30 +243,21 @@ logged-out gate states + fresh-account seed live in `auth.spec.js` (S23–S28) w
 the auth client stubbed (register the `**/auth/v1/**` catch-all route FIRST and
 `token`/`recover` specifics LAST — Playwright's last-registered route wins).
 
-**The generic auth scenario `S2` skips BY DESIGN here — a skip is the correct state,
-not a coverage gap, and "fixing" it by setting
-`TEST_AUTH_CREDENTIAL`/`TEST_AUTH_EMAIL` makes the signal strictly worse.** It is
-structurally redundant with S23–S28 above, which exercise the *real* gate (only the
-backend is stubbed) deterministically and without credentials — see the credential row
-in the UI Test Configuration table for the measurement. **Precise scope — re-verified 2026-10-05 (3 skipped / 49 passed, desktop), still exactly as
-first measured 2026-08-26:** exactly ONE of the three desktop skips is S2. The
-other two are `NAV` (the kit requires a **multi-level** drill-in; this app's hierarchy is
-one level deep with three branches — note it is *not* that there is no in-app back control,
-as an earlier version of this line said: there are five, and the **NAV back-flow** scenario
-in `property.spec.js` now proves the unwinding property directly) and `ENTRY`
-(no extra `APP_PAGES` declared) — structural, nothing to do with auth. **S3 and S4 do
-NOT skip**: they carry no credential guard and run unconditionally, exercising their
-real subjects (interactive elements; 390px overflow) with the auth step a no-op. An
-earlier note here said "S2/S3/S4 skip" and "three auth scenarios" — both wrong on the
-count and the names, though the decision they supported is unchanged. Do **not** add a local
-`expect(mechanism).not.toBe('none')` guard either: the upstream kit carries one that
-discriminates (gate absent **with** credentials configured → fail, naming the
-contradiction; gate absent **without** them → a visible skip), so a local copy would
-fork the kit to get something worse and the next `/refresh-repo` would have to diff it
-back out. Worth carrying generally: there are two ways an auth scenario goes vacuous —
-never *reaching* the gate (a public landing route), or being *mocked past* it (this
-repo's file-wide `installSignedIn`). Same symptom, `mechanism` `'none'` and a green
-run; different cause.
+**The generic `S2` skips BY DESIGN — the skip is correct, and setting
+`TEST_AUTH_CREDENTIAL`/`TEST_AUTH_EMAIL` makes the signal worse, not better.** It is
+structurally redundant with S23–S28, which exercise the *real* gate (only the backend is
+stubbed) without credentials. **Desktop skips, re-verified 2026-10-05 (3 skipped / 49
+passed): `S2`, `NAV` and `ENTRY`.** NAV needs a multi-level drill-in (this app is one
+level with three branches — S39 proves the unwinding property instead); ENTRY needs extra
+`APP_PAGES`. Both structural, neither about auth. **S3 and S4 do NOT skip** — no
+credential guard, so they run unconditionally with the auth step a no-op.
+
+Do **not** add a local `expect(mechanism).not.toBe('none')` guard: the upstream kit
+already carries one that discriminates (gate absent **with** credentials → fail naming
+the contradiction; **without** → a visible skip), so a local copy would fork the kit to
+get something worse. Worth carrying generally: an auth scenario goes vacuous two ways —
+never *reaching* the gate (a public landing route), or being *mocked past* it (this repo's
+file-wide `installSignedIn`). Same symptom, different cause.
 
 The store layer (backend swap, offline choke-point, first-sign-in upload/dedup) is
 covered by Node unit tests in `tests/*.test.mjs` (run `node --test
@@ -307,11 +271,9 @@ URL and `http://localhost:8099`).
 `test.md` → *Sandboxed local runs* requires each project to record what it cannot
 run in an agent sandbox, **with the causes and what would make this wrong**.
 
-⚠️ **CORRECTION to the 2026-09-01 version of this section, which said "Full UI
-suite — Yes".** That was measured with `--project=desktop` only and overstated
-what runs here. Two of the four Playwright projects are **webkit**
-(`tablet` = iPad gen 7, `iphone` = iPhone 12); the other two are chromium.
-
+Two of the four Playwright projects are **webkit** (`tablet` = iPad gen 7,
+`iphone` = iPhone 12); the other two are chromium. Measure per project — a
+`--project=desktop` run alone overstates what runs here.
 | Project | Band | Runs here? |
 |---|---|---|
 | `desktop` (chromium) | laptop | **Yes** — 49 passed / 3 skipped |
@@ -330,22 +292,17 @@ hitting both of its named traps at once: **a present binary is not a browser tha
 launches, and an install that exits 0 is not a browser that launches.** Measured,
 not inferred — the 52 failures are all `browserType.launch`.
 
-⚠️ **CORRECTION (2026-10-05, Codex on #116) — the earlier version of this paragraph
-called `check-ui-viewports.js` the "#348 executed-coverage gate", said it "verifies each
-width class actually *ran*", and concluded it **cannot pass locally**. All three are
-wrong, and the error inverts what a green means.** The gate's verdict is **SCHEDULED**,
-which `test.md` names deliberately: a band is covered when a project declaring that width
-has a **non-skipped** result, and `failed`, `timedOut` and `interrupted` are all
-non-skipped. So webkit's launch failures here are not an absence of results — they are 52
-**failed** results, they satisfy the tablet band, and the gate **exits 0** on them.
-Measured, not reasoned: a synthetic report whose tablet results are *only* `failed`
-returns `GATE EXIT=0`. What is genuinely unavailable locally is the stronger **RENDERED**
-disposition for the tablet band (it needs the render witness recorded at a width in the
-class, which a test that never launched cannot produce) — and RENDERED never changes the
-exit code. **So never read this gate's green as "all three bands rendered", locally or in
-CI; the suite's own pass/fail is what says webkit ran.** Locally, verify with
-`--project=desktop` and `--project=mobile-chrome`, and let CI — which installs chromium
-**and** webkit with their deps — arbitrate the tablet band.
+**What `check-ui-viewports.js` actually establishes — read its green narrowly.** Its
+verdict is **SCHEDULED**: a band counts when a project declaring that width has a
+**non-skipped** result, and `failed`/`timedOut`/`interrupted` all qualify. So webkit's
+launch failures here are 52 *failed* results that SATISFY the tablet band, and the gate
+**exits 0** on them (measured: a synthetic report with only `failed` tablet results
+returns `GATE EXIT=0`). It is NOT an executed-coverage gate and never says a page
+rendered. The stronger **RENDERED** disposition needs the render witness, which a test
+that never launched cannot produce — and RENDERED never changes the exit code. **Never
+read this gate's green as "all three bands rendered", locally or in CI**; the suite's own
+pass/fail is what says webkit ran. Locally use `--project=desktop` and
+`--project=mobile-chrome`; CI installs webkit with deps and arbitrates that band.
 
 **Why the chromium projects run at all:** this app has **no runtime CDN import**.
 `js/supabase.js:11` loads the client from `./vendor/supabase-js.js` (720KB, zero

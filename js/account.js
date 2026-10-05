@@ -6,7 +6,7 @@
 import { signIn, signUp, resetPassword, updatePassword, signOut, getSession, onAuthChange } from './supabase.js';
 import { cloudOps } from './cloud.js';
 import * as store from './store.js';
-import { el, clear, toast } from './dom.js';
+import { el, clear, toast, mountOverlay } from './dom.js';
 import { sampleProperty, demoProperties } from './sample.js';
 import { missingFixtures } from './reconcile.js';
 
@@ -19,12 +19,7 @@ let recovering = false;       // true while a password-reset link is being compl
 function modal(children) {
   const panel = el('div', { class: 'modal__panel', role: 'dialog', 'aria-modal': 'true' }, children);
   const overlay = el('div', { class: 'modal__overlay' }, [panel]);
-  const onKey = (e) => { if (e.key === 'Escape') close(); };
-  const close = () => { document.removeEventListener('keydown', onKey); overlay.remove(); };
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-  document.addEventListener('keydown', onKey);
-  document.body.appendChild(overlay);
-  return { close, panel };
+  return { close: mountOverlay(overlay), panel };
 }
 
 // ── first-sign-in reconcile (D6 fixed order: upload wins, then gap-seed) ────

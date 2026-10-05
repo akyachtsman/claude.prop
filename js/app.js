@@ -1,7 +1,7 @@
 // app.js — hash router + shared state. Wires views to store + model, owns the
 // topbar center slot (switcher/pills or view title), first-run, export/import.
 
-import { el, clear, toast } from './dom.js';
+import { el, clear, toast, mountOverlay } from './dom.js';
 import * as store from './store.js';
 import * as fmt from './format.js';
 import { capVerdict, dscrVerdict, BENCHMARK_CAP, BENCHMARK_DSCR } from './model.js';
@@ -372,9 +372,8 @@ function openImport() {
     el('div', { class: 'modal__actions' }, [blankBtn, importBtn]),
   ]);
   const overlay = el('div', { class: 'modal__overlay' }, [panel]);
-  const close = () => { document.removeEventListener('keydown', onKey); overlay.remove(); };
+  const close = mountOverlay(overlay);
   closeBtn.addEventListener('click', close);
-  const onKey = (e) => { if (e.key === 'Escape') close(); };
   const busy = (on) => { importBtn.disabled = on; importBtn.textContent = on ? 'Importing…' : 'Import'; };
   const finish = (property) => {
     const saved = store.save(property);
@@ -419,9 +418,6 @@ function openImport() {
   }
   importBtn.addEventListener('click', doImport);
   blankBtn.addEventListener('click', () => { close(); createNew(); });
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-  document.addEventListener('keydown', onKey);
-  document.body.appendChild(overlay);
   input.focus();
 }
 
