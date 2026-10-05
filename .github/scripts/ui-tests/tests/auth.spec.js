@@ -7,6 +7,19 @@ import { test, expect } from '@playwright/test';
 import { installSignedIn } from './_supabase-mock.js';
 
 test.use({ viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false });
+// ⚠️ THE FILE-SCOPE `test.use({ viewport })` ABOVE REPLACES EVERY PROJECT'S WIDTH,
+// so these scenarios run at 1440x900 in the tablet and phone projects too —
+// verified: S11 ("fits 1440x900, no vertical scroll") passes under
+// --project=mobile-chrome, which declares 393x727. test.md -> UI coverage gates
+// requires any test that can end up at a width its project did not declare to
+// carry the marker, by EITHER route (setViewportSize OR the test.use/extend
+// fixture form), or check-ui-viewports.js counts the result toward a band this
+// test never rendered at. Pushed per-test from a hook so a scenario added later
+// inherits it instead of having to remember.
+test.beforeEach(() => {
+  test.info().annotations.push({ type: 'viewport-override', description: '1440' });
+});
+
 
 // Stub Supabase for LOGGED-OUT cases (no session injected). Register the
 // catch-all FIRST and specifics LAST — Playwright's last-registered route wins.

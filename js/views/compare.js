@@ -168,7 +168,9 @@ export function renderCompare(container, ctx) {
         if (nb) return -1;             // b is "—" → after a
         return (va - vb) * dir;
       }
-      return String(va).localeCompare(String(vb)) * dir;
+      // design.md -> Tables & sorting: case-insensitive AND natural-number order,
+      // so "Property 10" sorts after "Property 9" rather than lexically before it.
+      return String(va).localeCompare(String(vb), undefined, { sensitivity: 'base', numeric: true }) * dir;
     });
   }
 

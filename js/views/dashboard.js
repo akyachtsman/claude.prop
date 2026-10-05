@@ -708,8 +708,14 @@ export function renderDashboard(container, ctx) {
     const next = el('button', { class: 'lightbox__nav', type: 'button', 'aria-label': 'Next photo', text: '›' });
     prev.addEventListener('click', (e) => { e.stopPropagation(); step(-1); });
     next.addEventListener('click', (e) => { e.stopPropagation(); step(1); });
-    const box = el('div', { class: 'lightbox', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Photo viewer' }, [prev, img, next, cap]);
+    // An explicit close control, not only Escape + a backdrop tap. Both of those
+    // keep working, but neither is DISCOVERABLE on a touch screen, where there is
+    // no keyboard and the backdrop looks like part of the photo — design.md
+    // -> Cross-platform: every action works by tap, click AND keyboard.
+    const shut = el('button', { class: 'lightbox__close', type: 'button', 'aria-label': 'Close photo viewer', title: 'Close', text: '\u00d7' });
+    const box = el('div', { class: 'lightbox', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Photo viewer' }, [shut, prev, img, next, cap]);
     const close = () => { document.removeEventListener('keydown', onKey); box.remove(); };
+    shut.addEventListener('click', (e) => { e.stopPropagation(); close(); });
     const onKey = (e) => { if (e.key === 'Escape') close(); else if (e.key === 'ArrowLeft') step(-1); else if (e.key === 'ArrowRight') step(1); };
     box.addEventListener('click', (e) => { if (e.target === box) close(); });
     document.addEventListener('keydown', onKey);

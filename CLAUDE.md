@@ -43,7 +43,8 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   not the dashboard (its center is already full; a 4-button add overflows the mobile
   topbar, the S4/S21 failure mode) and not the compare/archive drill-downs (reached
   from the list, they return via their own "Back to properties", which keeps
-  back-navigation strictly unwindable — the generic `app.spec.js` NAV invariant).
+  back-navigation strictly unwindable — proven by the project's own **NAV back-flow**
+  scenario, not by the generic `app.spec.js` NAV invariant, which SKIPS here).
 - `js/model.js` — **pure calc engine** (the fidelity core): `compute(property)`
   → all 12 KPIs + 5-year pro-forma. Mirrors `specs/property-dashboard/workbook-model.md`
   with the two owner-approved corrections. No DOM/storage — unit-testable.
@@ -87,6 +88,11 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   so numbers can't go stale.
 - All dynamic text via `textContent` / the `el()` helper — never `innerHTML` with data.
 - Every displayed value reads from `js/format.js`; no ad-hoc number formatting.
+- **Deliberate deviation from `design.md` → Number & Data Formatting's whole-number
+  percentages.** `format.js` keeps `percent()` (whole, the directive default) but headline
+  rates render through `percent2()` at two decimals, because a CAP of 5.13% and one of 5%
+  are different deals and the S5 fidelity fixture is stated to the cent. The deviation is
+  confined to rate readouts; every other percentage uses the whole-number form.
 - Any change to the financial model must keep `js/sample.js` `EXPECTED` in sync
   and pass the S5 fidelity test.
 - **No root-absolute paths** in app source or test specs — Pages serves this
@@ -186,7 +192,7 @@ Read by `ui-tester` and the Playwright kit at runtime — fill in before invokin
 | Key | Value |
 |---|---|
 | App URL | `https://akyachtsman.github.io/claude.prop/` |
-| Valid test credential | **LEAVE BOTH UNSET — and that is the correct answer, not a compromise.** Two independent reasons. **(1) Redundant:** the generic S2/S3/S4 would duplicate coverage `auth.spec.js` already has deterministically. S24 is not a mocked assertion about auth — `stubLoggedOut` (`auth.spec.js:13`) routes only the *network* (`/auth/v1/**`, `/rest/v1/properties`) and injects **no session**, so the app boots genuinely logged out, the **real `.authgate` renders**, S24 fills its own `input[type=email]` + `[type=password]`, clicks the real Sign in, and asserts `.account__email` + `.authgate__title` gone. Only the backend response is stubbed — which is exactly what generic S2 claims to do. **(2) Costly:** real Supabase sign-ins from CI runners would put live auth traffic in a *blocking* job — new flake bought with credentials, for coverage that already exists. Verified 2026-08-26 that setting them would also be actively *wrong* here: the generic suite's `beforeEach` signs every test in via `installSignedIn` (`app.spec.js:20`), so no gate is on screen (measured: 0 visible password inputs, 0 `.authgate` nodes), `mechanism` resolves to `'none'` (`:799`), and both judges are explicit no-ops on it (`:571` shared verifier, `:868` S2's own check) — with a deliberately wrong password, **S2 passed in 7.1s**. ⚠️ `TEST_AUTH_EMAIL` would not be a secret even if set: it is typed into a *visible* input, so failure screenshots record it where log masking cannot reach. Never write either value in this file. |
+| Valid test credential | **LEAVE BOTH UNSET — and that is the correct answer, not a compromise.** Two independent reasons. **(1) Redundant:** the generic S2/S3/S4 would duplicate coverage `auth.spec.js` already has deterministically. S24 is not a mocked assertion about auth — `stubLoggedOut` (`auth.spec.js:13`) routes only the *network* (`/auth/v1/**`, `/rest/v1/properties`) and injects **no session**, so the app boots genuinely logged out, the **real `.authgate` renders**, S24 fills its own `input[type=email]` + `[type=password]`, clicks the real Sign in, and asserts `.account__email` + `.authgate__title` gone. Only the backend response is stubbed — which is exactly what generic S2 claims to do. **(2) Costly:** real Supabase sign-ins from CI runners would put live auth traffic in a *blocking* job — new flake bought with credentials, for coverage that already exists. Setting them is also actively *wrong* here: the generic suite's `beforeEach` signs every test in via `installSignedIn` (`app.spec.js:78`, imported `:14`), so no gate is on screen (0 visible password inputs, 0 `.authgate` nodes) and `mechanism` resolves to `'none'`, which the shared verifier treats as an explicit no-op (`:1125`). ⚠️ **RE-MEASURED 2026-10-05 and the result has INVERTED — the 2026-08-26 note here said "with a deliberately wrong password, S2 passed in 7.1s", and it no longer does.** Upstream has since added a *discriminating* guard (`:1464`, throw at `:1467`): a gate absent **with** credentials configured is now a hard FAIL naming the contradiction, not a vacuous pass. Verified by setting a deliberately wrong credential — S2 **failed**, on the first run and the retry. The decision is unchanged and the argument is now **stronger**: setting these does not buy a silent green, it buys a red CI job that is correct about a contradiction this project creates on purpose. ⚠️ `TEST_AUTH_EMAIL` would not be a secret even if set: it is typed into a *visible* input, so failure screenshots record it where log masking cannot reach. Never write either value in this file. |
 | Invalid test credential | _n/a — the suite never asserts a rejected login_ |
 | Primary nav button | `Load sample deal` (first-run) / `+ New property` |
 | Primary content selector | `.kpi-strip` (dashboard) · `.lcard` (list) · `.compare-table` (compare) |
@@ -200,6 +206,15 @@ adds one `app.spec.js` scenario per row, numbered from S5. Fill in before
 invoking agents (the ui-tester stops and asks if this table is missing).
 Implemented in `.github/scripts/ui-tests/tests/property.spec.js` (desktop,
 fine-pointer context; the generic `app.spec.js` covers the mobile viewports).
+⚠️ **`property.spec.js` and `auth.spec.js` each set `test.use({ viewport: 1440×900 })` at
+FILE scope, which replaces the width in EVERY project — not only the desktop one.** Verified:
+S11 ("fits 1440×900, no vertical scroll") passes under `--project=mobile-chrome`, declared at
+393×727. So both files push `{ type: 'viewport-override' }` from a `beforeEach`, as
+`test.md` → *UI coverage gates* requires of any test that can end up at a width its project
+did not declare; without it `check-ui-viewports.js` counts 44 of the 52 results per project
+toward a band they never rendered at. The hook form is deliberate — a scenario added later
+inherits the marker instead of having to remember it. Do not remove it without also
+restricting these files to a single project.
 | # | Feature | What to verify | Failure indicator |
 |---|---|---|---|
 | S5 | Calc fidelity | Sample deal's 12 KPIs equal the actual-close fixture (CAP 5.13%, DSCR 0.84, NPV -$29,512, …) | Any KPI differs from EXPECTED |
@@ -237,7 +252,8 @@ fine-pointer context; the generic `app.spec.js` covers the mobile viewports).
 | S36 | Compare picker | **Table layout**: the checkbox leads every row *inside the comparison table itself* (`.compare-check-col`, sticky next to the Prospect name), not a separate picker section — every saved property gets a row, checked or not. Checked rows are included/sortable as usual; unchecking a property excludes it from sorting and best/worst, and sinks its row (still showing its metrics, dimmed via `.compare-table-row--off`) below a full-width **"Not included in comparison"** divider row (`.compare-divider-row`) at the bottom of the same table; re-checking restores it to the included group above the divider, which disappears once nothing is excluded. **Side by side layout** (properties are columns, not rows) keeps the standalone checkbox-grid picker (`.compare-picker`/`.compare-row`) above the table for the same include/exclude/re-include behavior. No minimum-selection floor — any property can be unchecked, including down to the last one | Table layout's checkbox isn't inside the table's own leading column (a separate picker instead), unchecking doesn't remove the property from sorting/best-worst or sink its row below the in-table divider, an excluded row's data disappears entirely instead of showing dimmed, or a checkbox can't be re-checked back in |
 | S37 | Extra KPIs | The KPI strip carries 15 cells (was 12): **Breakeven Occupancy** (`(included expenses + annual debt service) ÷ gross income` — the cushion-over-debt-AND-opex risk lens DSCR doesn't cover), **Expense Ratio** (`included expenses ÷ gross income` — the headline counterpart to the per-line expense breakdown), and **Price/SF** (`offer ÷ rentable SF` — the standard broker comp metric). All three computed in `model.js` `compute()`; every value renders in full at 1440px (no truncation) via `minmax(0, 1fr)` grid tracks + tightened cell padding/font-size, with label/value `text-overflow: ellipsis` as a safety net. Responsive breakpoints re-tuned to 5 cols (≤1100px) / 3 cols (≤760px) so 15 divides evenly (no dangling half-empty row) | Fewer than 15 `.kpi` cells, any KPI value visibly truncated at 1440px, NaN/Infinity/undefined anywhere in `.kpi-strip`, or a breakpoint leaves an empty gap in the last row |
 | S38 | Target CAP/DSCR sliders | Target CAP and Target DSCR share one combined, double-wide deal-cell (`.deal-cell--target-combo`), stacked one row above the other (`.target-row`) instead of two separate side-by-side cells. Each row is a **slider** (`.target-sweep-slider`, fixed range — CAP **5%–20%** at 0.05% steps, DSCR **1–5** at 0.01 steps) plus a **directly-editable readout field** at the right end (a plain `fieldPercent`/`fieldNum`, same Excel-style formula entry as every other numeric field) — no mode switch, no separate preview state. Both controls always show the deal's **live actual** CAP/DSCR (recomputed every render — not a separately stored target) and both **permanently commit** the same way: the slider fires its back-solve on `change` (release, one undo step per drag — not `input`, which would fire continuously mid-drag), the field on blur/Enter, and either one calls the same `goalSeekOffer` as S15's typed goal-seek (`solveOfferForTarget`, shared). The readout text still updates live on every `input` tick while dragging (so the number visibly tracks the handle instead of freezing until release) — that part is a cheap local re-format of the slider's own position, not a commit. No more ephemeral/"what-if" preview mode or simulated-offer styling — every interaction is a real, saved edit. Both disabled whenever the dashboard is locked, same as any other field | Target CAP/DSCR aren't stacked in one combined cell, the slider's range/step is off, the readout doesn't reflect the deal's actual current value on load, the readout freezes until release instead of tracking the drag live, dragging the slider doesn't permanently move the offer on release (or commits on every `input` tick instead of once on release), a committed value doesn't survive a reload, or the field/slider stay editable while the dashboard is locked |
-
+| S39 | NAV back-flow | Every drill-down returns to Properties and the path strictly unwinds — Compare and Archive via their own **Back to properties**, a dashboard via the static `#nav-properties` link — and the page just left is GONE after each (`.compare-table`/`.archive-table`/`.kpi-strip` count 0). Exists because the generic `NAV` SKIPS here (it needs a multi-level drill-in) while `test.md` still requires a back-flow test for every back affordance, of which this app has five | A back control doesn't return to the list, or the page just left is still rendered after it |
+| S40 | DISMISS (project overlays) | The photo gallery, the lightbox and the Import modal each close by **all three** paths — its close control, Escape, and a backdrop click at the overlay's own corner — and the gallery SURVIVES every lightbox dismissal (the upper layer owns the key). The fixture photo URL is stubbed to a real 1×1 PNG so the gallery renders an actual image and the console-error gate isn't tripped by `ERR_TUNNEL_CONNECTION_FAILED`. Exists because the generic `DISMISS` can only reach overlays discoverable from the default state, and the gallery needs the ▦ button while the lightbox needs a photo to exist | Any overlay survives one of its three dismissal paths, a lightbox dismissal also closes the gallery, or the image stub is removed and the console gate fires |
 **The app is gated behind login** (owner decision, 2026-07-16), using **email +
 password** (`signIn`/`signUp`/`resetPassword`/`updatePassword` in `js/supabase.js`;
 the gate has sign-in / create-account / forgot modes + a recovery form). Logged
@@ -259,9 +275,12 @@ not a coverage gap, and "fixing" it by setting
 `TEST_AUTH_CREDENTIAL`/`TEST_AUTH_EMAIL` makes the signal strictly worse.** It is
 structurally redundant with S23–S28 above, which exercise the *real* gate (only the
 backend is stubbed) deterministically and without credentials — see the credential row
-in the UI Test Configuration table for the measurement. **Precise scope, measured
-2026-08-26 on the refreshed kit:** exactly ONE of the three desktop skips is S2. The
-other two are `NAV` (no multi-level drill-down with an in-app back control) and `ENTRY`
+in the UI Test Configuration table for the measurement. **Precise scope — re-verified 2026-10-05 (3 skipped / 49 passed, desktop), still exactly as
+first measured 2026-08-26:** exactly ONE of the three desktop skips is S2. The
+other two are `NAV` (the kit requires a **multi-level** drill-in; this app's hierarchy is
+one level deep with three branches — note it is *not* that there is no in-app back control,
+as an earlier version of this line said: there are five, and the **NAV back-flow** scenario
+in `property.spec.js` now proves the unwinding property directly) and `ENTRY`
 (no extra `APP_PAGES` declared) — structural, nothing to do with auth. **S3 and S4 do
 NOT skip**: they carry no credential guard and run unconditionally, exercising their
 real subjects (interactive elements; 390px overflow) with the auth step a no-op. An
@@ -311,13 +330,22 @@ hitting both of its named traps at once: **a present binary is not a browser tha
 launches, and an install that exits 0 is not a browser that launches.** Measured,
 not inferred — the 52 failures are all `browserType.launch`.
 
-**Consequence for the #348 executed-coverage gate.** `check-ui-viewports.js
---declared … --report …` verifies each width class actually *ran*, not merely that
-it was declared. Locally it therefore **cannot pass**: the tablet band can never
-produce a result here. That is not a project defect — CI's `ui-suite` composite
-installs chromium **and** webkit with their deps and runs the full matrix, where
-all three bands get results. Locally, verify with `--project=desktop` and
-`--project=mobile-chrome` and let CI arbitrate the tablet band.
+⚠️ **CORRECTION (2026-10-05, Codex on #116) — the earlier version of this paragraph
+called `check-ui-viewports.js` the "#348 executed-coverage gate", said it "verifies each
+width class actually *ran*", and concluded it **cannot pass locally**. All three are
+wrong, and the error inverts what a green means.** The gate's verdict is **SCHEDULED**,
+which `test.md` names deliberately: a band is covered when a project declaring that width
+has a **non-skipped** result, and `failed`, `timedOut` and `interrupted` are all
+non-skipped. So webkit's launch failures here are not an absence of results — they are 52
+**failed** results, they satisfy the tablet band, and the gate **exits 0** on them.
+Measured, not reasoned: a synthetic report whose tablet results are *only* `failed`
+returns `GATE EXIT=0`. What is genuinely unavailable locally is the stronger **RENDERED**
+disposition for the tablet band (it needs the render witness recorded at a width in the
+class, which a test that never launched cannot produce) — and RENDERED never changes the
+exit code. **So never read this gate's green as "all three bands rendered", locally or in
+CI; the suite's own pass/fail is what says webkit ran.** Locally, verify with
+`--project=desktop` and `--project=mobile-chrome`, and let CI — which installs chromium
+**and** webkit with their deps — arbitrate the tablet band.
 
 **Why the chromium projects run at all:** this app has **no runtime CDN import**.
 `js/supabase.js:11` loads the client from `./vendor/supabase-js.js` (720KB, zero

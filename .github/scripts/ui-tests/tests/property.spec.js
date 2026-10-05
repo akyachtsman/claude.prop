@@ -10,6 +10,19 @@ import { installSignedIn, CLOUD_KEY } from './_supabase-mock.js';
 // one-screen and 44px-touch behaviours are tested in their intended mode.
 // (The generic app.spec.js covers the mobile/touch viewports.)
 test.use({ viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false });
+// ⚠️ THE FILE-SCOPE `test.use({ viewport })` ABOVE REPLACES EVERY PROJECT'S WIDTH,
+// so these scenarios run at 1440x900 in the tablet and phone projects too —
+// verified: S11 ("fits 1440x900, no vertical scroll") passes under
+// --project=mobile-chrome, which declares 393x727. test.md -> UI coverage gates
+// requires any test that can end up at a width its project did not declare to
+// carry the marker, by EITHER route (setViewportSize OR the test.use/extend
+// fixture form), or check-ui-viewports.js counts the result toward a band this
+// test never rendered at. Pushed per-test from a hook so a scenario added later
+// inherits it instead of having to remember.
+test.beforeEach(() => {
+  test.info().annotations.push({ type: 'viewport-override', description: '1440' });
+});
+
 
 // The app is gated behind login: every scenario boots SIGNED IN against a stubbed
 // Supabase (no backend). The account starts empty (reconcile suppressed), so a
@@ -852,4 +865,129 @@ test('S32b archive persists across reload — an archived deal stays out of the 
   // entry keeps its count.
   await expect(page.locator('.lcard')).toHaveCount(0);
   await expect(page.locator('#nav-archive')).toContainText('Archive (1)');
+});
+
+// NAV back-flow — the PROPERTY the kit's generic NAV scenario would prove, proved
+// here instead. NAV skips in this repo because it requires a MULTI-LEVEL drill-in,
+// and this app's hierarchy is one level deep with three branches (Compare,
+// Archive, a property dashboard). test.md -> UI coverage gates is explicit that a
+// gate is its PROPERTY and not the kit's scenario, and that "any new client-side
+// navigation or back affordance requires a back-flow test" — and this app ships
+// five such affordances (four "Back to properties", plus the static Properties
+// nav). A skipped NAV left every one of them unexercised, so CLAUDE.md citing the
+// NAV invariant as what keeps back-navigation unwindable was citing a test that
+// never ran.
+test('NAV back-flow — every drill-down returns to Properties and never revisits the page just left', async ({ page }) => {
+  const errors = watchErrors(page);
+  await loadSample(page);                                   // 715 Plumas
+  await page.goto('./', { waitUntil: 'load' });
+  await page.click('button:has-text("+ New property")');    // a 2nd deal so Compare draws its table
+  await page.waitForSelector('.kpi-strip');
+  await page.goto('./', { waitUntil: 'load' });
+  await page.waitForSelector('.lcard');
+  await expect(page.locator('.lcard')).toHaveCount(2);
+
+  // Compare → its own "Back to properties" → the list, and Compare is GONE
+  // (strictly unwound: back must not land on the page just left).
+  await page.click('#nav-compare');
+  await page.waitForSelector('.compare-table');
+  await page.click('button:has-text("Back to properties")');
+  await page.waitForSelector('.lcard');
+  await expect(page.locator('.compare-table')).toHaveCount(0);
+
+  // Archive → its own "Back to properties" → the list, and Archive is GONE.
+  await page.click('#nav-archive');
+  await page.waitForSelector('.archive-table, .empty');
+  await page.click('button:has-text("Back to properties")');
+  await page.waitForSelector('.lcard');
+  await expect(page.locator('.archive-table')).toHaveCount(0);
+
+  // A property dashboard → the static Properties nav → the list, dashboard GONE.
+  // This branch returns via the topbar link rather than a "Back to properties"
+  // button, because the action bar is deliberately absent from the dashboard.
+  await page.click('.lcard__open >> nth=0');
+  await page.waitForSelector('.kpi-strip');
+  await page.click('#nav-properties');
+  await page.waitForSelector('.lcard');
+  await expect(page.locator('.kpi-strip')).toHaveCount(0);
+  await expect(page.locator('.lcard')).toHaveCount(2);
+
+  expect(errors).toEqual([]);
+});
+
+// DISMISS (project overlays) — test.md's dismisser gate: for EVERY overlay, prove
+// the close control AND Escape AND the backdrop each actually hide it. The kit's
+// generic DISMISS scenario runs here and passes, but it can only exercise overlays
+// it can DISCOVER from the default state; the photo gallery needs the ▦ button and
+// the lightbox needs a photo to exist, which fixtures start without. So those two
+// had only their Escape path asserted (above) and never their control or backdrop.
+// Backdrop clicks are aimed at (5,5) — the overlay's own corner, clear of the
+// centred panel — because clicking the overlay's centre hits the panel instead and
+// the handlers deliberately only close on `e.target === overlay`.
+test('DISMISS project overlays — gallery, lightbox and Import each close by control, Escape AND backdrop', async ({ page }) => {
+  const errors = watchErrors(page);
+  // Serve a real pixel for the fixture photo URLs. test.md -> "stub the
+  // collaborators, never the subject": the subject here is DISMISSAL, the image is
+  // a collaborator, and unstubbed it fails with ERR_TUNNEL_CONNECTION_FAILED and
+  // trips the console-error gate on a flow that is otherwise correct. Stubbing it
+  // also means the gallery and lightbox render an actual image rather than a
+  // broken one.
+  const PNG = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==',
+    'base64');
+  await page.route('https://ex.com/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'image/png', body: PNG }));
+  await loadSample(page);
+  const photos = page.locator('button[aria-label^="Photos"]');
+
+  // Seed one photo so the lightbox is reachable at all.
+  await photos.click();
+  await page.fill('textarea[aria-label="Add photo URLs"]', 'https://ex.com/1.jpg');
+  await page.click('button:has-text("Add photos")');
+  await expect(page.locator('.gallery__cell')).toHaveCount(1);
+
+  // ── gallery: control, then Escape, then backdrop
+  await page.click('button:has-text("Done")');
+  await expect(page.locator('.gallery')).toHaveCount(0);
+  await photos.click();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.gallery')).toHaveCount(0);
+  await photos.click();
+  await page.locator('.modal__overlay').click({ position: { x: 5, y: 5 } });
+  await expect(page.locator('.gallery')).toHaveCount(0);
+
+  // ── lightbox: control, then Escape, then backdrop. The gallery must SURVIVE
+  // each one — the lightbox is the upper layer and owns the dismissal.
+  await photos.click();
+  await page.locator('.gallery__img').first().click();
+  await page.locator('.lightbox__close').click();
+  await expect(page.locator('.lightbox')).toHaveCount(0);
+  await expect(page.locator('.gallery')).toBeVisible();
+
+  await page.locator('.gallery__img').first().click();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.lightbox')).toHaveCount(0);
+  await expect(page.locator('.gallery')).toBeVisible();
+
+  await page.locator('.gallery__img').first().click();
+  await page.locator('.lightbox').click({ position: { x: 5, y: 5 } });
+  await expect(page.locator('.lightbox')).toHaveCount(0);
+  await expect(page.locator('.gallery')).toBeVisible();
+  await page.keyboard.press('Escape');                       // tidy up the gallery
+
+  // ── Import modal (list view): control, Escape, backdrop
+  await page.goto('./', { waitUntil: 'load' });
+  await page.waitForSelector('.lcard');
+  for (const dismiss of [
+    async () => page.locator('.modal__close').click(),
+    async () => page.keyboard.press('Escape'),
+    async () => page.locator('.modal__overlay').click({ position: { x: 5, y: 5 } }),
+  ]) {
+    await page.click('button:has-text("Import a listing")');
+    await expect(page.locator('.modal__overlay')).toHaveCount(1);
+    await dismiss();
+    await expect(page.locator('.modal__overlay')).toHaveCount(0);
+  }
+
+  expect(errors).toEqual([]);
 });
