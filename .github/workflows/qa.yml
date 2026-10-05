@@ -23,9 +23,18 @@
 #     ⚠️ LOCAL OVERRIDE — DO NOT set either secret on this repo. The generic
 #     suite signs itself in (app.spec.js beforeEach -> installSignedIn), so no
 #     gate is ever on screen, mechanism resolves to 'none', and S2 skips by
-#     design. Setting the secret converts that honest skip into a vacuous pass.
-#     Measured: S2 passes in 7.1s with a deliberately wrong password. See the
-#     credential row in CLAUDE.md.
+#     design.
+#     ⚠️ WHAT SETTING ONE NOW DOES, RE-MEASURED 2026-10-05: S2 FAILS — it does
+#     NOT become a vacuous pass. An earlier version of this comment said
+#     "Measured: S2 passes in 7.1s with a deliberately wrong password", which was
+#     true of the older kit and is now the opposite of the behaviour. Upstream
+#     added a discriminating guard (app.spec.js, `if (!s2Gated)` -> `if
+#     (authConfigured) throw`): a gate absent WITH credentials configured is a
+#     hard failure naming the contradiction. So if CI goes red on S2 right after
+#     someone sets one of these secrets, the secret IS the cause and removing it
+#     is the fix — do not go looking for a broken gate. Reason to keep them unset
+#     is unchanged (the coverage is redundant with auth.spec.js S23-S28); only the
+#     failure mode is. See the credential row in CLAUDE.md.
 #   - Set UI_TESTS_DIR below to the path of your Playwright test directory
 #   - Adjust the UI_PATHS regex in the ui-changes job to your project layout
 

@@ -873,58 +873,103 @@ test('S32b archive persists across reload — an archived deal stays out of the 
 // Archive, a property dashboard). test.md -> UI coverage gates is explicit that a
 // gate is its PROPERTY and not the kit's scenario, and that "any new client-side
 // navigation or back affordance requires a back-flow test" — and this app ships
-// five such affordances (four "Back to properties", plus the static Properties
-// nav). A skipped NAV left every one of them unexercised, so CLAUDE.md citing the
-// NAV invariant as what keeps back-navigation unwindable was citing a test that
-// never ran.
+// five such affordances. A skipped NAV left every one of them unexercised, so
+// CLAUDE.md citing the NAV invariant as what keeps back-navigation unwindable was
+// citing a test that never ran.
+//
+// ⚠️ FOUR "Back to properties" BUTTONS, NOT TWO — Compare and Archive each render
+// their own from TWO independent branches, chosen by how much data exists
+// (Codex, #116):
+//   compare.js:62  — the `all.length < 2` "needs 2+" empty state
+//   compare.js:251 — the populated comparison table
+//   archive.js:19  — the `all.length === 0` empty state
+//   archive.js:112 — the populated archive table
+// An earlier version of this test opened Compare with two deals and Archive with
+// none, so it only ever clicked compare.js:251 and archive.js:19 while claiming to
+// cover every affordance — either other branch could regress green. The property
+// counts below are therefore load-bearing: each step sets up the data state that
+// selects the branch it means to click.
 test('NAV back-flow — every drill-down returns to Properties and never revisits the page just left', async ({ page }) => {
   const errors = watchErrors(page);
-  await loadSample(page);                                   // 715 Plumas
+  const backToList = async (gone) => {
+    await page.click('button:has-text("Back to properties")');
+    await page.waitForSelector('.lcard');
+    await expect(page.locator(gone)).toHaveCount(0);   // strictly unwound
+  };
+
+  await loadSample(page);                                   // ONE deal: 715 Plumas
   await page.goto('./', { waitUntil: 'load' });
-  await page.click('button:has-text("+ New property")');    // a 2nd deal so Compare draws its table
+  await page.waitForSelector('.lcard');
+
+  // (1) Compare with ONE deal → the "needs 2+" empty state's back button
+  //     (compare.js:62).
+  await page.click('#nav-compare');
+  await expect(page.locator('.empty')).toContainText('Compare needs 2+');
+  await backToList('.empty');
+
+  // (2) Archive with NOTHING archived → the empty state's back button
+  //     (archive.js:19).
+  await page.click('#nav-archive');
+  await expect(page.locator('.empty')).toContainText('No archived properties');
+  await backToList('.empty');
+
+  // A second deal, so Compare draws its table and Archive can hold a row.
+  await page.click('button:has-text("+ New property")');
   await page.waitForSelector('.kpi-strip');
   await page.goto('./', { waitUntil: 'load' });
-  await page.waitForSelector('.lcard');
   await expect(page.locator('.lcard')).toHaveCount(2);
 
-  // Compare → its own "Back to properties" → the list, and Compare is GONE
-  // (strictly unwound: back must not land on the page just left).
+  // (3) Compare with TWO deals → the populated table's back button
+  //     (compare.js:251).
   await page.click('#nav-compare');
   await page.waitForSelector('.compare-table');
-  await page.click('button:has-text("Back to properties")');
-  await page.waitForSelector('.lcard');
-  await expect(page.locator('.compare-table')).toHaveCount(0);
+  await backToList('.compare-table');
 
-  // Archive → its own "Back to properties" → the list, and Archive is GONE.
+  // (4) Archive holding a row → the populated table's back button
+  //     (archive.js:112).
+  await page.click('button[aria-label="Archive New property"]');
+  await expect(page.locator('.lcard')).toHaveCount(1);
   await page.click('#nav-archive');
-  await page.waitForSelector('.archive-table, .empty');
-  await page.click('button:has-text("Back to properties")');
-  await page.waitForSelector('.lcard');
-  await expect(page.locator('.archive-table')).toHaveCount(0);
+  await page.waitForSelector('.archive-table');
+  await backToList('.archive-table');
 
-  // A property dashboard → the static Properties nav → the list, dashboard GONE.
-  // This branch returns via the topbar link rather than a "Back to properties"
-  // button, because the action bar is deliberately absent from the dashboard.
+  // (5) A property dashboard → the static Properties nav. This branch returns via
+  // the topbar link rather than a "Back to properties" button, because the action
+  // bar is deliberately absent from the dashboard.
   await page.click('.lcard__open >> nth=0');
   await page.waitForSelector('.kpi-strip');
   await page.click('#nav-properties');
   await page.waitForSelector('.lcard');
   await expect(page.locator('.kpi-strip')).toHaveCount(0);
-  await expect(page.locator('.lcard')).toHaveCount(2);
+  await expect(page.locator('.lcard')).toHaveCount(1);
 
   expect(errors).toEqual([]);
 });
 
 // DISMISS (project overlays) — test.md's dismisser gate: for EVERY overlay, prove
-// the close control AND Escape AND the backdrop each actually hide it. The kit's
-// generic DISMISS scenario runs here and passes, but it can only exercise overlays
-// it can DISCOVER from the default state; the photo gallery needs the ▦ button and
-// the lightbox needs a photo to exist, which fixtures start without. So those two
-// had only their Escape path asserted (above) and never their control or backdrop.
+// the close control AND Escape AND the backdrop each actually hide it.
+//
+// ⚠️ THE GENERIC DISMISS SCENARIO CANNOT COVER THIS APP'S OVERLAYS, and passing is
+// not evidence that it did (Codex, #116). Two of its selectors simply do not match
+// anything here:
+//   app.spec.js:2520  CLOSE    — matches aria-label*="close", .close, .modal-close,
+//                                "Close"/"Cancel"/×/✕ — but NOT the `Done` buttons
+//                                the gallery and Listing-details modals use.
+//   app.spec.js:2605  backdrop — matches .backdrop, .modal-backdrop,
+//                                .overlay-backdrop, [data-backdrop] — and this app's
+//                                ONLY backdrop class is `.modal__overlay`, so the
+//                                generic backdrop leg has never found a backdrop in
+//                                this project at all.
+// It is also limited to overlays reachable from the default state: the photo gallery
+// needs the ▦ button, the lightbox needs a photo to exist, and Listing details needs
+// the 🏷 button. So every path below is one nothing else asserts.
+// (The first-sign-in account modal is the fifth overlay; `installSignedIn` suppresses
+// the reconcile in this file, so its three paths are covered in auth.spec.js, where
+// reconcile can be enabled.)
 // Backdrop clicks are aimed at (5,5) — the overlay's own corner, clear of the
 // centred panel — because clicking the overlay's centre hits the panel instead and
 // the handlers deliberately only close on `e.target === overlay`.
-test('DISMISS project overlays — gallery, lightbox and Import each close by control, Escape AND backdrop', async ({ page }) => {
+test('DISMISS project overlays — gallery, lightbox, Listing details and Import each close by control, Escape AND backdrop', async ({ page }) => {
   const errors = watchErrors(page);
   // Serve a real pixel for the fixture photo URLs. test.md -> "stub the
   // collaborators, never the subject": the subject here is DISMISSAL, the image is
@@ -974,6 +1019,20 @@ test('DISMISS project overlays — gallery, lightbox and Import each close by co
   await expect(page.locator('.lightbox')).toHaveCount(0);
   await expect(page.locator('.gallery')).toBeVisible();
   await page.keyboard.press('Escape');                       // tidy up the gallery
+
+  // ── Listing details (🏷 on the dashboard): control ("Done"), Escape, backdrop.
+  // Its close control is a `Done` button, which is exactly what the generic
+  // scenario's CLOSE selector misses.
+  for (const dismiss of [
+    async () => page.click('.desc-modal button:has-text("Done")'),
+    async () => page.keyboard.press('Escape'),
+    async () => page.locator('.modal__overlay').click({ position: { x: 5, y: 5 } }),
+  ]) {
+    await page.click('button[aria-label="Listing details"]');
+    await expect(page.locator('.desc-modal')).toBeVisible();
+    await dismiss();
+    await expect(page.locator('.desc-modal')).toHaveCount(0);
+  }
 
   // ── Import modal (list view): control, Escape, backdrop
   await page.goto('./', { waitUntil: 'load' });
