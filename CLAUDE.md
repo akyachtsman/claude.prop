@@ -142,6 +142,36 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   all eight of these — is invisible to it. Deriving beats enumerating but is not
   complete either; treat both as aids, not proofs.
 
+- **`ui-suite/action.yml` names a guard this repo does not have.** It cites
+  `check-ui-suite-env.py` **nine times** — "enforces exact env parity across the sequence",
+  "enforces that adjacency mechanically" — and that script does not run here. It is real, but
+  lives at upstream's `.github/scripts/check-ui-suite-env.py`, **outside `templates/`**; its own
+  docstring says so ("NOT exported: `.github/` is outside every EXPORTS.json category path").
+  So upstream's CI guards upstream's copy of the template and **nothing guards this one**.
+  Codex flagged one reference on #115; there are ten, and it went unaddressed until 2026-10-05.
+  This is **not** a live breakage — the composite here is verbatim upstream and the invariant
+  currently holds — but the comments tell anyone editing the composite that a hand-edit would be
+  caught mechanically, and here it would not be: insert a step between the Playwright run and a
+  viewport gate, or add an env var to only one of them, and every local check stays green while
+  the gate inspects a different configuration than the run.
+  **So run it by hand when touching the composite or the kit.** It takes the target as `argv[1]`
+  and the spec files as `argv[2:]`, so it works against this tree unmodified:
+  `python3 check-ui-suite-env.py .github/actions/ui-suite/action.yml <kit .js files>`.
+  Doing that on 2026-10-05 produced a **true finding in one second** that no gate here can see:
+  `PW_EXECUTABLE` is read by `playwright.config.js:38` while the composite's run step never sets
+  it. The correct resolution is the guard's **`ENV_EXEMPT`** branch, **not** an input — it is a
+  local-sandbox hatch that arrives from the developer's own shell, and giving CI an input to pin
+  the browser executable would invert `global.md`'s *supply the missing thing, never lower the
+  bar*. CI leaving it unset is the right behaviour (`launchOptions: undefined` → Playwright's own
+  installed browser), which is why the green runs were never wrong.
+  **Not forked locally, deliberately:** without its case suite it becomes "the guard nobody
+  exercises" (its own line 70 says a branch verified in round 9 broke in round 10 for exactly
+  that reason), and with it that is ~1,500 lines of upstream CI for every future `/refresh-repo`
+  to diff by hand. Handed upstream instead — export the guard **and** its cases to `templates/`,
+  because downstream is where local specs live and therefore where the #320 class actually bites.
+  The three local specs here (`property.spec.js`, `auth.spec.js`, and `app.spec.js`'s bootstrap)
+  are invisible to upstream's run of it.
+
 ## Agent Workflow
 1. Use a `claude/<name>` feature branch
 2. For a non-trivial feature, run `/sdd-loop` (`specify` → `clarify` → `plan` → `tasks`) before coding — separate WHAT from HOW; trivial changes skip to step 3
