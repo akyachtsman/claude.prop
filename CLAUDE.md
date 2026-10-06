@@ -158,7 +158,7 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   exempted name under "spec env wired from inputs", crediting `PW_EXECUTABLE` to a
   composite that never mentions it. Same shape as the pass-line over-claims upstream's
   own `check-job-bounds.py` removed in `96c370f` (*report only what was ENFORCED*).
-- **Drop-in drift inventory — what `/refresh-repo` Phase 1.5 should expect.** Four
+- **Drop-in drift inventory — what a refresh should expect to find.** Four
   installed templates differ from upstream and all four are deliberate: `qa.yml` (three
   local additions — the root-absolute guard above, the unit-test step, the LOCAL OVERRIDE
   comment on the auth secrets), `check-contrast.js` (the four pairs above),
@@ -174,17 +174,40 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   `1cde0ef2..c411b808` name it 0 times, and upstream never touched it again.) The real
   mechanism: **Phase 3 advances the stamp on the delta having been READ, not APPLIED** —
   its own marker is named `refresh-repo-classified` — so a listed file left unapplied
-  drops out of every later delta, and Phase 1.5's delta-independent diff is the only
-  thing that still sees it. ⚠️ **How long that lasts depends on upstream, not on you:**
+  drops out of every later delta, and only a delta-INDEPENDENT diff still sees it.
+  ⚠️ **How long that lasts depends on upstream, not on you:**
   it is permanent only while upstream never touches that template again, which is
   exactly the condition `check-job-bounds.py` met (`96c370f` was upstream's last change
   to it). A later upstream edit does re-list the path — but the delta then shows only
   that **newer** change, while the local file is behind by both, so resurfacing still
   requires dispositioning against the whole template rather than reading the new hunk.
-  Either way the gap is not self-healing, so
-  treat an unmarked, unlisted DRIFT as staleness until the diff proves otherwise, grep
+  Either way the gap is not self-healing.
+  ⚠️ **And the diff that caught it was NOT stock Phase 1.5 — crediting it there was wrong**
+  (corrected by claude.directives 2026-10-06; re-verified against the skill at
+  `c411b808`). Phase 1.5's loop is `.github/workflows/*.yml`, `.github/actions/*/*` and
+  `.claude/hooks/session-start.sh`; **it never looks at `.github/scripts/*` or the
+  Playwright kit.** This catch came from broadening the scan to those by hand, so a stock
+  Phase 1.5 run reports no DRIFT for any script and that silence says nothing about them.
+  So treat an unmarked, unlisted DRIFT as staleness until the diff proves otherwise, grep
   the in-file marker rather than trusting this list, and on any refresh **confirm each
   dispositioned file was actually written, not merely classified**.
+- **Upstream closed the stamp-on-READ gap in `claude.directives#397`** (pending merge as
+  of 2026-10-06): Phase 3 now fetches the upstream head before stamping and **refuses the
+  stamp while any installed copy differs from its template**, or a required file is
+  missing. It compares every path the delta lists **plus every dependency regardless of
+  the delta** — whole composite directories, and scripts an installed workflow or
+  directive names by `.github/scripts/*` path — with kit files compared wherever this
+  project's `UI_TESTS_DIR` puts them. So the next refresh here **will name all four
+  deliberate divergences above**, once, hunk-by-hunk kit files included. Record each as
+  `.claude/directive-sync.json` → `refresh_kept[<path>] = {blob, reason}` **using the blob
+  id the refusal prints** — do NOT pre-populate guessed ids, because the refusal is what
+  supplies them; a reason holds until the template changes, and then the question returns.
+  ⚠️ **Known hole, `claude.directives#398`:** a script run from
+  `working-directory: .github/scripts` with a bare command is invisible to BOTH the
+  install and this check. The shipped case is `cron-notify.yml` → `notify-task.js` /
+  `notify-email.js`. **Check those two by hand on any refresh that touches
+  `cron-notify.yml`** until #398 lands. Both matched their templates at `c411b808`,
+  verified in this refresh's broadened scan.
 
 ## Agent Workflow
 1. Use a `claude/<name>` feature branch
