@@ -133,23 +133,44 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   pairing.** Its limit: it only sees rules declaring BOTH a `color:` and a
   `background:`, so text that sets a colour and inherits its background — all eight
   in (1) — is invisible to it. Deriving beats enumerating; neither is a proof.
-- **`ui-suite/action.yml` cites `check-ui-suite-env.py` nine times as enforcing step
-  adjacency and exact env parity — and that script does not run here.** It is real but
-  lives at upstream's `.github/scripts/`, outside `templates/`, so upstream's CI guards
-  upstream's copy of the template and **nothing guards this one**. Not a live breakage
-  (the composite is verbatim upstream), but the comments promise an editor a mechanical
-  catch they will not get: insert a step between the Playwright run and a viewport gate,
-  or add an env var to only one of them, and every local check stays green.
-  **So run it by hand when touching the composite or the kit** — it takes the target as
-  `argv[1]` and the spec files as `argv[2:]`, so it works against this tree unmodified:
-  `python3 check-ui-suite-env.py .github/actions/ui-suite/action.yml <kit .js files>`.
-  Doing that on 2026-10-05 found a true finding no gate here can see: `PW_EXECUTABLE` is
-  read by `playwright.config.js:38` and the composite's run step never sets it. Resolve
-  that through the guard's **`ENV_EXEMPT`**, never an input — it is a local-sandbox hatch
-  from the developer's own shell, and letting CI pin the browser executable would invert
-  *supply the missing thing, never lower the bar*. CI leaving it unset is correct.
-  Deliberately **not** forked in: without its case suite it is the guard nobody
-  exercises, and with it, ~1,500 lines for every refresh to diff. Handed upstream.
+- **`check-ui-suite-env.py` RUNS here now** — a blocking `static-checks` step
+  (`--kit-dir "$UI_TESTS_DIR"`). Upstream exported it to `templates/scripts/` in
+  `c411b808` (PROP6 #2), which answered both reasons this project had declined the
+  fork: upstream keeps the case suite and exercises the template with it, so it is no
+  longer the guard nobody tests, and what lands here is 828 verbatim lines Phase 1.5
+  diffs mechanically rather than lines anyone re-reads (the old "~1,500" counted the
+  case suite, which is NOT exported). It enforces what `ui-suite/action.yml` cites nine
+  times — step adjacency and exact env parity — so inserting a step between the
+  Playwright run and a viewport gate, or adding an env var to only one of them, is now
+  caught instead of staying green. No longer run it by hand.
+- **`PW_EXECUTABLE` is EXEMPTED in `.github/ui-suite-env-exempt.json`, never wired to an
+  input.** The guard's one true finding here: `playwright.config.js:38` reads it and the
+  composite never sets it. Exempting is the right answer — it is a local-sandbox hatch
+  from the developer's own shell (the `/opt/pw-browsers/chromium` symlink), the config's
+  ternary yields `undefined` when unset, so CI exercises Playwright's own managed
+  browser; letting CI pin the executable would invert *supply the missing thing, never
+  lower the bar*. The entry lives in the project's own file **by design** — upstream's
+  script says so in as many words: editing it would be drift every refresh stops on, and
+  the reason would be lost at the next take.
+  ⚠️ **Over-claim found on adoption, handed upstream:** the guard's pass line lists an
+  exempted name under "spec env wired from inputs", crediting `PW_EXECUTABLE` to a
+  composite that never mentions it. Same shape as the pass-line over-claims upstream's
+  own `check-job-bounds.py` removed in `96c370f` (*report only what was ENFORCED*).
+- **Drop-in drift inventory — what `/refresh-repo` Phase 1.5 should expect.** Four
+  installed templates differ from upstream and all four are deliberate: `qa.yml` (three
+  local additions — the root-absolute guard above, the unit-test step, the LOCAL OVERRIDE
+  comment on the auth secrets), `check-contrast.js` (the four pairs above),
+  `playwright.config.js` (`baseURL` fill-in + the `PW_EXECUTABLE` hatch) and
+  `app.spec.js` (the `installSignedIn` boot) — the last two marked `PROJECT-SPECIFIC`
+  in-file. A fifth difference, found and RESOLVED by this refresh, was not a
+  customization at all: ⚠️ **`check-job-bounds.py` had been 70 lines stale since
+  2026-08-27**, unmarked and unmentioned here, because upstream hardened it
+  **in `96c370f` — the commit this project was stamped at**, so the `96c370f..1cde0ef2`
+  delta began after that change and every later delta began later still. **A template
+  that changes in the commit you stamp at is invisible to every delta, permanently**;
+  only Phase 1.5's delta-independent diff can surface it. So treat an unmarked,
+  unlisted DRIFT as staleness until the diff proves otherwise, and grep the in-file
+  marker rather than trusting this list.
 
 ## Agent Workflow
 1. Use a `claude/<name>` feature branch
