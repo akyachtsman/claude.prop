@@ -390,6 +390,20 @@ Agents write evidence to `.agent-reports/`:
 - A single one-shot verification check to confirm ci-notify fires is allowed **once** (the global.md wake-mechanism exception); after it's confirmed, never schedule again.
 - **Narrow exception — an outcome that NO subscription covers** (owner ruling relayed from `claude.directives`, 2026-08-23; adopt `git.md`): a PR subscription covers that PR and nothing else. **A `workflow_dispatch` run with no matching open PR**, a Pages deploy, or **a live gate on `main` after a merge** is reported by no webhook — `ci-notify.yml` fires only on success *and* only comments on an open PR for the head SHA. It *does* fall back to matching a dispatched run to an open PR **by branch**, so a dispatch onto a PR branch is already covered and must not get a check-in. It says so in its own code ("No open PR … nothing to notify", "silence here is an answer, not a miss"). For those, arm **ONE** check-in named for the specific outcome and drop it the moment that outcome lands. This is not a rhythm and not a poll: the ruling above still forbids standing periodic self-checks, and still forbids check-ins on a PR, which the webhook does cover. The gap is real — a red `qa-live` on `main` reopened #2 for hours with nothing able to wake this session.
 - Merge on green is a standing order; do the merge inline when a webhook wake reports green, not via a scheduled trigger.
+- ⚠️ **Codex does NOT re-review on a push — so a `Completed` verdict can describe a SHA
+  that is no longer the head.** `git.md` says the *Codex Review Summary* table is a
+  progress table, never a verdict; this is the second, quieter half of that trap. Codex's
+  own triggers, printed in its comment on every PR, are: opening a PR for review, marking
+  a draft ready, and `@codex review` / `@codex security review`. **A push is not one of
+  them.** After you push a fix, the table keeps naming the OLD commit and still reads
+  `Completed` — it looks like a clean head and is not one.
+  **Remedy: comment `@codex review`.** The trigger column then reads `Manual request`
+  against the new SHA. Measured end-to-end on #119 (2026-10-06): verdict `Completed` /
+  `2db6f63` / `Draft marked ready` while the head was `f812073`; the mention at 01:19:05
+  produced `Running` / `f812073` / `Manual request` at 01:20:11, 👀 at 01:20:15, and an
+  all-clear naming `f812073e7f` at 01:22:09. **So never read a verdict without comparing
+  its commit to the current head** — the SHA match is the whole check, and after any push
+  of your own you must request the review that will match.
 - This rule is written here (not just held in-conversation) so it survives `/refresh-repo` and context compaction — both of which reload this file but not transient chat rulings.
 
 ## Session Start
