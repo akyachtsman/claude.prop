@@ -160,6 +160,20 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   report — `is_wired()` classifies by the ACTUAL wiring, so a *stale* exemption for a name
   the composite has since taken from an input is reported as wired rather than exempted.
   Verified here before/after on the same tree: `PW_EXECUTABLE` moved off the wired list.
+  ⚠️ **The fix traded one over-claim for a smaller one — handed upstream (Codex, #122).**
+  The new line reads `exempted, NOT wired (each arrives another way, per its recorded
+  reason)`, and "arrives another way" is **false for this project's only exemption**:
+  `.github/ui-suite-env-exempt.json` says `PW_EXECUTABLE` does not arrive in CI at all and
+  that leaving it unset is correct. So every passing run now asserts something untrue.
+  Root cause is a conflation in `ENV_EXEMPT`, which covers two different things — a
+  variable the RUNNER supplies (`CI`, `GITHUB_*`, upstream's documented intent) and one
+  **deliberately never set, whose reader handles unset** (this project's case). Proposed
+  patch: drop the parenthetical to `per its recorded reason`, true of both kinds.
+  **NOT patched locally, on purpose:** the string is byte-identical upstream template
+  text, so editing it would make the file drift that Phase 3 now stops on at every
+  refresh, costing a `refresh_kept` entry for a cosmetic string — which is precisely what
+  the script's own header forbids (*"a PROJECT extends it in its own file, never by editing
+  this one"*).
 - **Drop-in drift inventory — what a refresh should expect to find.** Four
   installed templates differ from upstream and all four are deliberate: `qa.yml` (three
   local additions — the root-absolute guard above, the unit-test step, the LOCAL OVERRIDE
