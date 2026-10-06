@@ -142,7 +142,9 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   case suite, which is NOT exported). It enforces what `ui-suite/action.yml` cites nine
   times — step adjacency and exact env parity — so inserting a step between the
   Playwright run and a viewport gate, or adding an env var to only one of them, is now
-  caught instead of staying green. No longer run it by hand.
+  caught instead of staying green. No longer run it by hand. This also CLOSES Codex's
+  P2 on #115 ("Add the referenced UI-suite invariant guard", 2026-09-01) — which posted
+  3m37s after that PR was merged and went unresolved for five weeks.
 - **`PW_EXECUTABLE` is EXEMPTED in `.github/ui-suite-env-exempt.json`, never wired to an
   input.** The guard's one true finding here: `playwright.config.js:38` reads it and the
   composite never sets it. Exempting is the right answer — it is a local-sandbox hatch
@@ -164,13 +166,25 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   `app.spec.js` (the `installSignedIn` boot) — the last two marked `PROJECT-SPECIFIC`
   in-file. A fifth difference, found and RESOLVED by this refresh, was not a
   customization at all: ⚠️ **`check-job-bounds.py` had been 70 lines stale since
-  2026-08-27**, unmarked and unmentioned here, because upstream hardened it
-  **in `96c370f` — the commit this project was stamped at**, so the `96c370f..1cde0ef2`
-  delta began after that change and every later delta began later still. **A template
-  that changes in the commit you stamp at is invisible to every delta, permanently**;
-  only Phase 1.5's delta-independent diff can surface it. So treat an unmarked,
-  unlisted DRIFT as staleness until the diff proves otherwise, and grep the in-file
-  marker rather than trusting this list.
+  2026-08-27**, unmarked and unmentioned here. ⚠️ **It was NOT invisible to the delta
+  — #115's refresh LISTED it and did not apply it.** (An earlier version of this bullet
+  claimed "a template that changes in the commit you stamp at is invisible to every
+  delta"; that is wrong, because `git diff A B` includes changes made *in* B. Measured:
+  `1d57879..96c370f` names the file, 1 path; `96c370f..1cde0ef2` and
+  `1cde0ef2..c411b808` name it 0 times, and upstream never touched it again.) The real
+  mechanism: **Phase 3 advances the stamp on the delta having been READ, not APPLIED** —
+  its own marker is named `refresh-repo-classified` — so a listed file left unapplied
+  drops out of every later delta, and Phase 1.5's delta-independent diff is the only
+  thing that still sees it. ⚠️ **How long that lasts depends on upstream, not on you:**
+  it is permanent only while upstream never touches that template again, which is
+  exactly the condition `check-job-bounds.py` met (`96c370f` was upstream's last change
+  to it). A later upstream edit does re-list the path — but the delta then shows only
+  that **newer** change, while the local file is behind by both, so resurfacing still
+  requires dispositioning against the whole template rather than reading the new hunk.
+  Either way the gap is not self-healing, so
+  treat an unmarked, unlisted DRIFT as staleness until the diff proves otherwise, grep
+  the in-file marker rather than trusting this list, and on any refresh **confirm each
+  dispositioned file was actually written, not merely classified**.
 
 ## Agent Workflow
 1. Use a `claude/<name>` feature branch
