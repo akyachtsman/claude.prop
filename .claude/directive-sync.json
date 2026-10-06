@@ -1,6 +1,12 @@
 {
   "upstream": {
-    "sha": "c411b808319876f4c657fbdf142335a2f82d1583",
+    "sha": "bbfdcfc287da2d34ef90f83d24d8fbd833d5fcac",
     "synced": "2026-10-06"
+  },
+  "refresh_kept": {
+    ".github/scripts/check-contrast.js": {
+      "blob": "36e6918e52e6da12b39442af94b19d495b1b660f",
+      "reason": "FOUR deliberate PROJECT-SPECIFIC contrast pairs, each marked in-file and documented in CLAUDE.md: accent/surface at the 4.5 normal-text floor plus accent/bg (accent is a small-text colour in eight places at 13px/12px, so upstream's 3.0 large-text floor passed a palette whose labels all failed AA); on-navy/accent (.switcher__btn and .topbar__action keep on-navy over an accent hover fill); accent-hover/accent-light (the NOI chip, found by deriving pairs from components.css, shipping 4.32:1 at 11px bold); and on-danger/danger (the gallery delete glyph — this app never renders danger as a foreground, which is what upstream checks). Restoring the template would delete four real AA checks and re-admit the failures they caught (Codex, #109)."
+    }
   }
 }
