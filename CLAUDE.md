@@ -188,17 +188,28 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   `.claude/hooks/session-start.sh`; **it never looks at `.github/scripts/*` or the
   Playwright kit.** This catch came from broadening the scan to those by hand, so a stock
   Phase 1.5 run reports no DRIFT for any script and that silence says nothing about them.
+  The skill says so itself, in Phase 3: *"Phase 1.5 does not inspect customized paths like
+  `.github/scripts/ui-tests/**`"* — it was documented all along and still got mis-credited
+  here, so read that line rather than inferring the loop's reach from a past write-up.
   So treat an unmarked, unlisted DRIFT as staleness until the diff proves otherwise, grep
   the in-file marker rather than trusting this list, and on any refresh **confirm each
   dispositioned file was actually written, not merely classified**.
-- **Upstream closed the stamp-on-READ gap in `claude.directives#397`** (pending merge as
-  of 2026-10-06): Phase 3 now fetches the upstream head before stamping and **refuses the
-  stamp while any installed copy differs from its template**, or a required file is
-  missing. It compares every path the delta lists **plus every dependency regardless of
-  the delta** — whole composite directories, and scripts an installed workflow or
-  directive names by `.github/scripts/*` path — with kit files compared wherever this
-  project's `UI_TESTS_DIR` puts them. So the next refresh here **will name all four
-  deliberate divergences above**, once, hunk-by-hunk kit files included. Record each as
+- **Upstream has a fix for the stamp-on-READ gap in `claude.directives#397` — ⚠️ NOT IN
+  FORCE HERE YET.** This project is stamped at `c411b808`, which predates it, and the
+  cached toolkit is pinned to that same SHA, so **nothing in the rest of this bullet is
+  active today.** Until it is, the OLD Phase 3 applies (stamp = "the delta up to this SHA
+  was classified"), **no refusal will occur**, and the manual discipline above — confirm
+  each dispositioned file was actually written — is the only thing standing in for it.
+  ⚠️ **So do not wait for a refusal that cannot come** (Codex, #121). Test before relying
+  on any of it: `grep -c refresh_kept <the live commands/refresh-repo.md>` — **0 means not
+  installed**; measured 0 at `c411b808`.
+  **Once it IS installed,** Phase 3 fetches the upstream head before stamping and refuses
+  the stamp while any installed copy differs from its template, or a required file is
+  missing — every path the delta lists **plus every dependency regardless of the delta**
+  (whole composite directories, and scripts an installed workflow or directive names by
+  `.github/scripts/*` path), with kit files compared wherever this project's
+  `UI_TESTS_DIR` puts them. That refresh will then name all four deliberate divergences
+  above, once, hunk-by-hunk kit files included. Keep each by recording
   `.claude/directive-sync.json` → `refresh_kept[<path>] = {blob, reason}` **using the blob
   id the refusal prints** — do NOT pre-populate guessed ids, because the refusal is what
   supplies them; a reason holds until the template changes, and then the question returns.
