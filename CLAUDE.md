@@ -247,6 +247,27 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   `notify-email.js`. **Check those two by hand on any refresh that touches
   `cron-notify.yml`** until #398 lands. Both matched their templates at `c411b808` and
   again at `bbfdcfc2`, verified by hand in each refresh's broadened scan.
+- **`.claude/settings.json` was 42 permission entries stale for six weeks, and Phase 3
+  cannot see it.** `templates/claude-settings.json` — the enabled plugins, a read-only tool
+  allowlist, and an `ask` on `mcp__Supabase__deploy_edge_function` — was **listed in #114's
+  delta** (`ce2140a..1d57879`) and not applied: this file's last change stayed #100
+  (2026-08-18) through every refresh since. Synced 2026-10-06, verbatim, because the local
+  file held no project-only keys: **+42 `allow` entries** (30 GitHub MCP reads, plus six
+  Remote-session reads in each of the two server-name spellings — every one read-only),
+  **+`plugin-dev`**, **+the `ask`**; nothing dropped. The `ask` matters here: it is the
+  harness-level form of this file's own rule that deploys require explicit approval, and
+  this repo has an Edge Function.
+  **Why the guard misses it:** Phase 3's delta loop has no case for
+  `templates/claude-settings.json`; it falls through to `*) continue ;  # merged, written
+  once, or not installed`. So a stale settings file draws no refusal, no `refresh_kept`
+  prompt and no output at all — **measured** by running Phase 3's applied-check against the
+  old 12-entry file, which printed nothing about settings (only the unrelated kit refusal).
+  It is the second listed-and-not-applied file found here (after `check-job-bounds.py`,
+  #115) and the first the new guard cannot catch — the worse kind, because this is the file
+  that decides what the agent may do unprompted. **Proposed upstream:** compare it as a SET,
+  the template's `permissions.allow`, `permissions.ask` and `enabledPlugins` each a subset
+  of the local file's, which honours "a project may add its own keys" while still refusing
+  a stale install. Until then, **diff this file by hand on every refresh.**
 
 ## Agent Workflow
 1. Use a `claude/<name>` feature branch
