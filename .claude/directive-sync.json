@@ -1,12 +1,16 @@
 {
   "upstream": {
-    "sha": "bbfdcfc287da2d34ef90f83d24d8fbd833d5fcac",
+    "sha": "9cbae810bbac2b4d940aa91534b4329afe4b72f0",
     "synced": "2026-10-06"
   },
   "refresh_kept": {
     ".github/scripts/check-contrast.js": {
       "blob": "36e6918e52e6da12b39442af94b19d495b1b660f",
       "reason": "FOUR deliberate PROJECT-SPECIFIC contrast pairs, each marked in-file and documented in CLAUDE.md: accent/surface at the 4.5 normal-text floor plus accent/bg (accent is a small-text colour in eight places at 13px/12px, so upstream's 3.0 large-text floor passed a palette whose labels all failed AA); on-navy/accent (.switcher__btn and .topbar__action keep on-navy over an accent hover fill); accent-hover/accent-light (the NOI chip, found by deriving pairs from components.css, shipping 4.32:1 at 11px bold); and on-danger/danger (the gallery delete glyph — this app never renders danger as a foreground, which is what upstream checks). Restoring the template would delete four real AA checks and re-admit the failures they caught (Codex, #109)."
+    },
+    ".github/scripts/ui-tests/tests/app.spec.js": {
+      "blob": "f538aba358519d25b3c137aa2a4cbe4a8b92d1a9",
+      "reason": "TWO deliberate PROJECT-SPECIFIC hunks kept, both marked in-file and documented in CLAUDE.md: (1) `import { installSignedIn } from './_supabase-mock.js'` and (2) `test.beforeEach(async ({ page }) => { await installSignedIn(page); })`. The app is gated behind login, so the generic exploration must boot signed-in against the stubbed Supabase; without them every generic scenario meets the sign-in wall instead of the app (the dedicated logged-out gate states live in auth.spec.js S23-S28). The upstream hunk in this delta — the comment-only dvh note — WAS applied; everything else is byte-identical to the template, verified by diff."
     }
   }
 }

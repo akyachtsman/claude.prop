@@ -234,6 +234,13 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
     derivation (which requires that literal prefix) never sees them.
   **So the broadened drift scan is still load-bearing** — it found all four. Do not read a
   clean Phase 3 as "no drift"; it means no unapplied delta path and no stale dependency.
+  **The second refresh (`bbfdcfc2 → 9cbae810`, 2026-10-06) confirmed the split from the
+  other side:** `app.spec.js` WAS named, because that delta listed its template (Phase 3
+  §1, *delta paths*), and it is now in `refresh_kept` — two entries. That gives the rule
+  that predicts what Phase 3 will name: **a divergence surfaces only when its template
+  changes in the delta, or it is a derived dependency** (a `.github/scripts/…` path that a
+  workflow, composite or directive names). `playwright.config.js` and `qa.yml` stay silent
+  until their templates move, and a clean Phase 3 says nothing about them.
   ⚠️ **Known hole, `claude.directives#398`:** a script run from
   `working-directory: .github/scripts` with a bare command is invisible to BOTH the
   install and this check. The shipped case is `cron-notify.yml` → `notify-task.js` /
@@ -422,7 +429,7 @@ Pages URL becoming browser-reachable. Re-measure rather than trusting this table
 — and a local failure is not evidence about the suite until CI has ruled on the
 same commit.
 
-**KD-1 (UI-test kit defects list):** `CLEAR`, re-verified 2026-10-06 at `bbfdcfc2` by running the entry's own check script (not by eye) — the kit carries
+**KD-1 (UI-test kit defects list):** `CLEAR`, re-verified 2026-10-06 at `9cbae810` — the check extracted verbatim from the fetched list and run from the kit directory (not retyped, not by eye) — the kit carries
 upstream's own guard shape at `app.spec.js` (`if (!s2Gated) { … if
 (authConfigured) { throw …`). Nothing declined; `/refresh-repo` re-runs every
 entry every time regardless.
