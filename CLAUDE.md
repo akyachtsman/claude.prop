@@ -234,12 +234,46 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
     derivation (which requires that literal prefix) never sees them.
   **So the broadened drift scan is still load-bearing** — it found all four. Do not read a
   clean Phase 3 as "no drift"; it means no unapplied delta path and no stale dependency.
+  **The second refresh (`bbfdcfc2 → 9cbae810`, 2026-10-06) confirmed the split from the
+  other side:** `app.spec.js` WAS named, because that delta listed its template (Phase 3
+  §1, *delta paths*), and it is now in `refresh_kept` — two entries. That gives the rule
+  that predicts what Phase 3 will name: **a divergence surfaces only when its template
+  changes in the delta, or it is a derived dependency** (a `.github/scripts/…` path that a
+  workflow, composite or directive names). `playwright.config.js` and `qa.yml` stay silent
+  until their templates move, and a clean Phase 3 says nothing about them.
   ⚠️ **Known hole, `claude.directives#398`:** a script run from
   `working-directory: .github/scripts` with a bare command is invisible to BOTH the
   install and this check. The shipped case is `cron-notify.yml` → `notify-task.js` /
   `notify-email.js`. **Check those two by hand on any refresh that touches
   `cron-notify.yml`** until #398 lands. Both matched their templates at `c411b808` and
   again at `bbfdcfc2`, verified by hand in each refresh's broadened scan.
+- **`.claude/settings.json` was 42 permission entries behind its template for six weeks, and
+  Phase 3 cannot see it.** `templates/claude-settings.json` was **listed in #114's delta**
+  (`ce2140a..1d57879`) and not applied: this file's last change stayed #100 (2026-08-18)
+  through every refresh since. **Applied 2026-10-06: only the `ask` on
+  `mcp__Supabase__deploy_edge_function`** — a pure restriction, the harness-level form of
+  this file's own rule that deploys need explicit approval, and the repo has an Edge
+  Function. **DEFERRED for the owner's decision: the +42 read-only `allow` entries and
+  `plugin-dev`.** A security review of the full sync raised two MEDIUM findings, and the
+  first is not answered by upstream's admission test (*"can it change anything a person
+  would want to be asked about"*, which models the call's own side effects, never the content
+  it returns): **this repo is public, so issues, PR bodies and CI logs are attacker-writable,
+  and auto-allowing `issue_read`, `pull_request_read`, `search_*`, `get_file_contents` and
+  `get_job_logs` removes the prompt that precedes an agent reading them — while the
+  scheduling tools, which can launch sessions, are already auto-allowed by owner ruling
+  (#4).** "Read-only" is not "safe" when the reader is untrusted. Do not take the template's
+  allowlist wholesale on a later refresh without that decision.
+  **Why the guard misses it:** Phase 3's delta loop has no case for
+  `templates/claude-settings.json`; it falls through to `*) continue ;  # merged, written
+  once, or not installed`. So a stale settings file draws no refusal, no `refresh_kept`
+  prompt and no output at all — **measured** by running Phase 3's applied-check against the
+  old 12-entry file, which printed nothing about settings. It is the second listed-and-not-
+  applied file found here (after `check-job-bounds.py`, #115) and the first the new guard
+  cannot catch — the worse kind, since this file decides what the agent may do unprompted.
+  **Proposed upstream:** compare it as a SET (template `permissions.allow`, `permissions.ask`
+  and `enabledPlugins` each a subset of the local file's), and let a project record a
+  *declined* entry the way `refresh_kept` records a kept file — otherwise a deliberate
+  decline would be refused forever. Until then, **diff this file by hand on every refresh.**
 
 ## Agent Workflow
 1. Use a `claude/<name>` feature branch
@@ -422,7 +456,7 @@ Pages URL becoming browser-reachable. Re-measure rather than trusting this table
 — and a local failure is not evidence about the suite until CI has ruled on the
 same commit.
 
-**KD-1 (UI-test kit defects list):** `CLEAR`, re-verified 2026-10-06 at `bbfdcfc2` by running the entry's own check script (not by eye) — the kit carries
+**KD-1 (UI-test kit defects list):** `CLEAR`, re-verified 2026-10-06 at `9cbae810` — the check extracted verbatim from the fetched list and run from the kit directory (not retyped, not by eye) — the kit carries
 upstream's own guard shape at `app.spec.js` (`if (!s2Gated) { … if
 (authConfigured) { throw …`). Nothing declined; `/refresh-repo` re-runs every
 entry every time regardless.

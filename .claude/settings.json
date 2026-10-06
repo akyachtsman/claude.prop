@@ -27,6 +27,9 @@
       "mcp__claude-code-remote__delete_trigger",
       "mcp__claude-code-remote__fire_trigger",
       "mcp__claude-code-remote__list_triggers"
+    ],
+    "ask": [
+      "mcp__Supabase__deploy_edge_function"
     ]
   },
   "hooks": {
