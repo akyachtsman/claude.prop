@@ -154,10 +154,26 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   lower the bar*. The entry lives in the project's own file **by design** — upstream's
   script says so in as many words: editing it would be drift every refresh stops on, and
   the reason would be lost at the next take.
-  ⚠️ **Over-claim found on adoption, handed upstream:** the guard's pass line lists an
-  exempted name under "spec env wired from inputs", crediting `PW_EXECUTABLE` to a
-  composite that never mentions it. Same shape as the pass-line over-claims upstream's
-  own `check-job-bounds.py` removed in `96c370f` (*report only what was ENFORCED*).
+  ✅ **The over-claim this project reported is FIXED upstream** (PROP7 #3, in `bbfdcfc2`):
+  an exempted name now prints on its own `spec env exempted, NOT wired` line instead of
+  being credited to a composite that never mentions it. Upstream went further than the
+  report — `is_wired()` classifies by the ACTUAL wiring, so a *stale* exemption for a name
+  the composite has since taken from an input is reported as wired rather than exempted.
+  Verified here before/after on the same tree: `PW_EXECUTABLE` moved off the wired list.
+  ⚠️ **The fix traded one over-claim for a smaller one — handed upstream (Codex, #122).**
+  The new line reads `exempted, NOT wired (each arrives another way, per its recorded
+  reason)`, and "arrives another way" is **false for this project's only exemption**:
+  `.github/ui-suite-env-exempt.json` says `PW_EXECUTABLE` does not arrive in CI at all and
+  that leaving it unset is correct. So every passing run now asserts something untrue.
+  Root cause is a conflation in `ENV_EXEMPT`, which covers two different things — a
+  variable the RUNNER supplies (`CI`, `GITHUB_*`, upstream's documented intent) and one
+  **deliberately never set, whose reader handles unset** (this project's case). Proposed
+  patch: drop the parenthetical to `per its recorded reason`, true of both kinds.
+  **NOT patched locally, on purpose:** the string is byte-identical upstream template
+  text, so editing it would make the file drift that Phase 3 now stops on at every
+  refresh, costing a `refresh_kept` entry for a cosmetic string — which is precisely what
+  the script's own header forbids (*"a PROJECT extends it in its own file, never by editing
+  this one"*).
 - **Drop-in drift inventory — what a refresh should expect to find.** Four
   installed templates differ from upstream and all four are deliberate: `qa.yml` (three
   local additions — the root-absolute guard above, the unit-test step, the LOCAL OVERRIDE
@@ -194,31 +210,36 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   So treat an unmarked, unlisted DRIFT as staleness until the diff proves otherwise, grep
   the in-file marker rather than trusting this list, and on any refresh **confirm each
   dispositioned file was actually written, not merely classified**.
-- **Upstream has a fix for the stamp-on-READ gap in `claude.directives#397` — ⚠️ NOT IN
-  FORCE HERE YET.** This project is stamped at `c411b808`, which predates it, and the
-  cached toolkit is pinned to that same SHA, so **nothing in the rest of this bullet is
-  active today.** Until it is, the OLD Phase 3 applies (stamp = "the delta up to this SHA
-  was classified"), **no refusal will occur**, and the manual discipline above — confirm
-  each dispositioned file was actually written — is the only thing standing in for it.
-  ⚠️ **So do not wait for a refusal that cannot come** (Codex, #121). Test before relying
-  on any of it: `grep -c refresh_kept <the live commands/refresh-repo.md>` — **0 means not
-  installed**; measured 0 at `c411b808`.
-  **Once it IS installed,** Phase 3 fetches the upstream head before stamping and refuses
-  the stamp while any installed copy differs from its template, or a required file is
-  missing — every path the delta lists **plus every dependency regardless of the delta**
-  (whole composite directories, and scripts an installed workflow or directive names by
-  `.github/scripts/*` path), with kit files compared wherever this project's
-  `UI_TESTS_DIR` puts them. That refresh will then name all four deliberate divergences
-  above, once, hunk-by-hunk kit files included. Keep each by recording
-  `.claude/directive-sync.json` → `refresh_kept[<path>] = {blob, reason}` **using the blob
-  id the refusal prints** — do NOT pre-populate guessed ids, because the refusal is what
-  supplies them; a reason holds until the template changes, and then the question returns.
+- **The stamp-on-READ guard is NOW LIVE** (`claude.directives#397`, in `bbfdcfc2`;
+  stamped here 2026-10-06). Phase 3 fetches the head before stamping and refuses the
+  stamp while an installed copy differs from its template or a required one is missing.
+  The test published here flipped as designed: `grep -c refresh_kept <the live
+  commands/refresh-repo.md>` returned **0** at `c411b808`, returns **3** at `bbfdcfc2`.
+  **Exercised, not assumed** — the first run refused, printing one path and its template
+  blob id; recording `.claude/directive-sync.json` → `refresh_kept[<path>] = {blob,
+  reason}` with that id cleared it and the re-run stamped. The blob is the **TEMPLATE's**
+  at the head, so the question returns exactly when upstream changes that file — measured,
+  which is why guessing the id in advance would have been wrong.
+  ⚠️ **But it named ONE of this project's four deliberate divergences, not four.** The
+  prediction relayed from `claude.directives` ("expect your next refresh to name each file
+  you've diverged from on purpose, once, including any hunk-by-hunk kit files") held for
+  `check-contrast.js` only. Measured reason: Phase 3 compares **delta paths + derived
+  dependencies**, not every installed drop-in.
+  - `check-contrast.js` — **named**; `qa.yml` invokes it by a literal `.github/scripts/`
+    path, so the dependency derivation finds it. Now in `refresh_kept`.
+  - `qa.yml` — **not named**; `templates/workflows/qa.yml` was not in this delta, and a
+    workflow is not itself a derived dependency.
+  - `playwright.config.js`, `app.spec.js` — **not named**; kit files are mentioned in the
+    workflows only as bare filenames, never as `.github/scripts/…` paths, so the
+    derivation (which requires that literal prefix) never sees them.
+  **So the broadened drift scan is still load-bearing** — it found all four. Do not read a
+  clean Phase 3 as "no drift"; it means no unapplied delta path and no stale dependency.
   ⚠️ **Known hole, `claude.directives#398`:** a script run from
   `working-directory: .github/scripts` with a bare command is invisible to BOTH the
   install and this check. The shipped case is `cron-notify.yml` → `notify-task.js` /
   `notify-email.js`. **Check those two by hand on any refresh that touches
-  `cron-notify.yml`** until #398 lands. Both matched their templates at `c411b808`,
-  verified in this refresh's broadened scan.
+  `cron-notify.yml`** until #398 lands. Both matched their templates at `c411b808` and
+  again at `bbfdcfc2`, verified by hand in each refresh's broadened scan.
 
 ## Agent Workflow
 1. Use a `claude/<name>` feature branch
@@ -401,7 +422,7 @@ Pages URL becoming browser-reachable. Re-measure rather than trusting this table
 — and a local failure is not evidence about the suite until CI has ruled on the
 same commit.
 
-**KD-1 (UI-test kit defects list):** `CLEAR` as of 2026-10-05 — the kit carries
+**KD-1 (UI-test kit defects list):** `CLEAR`, re-verified 2026-10-06 at `bbfdcfc2` by running the entry's own check script (not by eye) — the kit carries
 upstream's own guard shape at `app.spec.js` (`if (!s2Gated) { … if
 (authConfigured) { throw …`). Nothing declined; `/refresh-repo` re-runs every
 entry every time regardless.
