@@ -1,0 +1,3 @@
+{
+  "PW_EXECUTABLE": "Not wired from an input ON PURPOSE, and it does not arrive in CI at all — CI leaving it unset is the correct outcome, not a gap. It is a local-sandbox hatch set from the developer's own shell: webkit's OS libraries are absent here, so a local run points Playwright at the preinstalled /opt/pw-browsers/chromium symlink (CLAUDE.md -> Sandbox Limits). playwright.config.js:38 reads it behind a ternary that yields `undefined` when unset, so the CI path is Playwright's own managed browser — exactly what should be exercised. Adding an input would let CI pin the browser executable, inverting global.md's *supply the missing thing, never lower the bar*: CI would stop testing the browser it ships."
+}
