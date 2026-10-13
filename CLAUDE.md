@@ -30,6 +30,7 @@ This project's look is its own — established at kickoff via `/design-intake`
 |---|---|
 | Validate HTML | `npx html-validate index.html` |
 | Validate workflow YAML | `python3 -c "import yaml, sys; yaml.safe_load(open('.github/workflows/qa.yml'))"` |
+| Workflow + action YAML as GitHub parses it (anchors, aliases, merge keys that PyYAML accepts and GitHub refuses) | `python3 .github/scripts/check-yaml-anchors.py` |
 
 ## Application Architecture
 Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
@@ -160,27 +161,27 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   report — `is_wired()` classifies by the ACTUAL wiring, so a *stale* exemption for a name
   the composite has since taken from an input is reported as wired rather than exempted.
   Verified here before/after on the same tree: `PW_EXECUTABLE` moved off the wired list.
-  ⚠️ **The fix traded one over-claim for a smaller one — handed upstream (Codex, #122).**
-  The new line reads `exempted, NOT wired (each arrives another way, per its recorded
-  reason)`, and "arrives another way" is **false for this project's only exemption**:
-  `.github/ui-suite-env-exempt.json` says `PW_EXECUTABLE` does not arrive in CI at all and
-  that leaving it unset is correct. So every passing run now asserts something untrue.
-  Root cause is a conflation in `ENV_EXEMPT`, which covers two different things — a
-  variable the RUNNER supplies (`CI`, `GITHUB_*`, upstream's documented intent) and one
-  **deliberately never set, whose reader handles unset** (this project's case). Proposed
-  patch: drop the parenthetical to `per its recorded reason`, true of both kinds.
-  **NOT patched locally, on purpose:** the string is byte-identical upstream template
-  text, so editing it would make the file drift that Phase 3 now stops on at every
-  refresh, costing a `refresh_kept` entry for a cosmetic string — which is precisely what
-  the script's own header forbids (*"a PROJECT extends it in its own file, never by editing
-  this one"*).
+  ✅ **The smaller over-claim that fix left (handed up as Codex #122) is FIXED too**, in
+  `100d6b45` (taken 2026-10-13): the line now reads `exempted, NOT wired (per its recorded
+  reason)` and `ENV_EXEMPT` documents both kinds of entry (a name something outside the
+  composite sets, and one deliberately never set because its reader handles unset — this
+  project's case). Verified on the refreshed tree: `spec env exempted, NOT wired (per its
+  recorded reason): GITHUB_WORKSPACE, PW_EXECUTABLE`; `GITHUB_WORKSPACE` is upstream's own
+  runner-supplied entry. Nothing was patched locally.
 - **Drop-in drift inventory — what a refresh should expect to find.** Four
   installed templates differ from upstream and all four are deliberate: `qa.yml` (three
   local additions — the root-absolute guard above, the unit-test step, the LOCAL OVERRIDE
   comment on the auth secrets), `check-contrast.js` (the four pairs above),
   `playwright.config.js` (`baseURL` fill-in + the `PW_EXECUTABLE` hatch) and
   `app.spec.js` (the `installSignedIn` boot) — the last two marked `PROJECT-SPECIFIC`
-  in-file. A fifth difference, found and RESOLVED by this refresh, was not a
+  in-file. All four are in `refresh_kept` since the 2026-10-13 refresh, each bound to the
+  template blob it printed. How that refresh told a customization from staleness (the
+  question Phase 1.5's bare `DRIFT` lines cannot answer): compare each installed file to
+  the template **at the stamp** — identical means the local copy is just the old
+  template and every hunk is upstream; different means look at the diff. Sixteen files
+  were pure staleness and four were these. For the three that carry local hunks, a
+  `git merge-file` 3-way merge with the stamp-era template as the base isolates exactly
+  the local content. A fifth difference, found and RESOLVED by this refresh, was not a
   customization at all: ⚠️ **`check-job-bounds.py` had been 70 lines stale since
   2026-08-27**, unmarked and unmentioned here. ⚠️ **It was NOT invisible to the delta
   — #115's refresh LISTED it and did not apply it.** (An earlier version of this bullet
@@ -241,39 +242,38 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   changes in the delta, or it is a derived dependency** (a `.github/scripts/…` path that a
   workflow, composite or directive names). `playwright.config.js` and `qa.yml` stay silent
   until their templates move, and a clean Phase 3 says nothing about them.
-  ⚠️ **Known hole, `claude.directives#398`:** a script run from
-  `working-directory: .github/scripts` with a bare command is invisible to BOTH the
-  install and this check. The shipped case is `cron-notify.yml` → `notify-task.js` /
-  `notify-email.js`. **Check those two by hand on any refresh that touches
-  `cron-notify.yml`** until #398 lands. Both matched their templates at `c411b808` and
-  again at `bbfdcfc2`, verified by hand in each refresh's broadened scan.
-- **`.claude/settings.json` was 42 permission entries behind its template for six weeks, and
-  Phase 3 cannot see it.** `templates/claude-settings.json` was **listed in #114's delta**
-  (`ce2140a..1d57879`) and not applied: this file's last change stayed #100 (2026-08-18)
-  through every refresh since. **Applied 2026-10-06: only the `ask` on
-  `mcp__Supabase__deploy_edge_function`** — a pure restriction, the harness-level form of
-  this file's own rule that deploys need explicit approval, and the repo has an Edge
-  Function. **DEFERRED for the owner's decision: the +42 read-only `allow` entries and
-  `plugin-dev`.** A security review of the full sync raised two MEDIUM findings, and the
-  first is not answered by upstream's admission test (*"can it change anything a person
-  would want to be asked about"*, which models the call's own side effects, never the content
-  it returns): **this repo is public, so issues, PR bodies and CI logs are attacker-writable,
-  and auto-allowing `issue_read`, `pull_request_read`, `search_*`, `get_file_contents` and
-  `get_job_logs` removes the prompt that precedes an agent reading them — while the
-  scheduling tools, which can launch sessions, are already auto-allowed by owner ruling
-  (#4).** "Read-only" is not "safe" when the reader is untrusted. Do not take the template's
-  allowlist wholesale on a later refresh without that decision.
-  **Why the guard misses it:** Phase 3's delta loop has no case for
-  `templates/claude-settings.json`; it falls through to `*) continue ;  # merged, written
-  once, or not installed`. So a stale settings file draws no refusal, no `refresh_kept`
-  prompt and no output at all — **measured** by running Phase 3's applied-check against the
-  old 12-entry file, which printed nothing about settings. It is the second listed-and-not-
-  applied file found here (after `check-job-bounds.py`, #115) and the first the new guard
-  cannot catch — the worse kind, since this file decides what the agent may do unprompted.
-  **Proposed upstream:** compare it as a SET (template `permissions.allow`, `permissions.ask`
-  and `enabledPlugins` each a subset of the local file's), and let a project record a
-  *declined* entry the way `refresh_kept` records a kept file — otherwise a deliberate
-  decline would be refused forever. Until then, **diff this file by hand on every refresh.**
+  **The third refresh (`9cbae810 → 100d6b45`, 2026-10-13) confirmed it again:** it named
+  `qa.yml`, `playwright.config.js` and `app.spec.js` because their templates were in the
+  delta (four `refresh_kept` entries now), and `check-contrast.js` stayed recorded because
+  its template did not move.
+  **`claude.directives#398` is CLOSED upstream** (`cron-notify.yml` now names its three files
+  by full path), and the hole is moot here regardless: on 2026-10-13 the owner confirmed
+  this project has no scheduled task, so `cron-notify.yml` and the starter `notify-task.js`
+  and `notify-email.js` were removed. `.github/scripts/package.json` and its lockfile
+  **stay**: the refreshed manifest declares `"type": "commonjs"`, which every Node script
+  in `.github/scripts` needs. Re-add `cron-notify.yml` only together with a real task
+  (`docs/standards/cicd-setup.md` → 9f).
+  ⚠️ **`refresh-stamp.sh` deletes Phase 2's markers on entry**, so a refusal burns the
+  verdict: after recording a `refresh_kept` entry, re-run `refresh-delta.sh` BEFORE
+  `refresh-stamp.sh`, or the second run says "NOT classified for THIS head" even though
+  it was. It also exits 0 when it refuses; read its last line, not its status.
+- **`.claude/settings.json` matches `templates/claude-settings.json` as sets since the
+  2026-10-13 refresh** (37 `allow`, 1 `ask`, 5 `enabledPlugins`; no `refresh_declined`).
+  **Owner decision, 2026-10-13:** take the template whole — the 25 `allow` entries the file
+  had been missing (six remote-session reads in two name spellings, 13 GitHub metadata reads)
+  and `plugin-dev@claude-code-plugins` — written through `update-config` in its own commit.
+  That reverses the 2026-10-06 deferral, whose first objection upstream has since answered:
+  the template now admits only reads whose content no outsider can write (`global.md` →
+  *Scheduling Tools Never Prompt*, admission test 2), so `issue_read`, `pull_request_read`,
+  `search_*`, `get_file_contents` and `get_job_logs` are NOT in it. The second objection —
+  that `list_sessions`, `get_session`, `list_repos` and `list_environments` are account-wide
+  reads a committed public file pre-approves — was put to the owner as a choice and
+  accepted. Any `allow` entry added beyond the template needs a recorded reason in
+  `refresh_declined` under `permissions.allow (local extra)`; the deploy gate
+  (`mcp__Supabase__deploy_edge_function` under `ask`) is unchanged.
+  The hole recorded 2026-10-06 is closed upstream: Phase 3 now compares this file **as
+  sets, every run**, so a stale copy is refused rather than silent. The change loads at the
+  NEXT session start, not the one that wrote it.
 
 ## Agent Workflow
 1. Use a `claude/<name>` feature branch
@@ -370,7 +370,7 @@ the auth client stubbed (register the `**/auth/v1/**` catch-all route FIRST and
 **The generic `S2` skips BY DESIGN — the skip is correct, and setting
 `TEST_AUTH_CREDENTIAL`/`TEST_AUTH_EMAIL` makes the signal worse, not better.** It is
 structurally redundant with S23–S28, which exercise the *real* gate (only the backend is
-stubbed) without credentials. **Desktop skips, re-verified 2026-10-05 (3 skipped / 49
+stubbed) without credentials. **Desktop skips, re-verified 2026-10-13 (3 skipped / 52
 passed): `S2`, `NAV` and `ENTRY`.** NAV needs a multi-level drill-in (this app is one
 level with three branches — S39 proves the unwinding property instead); ENTRY needs extra
 `APP_PAGES`. Both structural, neither about auth. **S3 and S4 do NOT skip** — no
@@ -391,7 +391,7 @@ Supabase MCP (impersonated, rolled-back). The password-reset email round-trip is
 verified **manually** (owner must set Auth Site URL + Redirect URLs to the Pages
 URL and `http://localhost:8099`).
 
-## Sandbox Limits (measured 2026-10-05 — re-derive, don't trust past its expiry)
+## Sandbox Limits (measured 2026-10-05; chromium counts, webkit cause and the curl row re-measured 2026-10-13 — re-derive, don't trust past its expiry)
 `test.md` → *Sandboxed local runs* requires each project to record what it cannot
 run in an agent sandbox, **with the causes and what would make this wrong**.
 
@@ -400,12 +400,12 @@ Two of the four Playwright projects are **webkit** (`tablet` = iPad gen 7,
 `--project=desktop` run alone overstates what runs here.
 | Project | Band | Runs here? |
 |---|---|---|
-| `desktop` (chromium) | laptop | **Yes** — 49 passed / 3 skipped |
-| `mobile-chrome` (chromium) | phone | **Yes** — 49 passed / 3 skipped |
-| `tablet` (webkit) | tablet | **No** — `browserType.launch` fails, 52/52 |
-| `iphone` (webkit) | phone | **No** — same cause |
+| `desktop` (chromium) | laptop | **Yes** — 52 passed / 3 skipped (2026-10-13) |
+| `mobile-chrome` (chromium) | phone | **Yes** — 52 passed / 3 skipped (2026-10-13) |
+| `tablet` (webkit) | tablet | **No** — `browserType.launch` fails, 55/55 (2026-10-13) |
+| `iphone` (webkit) | phone | **No** — same cause, 55/55 |
 | Unit tests, all static guards | — | **Yes** — no network |
-| Live-URL run (any project) | — | **No** — `page.goto` gets `ERR_CONNECTION_RESET` on the Pages URL while `curl` gets **200** on it seconds apart. Browser-only, not a host outage |
+| Live-URL run (any project) | — | **No** — on 2026-10-05 `page.goto` got `ERR_CONNECTION_RESET` on the Pages URL while `curl` got **200** seconds apart (browser-only). On 2026-10-13 `curl` itself was refused: `CONNECT tunnel failed, response 403` on `akyachtsman.github.io`. The browser path was not re-measured; either way the Pages URL is not reachable from here, so deploy state is read from run metadata (`head_sha` + `conclusion`) |
 
 **Why webkit fails, and why "absent" was the wrong diagnosis.** `npx playwright
 install webkit` **succeeds** — `webkit-2359` lands in `/opt/pw-browsers` and the
@@ -415,6 +415,18 @@ This is `test.md` → *grade on whether a thing WORKS, not a cheaper stand-in*,
 hitting both of its named traps at once: **a present binary is not a browser that
 launches, and an install that exits 0 is not a browser that launches.** Measured,
 not inferred — the 52 failures are all `browserType.launch`.
+
+**The cause moved on 2026-10-13; the verdict did not.** In a fresh container
+`browser-ladder.js webkit` ended **CEILING**, but at the first step: the binary is
+not there and cannot be fetched. `playwright install webkit` exits 1
+(`Failed to install browsers`) because the egress policy refuses `cdn.playwright.dev`
+and `playwright.download.prss.microsoft.com` (`CONNECT` 403 on each, in the proxy's
+`recentRelayFailures`), so the first run's `webkit-2359` never lands. 110/110 fail
+(`Executable doesn't exist at /opt/pw-browsers/webkit-2359/pw_run.sh`). Two
+different causes, one outcome — which is why the record names what was measured on
+each date. A 403 on CONNECT is a policy denial: report it, never route around it
+(`global.md` → *Network Access Playbook*). CI installs webkit with deps and arbitrates
+those two bands.
 
 **What `check-ui-viewports.js` actually establishes — read its green narrowly.** Its
 verdict is **SCHEDULED**: a band counts when a project declaring that width has a
@@ -449,14 +461,15 @@ which moves on every browser bump). **Do not pass `--reporter=line` when the JSO
 report is needed**: a CLI reporter *replaces* the config's list, so the json
 reporter never writes and the #348 gate has nothing to read.
 
-**What would make this wrong:** webkit's OS deps becoming present (the two webkit
-rows would flip); adding any runtime CDN import to app source; the egress
+**What would make this wrong:** webkit's OS deps becoming present, or
+`cdn.playwright.dev` and `playwright.download.prss.microsoft.com` being allowed (the
+two webkit rows would flip); adding any runtime CDN import to app source; the egress
 allowlist changing; a browser bump changing `/opt/pw-browsers/` layout; or the
 Pages URL becoming browser-reachable. Re-measure rather than trusting this table
 — and a local failure is not evidence about the suite until CI has ruled on the
 same commit.
 
-**KD-1 (UI-test kit defects list):** `CLEAR`, re-verified 2026-10-06 at `9cbae810` — the check extracted verbatim from the fetched list and run from the kit directory (not retyped, not by eye) — the kit carries
+**KD-1 (UI-test kit defects list):** `CLEAR`, re-verified 2026-10-13 at `100d6b45` — the check extracted verbatim from the fetched list and run from the kit directory (not retyped, not by eye) — the kit carries
 upstream's own guard shape at `app.spec.js` (`if (!s2Gated) { … if
 (authConfigured) { throw …`). Nothing declined; `/refresh-repo` re-runs every
 entry every time regardless.
