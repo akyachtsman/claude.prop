@@ -179,7 +179,12 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   question Phase 1.5's bare `DRIFT` lines cannot answer): compare each installed file to
   the template **at the stamp** — identical means the local copy is just the old
   template and every hunk is upstream; different means look at the diff. Sixteen files
-  were pure staleness and four were these. For the three that carry local hunks, a
+  were pure staleness and four were these. (`refresh-drift.sh` now prints that split
+  itself, `STALE` or `CUSTOM` per file, and `refresh-merge.sh` runs the 3-way merge, since
+  `569a0ae`. The `569a0ae` refresh measured: 12 installed files compared, 8 match, 3 `STALE`,
+  1 `CUSTOM` (`qa.yml`, the known one), 0 `DRIFT`. The five script templates in that delta
+  sit outside its loop, so they were classified by hand against the stamp and the pin:
+  all five `STALE`, no local edit.) For the three that carry local hunks, a
   `git merge-file` 3-way merge with the stamp-era template as the base isolates exactly
   the local content. A fifth difference, found and RESOLVED by this refresh, was not a
   customization at all: ⚠️ **`check-job-bounds.py` had been 70 lines stale since
@@ -211,13 +216,14 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   So treat an unmarked, unlisted DRIFT as staleness until the diff proves otherwise, grep
   the in-file marker rather than trusting this list, and on any refresh **confirm each
   dispositioned file was actually written, not merely classified**.
-- **`pages-monitor.yml` is one upstream commit AHEAD of the stamp** (`100d6b45`): it is
-  `claude.directives@e2d4603` (#447), byte-identical, taken on 2026-10-13 after Codex's P2 on
-  #124 found a real gap in the `100d6b45` template (the superseded-deploy test used temporal
-  overlap only; the `workflow_run` arm it guards is not active in this branch-source project).
-  Not a local customization and NOT in `refresh_kept`: at the next refresh it should simply
-  equal the head template, and a comparison against the stamp-era template will show
-  upstream's #447, not a local edit.
+- **`pages-monitor.yml` is a verbatim template again.** It was taken one upstream commit
+  ahead of the then-stamp (`claude.directives@e2d4603`, #447, after Codex's P2 on #124 found
+  the superseded-deploy test used temporal overlap only; the `workflow_run` arm it guards
+  is not active in this branch-source project). Measured at the `569a0ae` refresh
+  (2026-10-13): the local copy equals the pinned template (`630d2b14`), so there was
+  nothing to apply, and it is not in `refresh_kept`. (That refresh's hand-off predicted
+  the file would classify as stale against the tip; it did not, because the template had
+  not moved past `e2d4603`.)
 - **The stamp-on-READ guard is NOW LIVE** (`claude.directives#397`, in `bbfdcfc2`;
   stamped here 2026-10-06). Phase 3 fetches the head before stamping and refuses the
   stamp while an installed copy differs from its template or a required one is missing.
@@ -253,6 +259,14 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   `qa.yml`, `playwright.config.js` and `app.spec.js` because their templates were in the
   delta (four `refresh_kept` entries now), and `check-contrast.js` stayed recorded because
   its template did not move.
+  **The fourth refresh (`100d6b45 → 569a0ae`, 2026-10-13) overturned the "stay silent" half
+  of that rule for the kit and for `check-contrast.js`.** Measured: none of the four
+  templates moved (blobs identical at the pin), yet `refresh-stamp.sh` printed
+  `KEPT: <path> -- <recorded reason>` for `check-contrast.js`, `playwright.config.js` and
+  `app.spec.js` — it now compares every installed kit file as part of the whole upstream kit
+  directory, and prints the recorded reason instead of saying nothing. `qa.yml` printed
+  nothing (a workflow whose template is not in the delta), so "silent until its template
+  moves" now holds for `qa.yml` alone. Nothing refused: the recorded blobs still matched.
   **`claude.directives#398` is CLOSED upstream** (`cron-notify.yml` now names its three files
   by full path), and the hole is moot here regardless: on 2026-10-13 the owner confirmed
   this project has no scheduled task, so `cron-notify.yml` and the starter `notify-task.js`
@@ -260,10 +274,13 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   **stay**: the refreshed manifest declares `"type": "commonjs"`, which every Node script
   in `.github/scripts` needs. Re-add `cron-notify.yml` only together with a real task
   (`docs/standards/cicd-setup.md` → 9f).
-  ⚠️ **`refresh-stamp.sh` deletes Phase 2's markers on entry**, so a refusal burns the
-  verdict: after recording a `refresh_kept` entry, re-run `refresh-delta.sh` BEFORE
-  `refresh-stamp.sh`, or the second run says "NOT classified for THIS head" even though
-  it was. It also exits 0 when it refuses; read its last line, not its status.
+  ✅ **The two `refresh-stamp.sh` defects this project reported are FIXED upstream** (#449,
+  in `569a0ae`): a refusal used to burn Phase 2's verdict (re-run `refresh-delta.sh` before
+  the second try, or it said "NOT classified for THIS head") and used to exit 0. The markers
+  now survive a refusal, and the exit status is the verdict: 0 stamped, 1 refused, 2 could
+  not run. **Not exercised here:** the `569a0ae` run stamped on its first try (exit 0, last
+  line `stamped: <sha>`), so the refusal path is read from the command text, not measured.
+  Until one is seen, still read the last line, not just the status.
 - **`.claude/settings.json` matches `templates/claude-settings.json` as sets since the
   2026-10-13 refresh** (37 `allow`, 1 `ask`, 5 `enabledPlugins`; no `refresh_declined`).
   **Owner decision, 2026-10-13:** take the template whole — the 25 `allow` entries the file
@@ -476,7 +493,11 @@ Pages URL becoming browser-reachable. Re-measure rather than trusting this table
 — and a local failure is not evidence about the suite until CI has ruled on the
 same commit.
 
-**KD-1 (UI-test kit defects list):** `CLEAR`, re-verified 2026-10-13 at `100d6b45` — the check extracted verbatim from the fetched list and run from the kit directory (not retyped, not by eye) — the kit carries
+**KD-1 (UI-test kit defects list):** `CLEAR`, re-verified 2026-10-13 at `569a0ae` by
+`kit-defects.sh`, which now extracts each entry's Check from the fetched list and runs it in
+every kit directory the workflows name (output: `KD-1 .github/scripts/ui-tests: CLEAR`;
+`SUMMARY: 1 entr(ies) checked — 0 AFFECTED, 0 UNDECIDED, 1 CLEAR`). The earlier pass, at
+`100d6b45`, did the same by hand-extracting the check from the list. The kit carries
 upstream's own guard shape at `app.spec.js` (`if (!s2Gated) { … if
 (authConfigured) { throw …`). Nothing declined; `/refresh-repo` re-runs every
 entry every time regardless.
