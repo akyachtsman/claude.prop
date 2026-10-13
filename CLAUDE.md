@@ -211,6 +211,13 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   So treat an unmarked, unlisted DRIFT as staleness until the diff proves otherwise, grep
   the in-file marker rather than trusting this list, and on any refresh **confirm each
   dispositioned file was actually written, not merely classified**.
+- **`pages-monitor.yml` is one upstream commit AHEAD of the stamp** (`100d6b45`): it is
+  `claude.directives@e2d4603` (#447), byte-identical, taken on 2026-10-13 after Codex's P2 on
+  #124 found a real gap in the `100d6b45` template (the superseded-deploy test used temporal
+  overlap only; the `workflow_run` arm it guards is not active in this branch-source project).
+  Not a local customization and NOT in `refresh_kept`: at the next refresh it should simply
+  equal the head template, and a comparison against the stamp-era template will show
+  upstream's #447, not a local edit.
 - **The stamp-on-READ guard is NOW LIVE** (`claude.directives#397`, in `bbfdcfc2`;
   stamped here 2026-10-06). Phase 3 fetches the head before stamping and refuses the
   stamp while an installed copy differs from its template or a required one is missing.
