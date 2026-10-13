@@ -1,7 +1,7 @@
 {
   "upstream": {
-    "sha": "9cbae810bbac2b4d940aa91534b4329afe4b72f0",
-    "synced": "2026-10-06"
+    "sha": "100d6b450030ed0fd91a2cbfc2be09311175b97f",
+    "synced": "2026-10-13"
   },
   "refresh_kept": {
     ".github/scripts/check-contrast.js": {
@@ -9,8 +9,16 @@
       "reason": "FOUR deliberate PROJECT-SPECIFIC contrast pairs, each marked in-file and documented in CLAUDE.md: accent/surface at the 4.5 normal-text floor plus accent/bg (accent is a small-text colour in eight places at 13px/12px, so upstream's 3.0 large-text floor passed a palette whose labels all failed AA); on-navy/accent (.switcher__btn and .topbar__action keep on-navy over an accent hover fill); accent-hover/accent-light (the NOI chip, found by deriving pairs from components.css, shipping 4.32:1 at 11px bold); and on-danger/danger (the gallery delete glyph — this app never renders danger as a foreground, which is what upstream checks). Restoring the template would delete four real AA checks and re-admit the failures they caught (Codex, #109)."
     },
     ".github/scripts/ui-tests/tests/app.spec.js": {
-      "blob": "f538aba358519d25b3c137aa2a4cbe4a8b92d1a9",
-      "reason": "TWO deliberate PROJECT-SPECIFIC hunks kept, both marked in-file and documented in CLAUDE.md: (1) `import { installSignedIn } from './_supabase-mock.js'` and (2) `test.beforeEach(async ({ page }) => { await installSignedIn(page); })`. The app is gated behind login, so the generic exploration must boot signed-in against the stubbed Supabase; without them every generic scenario meets the sign-in wall instead of the app (the dedicated logged-out gate states live in auth.spec.js S23-S28). The upstream hunk in this delta — the comment-only dvh note — WAS applied; everything else is byte-identical to the template, verified by diff."
+      "blob": "823167be7a14d7057e433aafa59d2fc70b654888",
+      "reason": "TWO deliberate PROJECT-SPECIFIC hunks kept, both marked in-file: (1) import { installSignedIn } from './_supabase-mock.js'; (2) test.beforeEach(async ({ page }) => { await installSignedIn(page); }). The app is gated behind login, so the generic exploration must boot signed-in against the stubbed Supabase; the logged-out gate states live in auth.spec.js S23-S28. The helper split into tests/lib/ (fixtures.js, auth.js) WAS taken whole: the rest of the file is the head template byte for byte, and the beforeEach now sits after the imports because test is imported from lib/fixtures.js rather than defined here."
+    },
+    ".github/workflows/qa.yml": {
+      "blob": "fda7e7c028a70dbbc34d94c95834cd68ed5066e1",
+      "reason": "THREE deliberate local additions kept on top of the template, verified by a 3-way merge against the stamp-era template (everything else is the head template verbatim): (1) the PROJECT-SPECIFIC 'No root-absolute paths' step in static-checks (Pages serves this app under /claude.prop/, so a leading-slash URL is green locally and red only live; CLAUDE.md, qa.yml enforces it); (2) the PROJECT-SPECIFIC unit-test step (node --test over tests/*.test.mjs) after the YAML-anchor guard; (3) the LOCAL OVERRIDE comment under the auth-secrets setup note (DO NOT set TEST_AUTH_CREDENTIAL/EMAIL here: installSignedIn leaves no gate on screen, and the kit's discriminating S2 guard turns configured-credentials-with-no-gate into a hard failure). BUILD_CMD/SITE_DIR/BUILD_PATHS stay at the shipped empties: branch-source, no build."
+    },
+    ".github/scripts/ui-tests/playwright.config.js": {
+      "blob": "c55256cb71b416a79e0ab09a30a5a6afcbc87e83",
+      "reason": "TWO deliberate PROJECT-SPECIFIC hunks kept, both marked in-file: (1) baseURL falls back to this project's Pages URL instead of REPLACE_WITH_YOUR_APP_URL, so a bare local run does not go to an invalid address; (2) launchOptions.executablePath from PW_EXECUTABLE, the local-sandbox hatch for a preinstalled Chromium (exempted in .github/ui-suite-env-exempt.json: CI leaves it unset and Playwright's managed browser runs). The upstream SCREENSHOT_DIR change (GITHUB_WORKSPACE-rooted) WAS applied; verified by a clean 3-way merge against the stamp-era template."
     }
   }
 }

@@ -2,7 +2,20 @@
 // Copy to .github/scripts/ui-tests/playwright.config.js and customize.
 // Replace all REPLACE_* placeholders before use.
 
+import { join } from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
+
+// Failure screenshots land where the ui-suite composite's upload step looks for
+// them: `.agent-reports/screenshots/` at the WORKSPACE root. Derived from
+// GITHUB_WORKSPACE when it is set (every CI job), never from this file's depth:
+// a hard-coded `../../../` is right only when the kit sits exactly at
+// .github/scripts/ui-tests/, and a moved UI_TESTS_DIR (cicd-setup.md Step 2
+// allows it) wrote the screenshots outside the workspace, where upload-artifact
+// only warns and the artifact silently omits them (audit 2026-10-11, M-10). The
+// relative form remains the local fallback, for a hand run from the shipped path.
+const SCREENSHOT_DIR = process.env.GITHUB_WORKSPACE
+  ? join(process.env.GITHUB_WORKSPACE, '.agent-reports', 'screenshots')
+  : '../../../.agent-reports/screenshots';
 
 export default defineConfig({
   testDir: './tests',
@@ -20,7 +33,7 @@ export default defineConfig({
   // beats the `outputFile` below — so under the composite this path need not
   // match `report-path`, and changing it changes nothing. What still matters is
   // that a json reporter is DECLARED at all: the variable redirects one, it does
-  // not add one (measured on 1.62.1). Without it the post-run check has no
+  // not add one (measured on 1.62.1 and 1.64.0). Without it the post-run check has no
   // report to read, reports CANNOT CHECK and fails the job — deliberately, so a
   // missing report is never read as a covered band. Running Playwright by hand,
   // outside the composite, this path IS where the report lands.
@@ -65,7 +78,7 @@ export default defineConfig({
     //
     // navigationTimeout — a page that cannot load in 30s is a failure worth
     // reporting as one, not worth waiting out. Governs goto(); the matching cap
-    // for waitForLoadState('networkidle') is IDLE_MS in tests/app.spec.js, which
+    // for waitForLoadState('networkidle') is IDLE_MS in tests/lib/fixtures.js, which
     // passes an explicit and much shorter timeout at every call site.
     navigationTimeout: 30_000,
     // actionTimeout — the floor for click()/fill()/press()/selectOption() calls
@@ -78,7 +91,7 @@ export default defineConfig({
     video: 'off',
     trace: 'on-first-retry',
   },
-  outputDir: '../../../.agent-reports/screenshots',
+  outputDir: SCREENSHOT_DIR,
   // THIS LIST IS THE ONLY THING THAT DECIDES WHAT WIDTHS THIS APP IS EVER
   // RENDERED AT. One spec set (tests/app.spec.js) runs against two targets — the
   // bundled local server in qa.yml, the live URL in qa-live.yml/qa-response.yml —
