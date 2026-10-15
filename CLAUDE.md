@@ -28,15 +28,17 @@ This project's look is its own — established at kickoff via `/design-intake`
 ## Required Commands
 | Purpose | Command |
 |---|---|
-| Validate HTML | `npx html-validate index.html` |
+| Validate HTML | `npm_config_legacy_peer_deps=true npx html-validate index.html` |
 | Validate workflow YAML | `python3 -c "import yaml, sys; yaml.safe_load(open('.github/workflows/qa.yml'))"` |
 | Workflow + action YAML as GitHub parses it (anchors, aliases, merge keys that PyYAML accepts and GitHub refuses) | `python3 .github/scripts/check-yaml-anchors.py` |
 
 `npx html-validate` is a local command only: CI never runs it. DIR9 reported (2026-10-15)
 that on a fresh machine it can crash in npm 10's peer resolution
 (`Cannot read properties of null (reading 'edgesOut')`, from vitest 5.0.5); the fix is
-`npm_config_legacy_peer_deps=true`. **Not reproduced here:** it exited 0 with and without the
-variable, though this container may be resolving a cached copy.
+`npm_config_legacy_peer_deps=true`, which the command above now carries (taken from
+`templates/CLAUDE-template.md` at `bde28c9`). **Not reproduced here:** it exited 0 with and
+without the variable on 2026-10-15, twice, though this container may be resolving a cached
+copy; the variable is harmless where the crash does not occur.
 
 ## Application Architecture
 Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
@@ -303,6 +305,17 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   line, not just the status. `synced` is the date the sha last CHANGED, not the last check
   (owner ruling, 2026-10-14); this run changed the sha, so the unchanged-sha branch (file
   left byte-identical) was **not exercised here**.
+  **The sixth refresh (`a9c8859 → bde28c9`, 2026-10-15)** had a 13-path delta of which two
+  had an installed copy (`codex-monitor.yml`, `pages-retry.yml`; both `STALE`, taken). It is
+  the first run of the `RE-RECORD` line (`f0e2838`, #457): it printed nothing, meaning all
+  four `refresh_kept` records still bind. A `CUSTOM` line for a record that DOES bind still
+  quotes the reason in full (here ~900 characters), and so do `refresh-stamp.sh`'s three
+  `KEPT:` lines: the 60-character cut applies only to the two warning lines for a record
+  that no longer binds. The stamp itself went through first time (exit 0, last line
+  `stamped: bde28c97…`, no refusal). `refresh-vars.sh` takes its baseline
+  from the last commit that touched `.claude/directive-sync.json`, which any `refresh_kept`
+  re-record moves without moving the stamp (here `dd86de9`, not `a64568c`); harmless in
+  this delta, reported upstream.
 - **`.claude/settings.json` matches `templates/claude-settings.json` as sets since the
   2026-10-13 refresh** (37 `allow`, 1 `ask`, 5 `enabledPlugins`; no `refresh_declined`).
   **Owner decision, 2026-10-13:** take the template whole — the 25 `allow` entries the file
@@ -509,13 +522,16 @@ policy blocks the Playwright browser download, but the sandbox ships a Chromium.
 `global.md` → *Network Access Playbook* rung 6 and `test.md` → *Sandboxed local runs*
 ("When the ladder cannot fetch your build but the preinstalled one launches") allow ONE
 way to use it: a LOCAL-ONLY wrapper config that pins `launchOptions.executablePath`,
-kept out of git so CI and the UI-suite env guard never see it. It lives in the exclude
-file, not in the repo, so **recreate it in each fresh container**:
+kept out of git so CI and the UI-suite env guard never see it. It must EXTEND the kit's
+config, never replace it: the kit's is an ES module, so import it and spread its `use`, or
+`baseURL` and every other shared setting are silently dropped (`test.md`, taken 2026-10-15
+at `bde28c9`, from this project's report). It lives in the exclude file, not in the repo,
+so **recreate it in each fresh container**:
 ```
 cd .github/scripts/ui-tests
 cat > playwright.local.config.js <<'EOF'
 import base from './playwright.config.js';
-export default { ...base, use: { ...base.use, launchOptions: { executablePath: '/opt/pw-browsers/chromium' } } };
+export default { ...base, use: { ...base.use, launchOptions: { ...base.use?.launchOptions, executablePath: '/opt/pw-browsers/chromium' } } };
 EOF
 echo ".github/scripts/ui-tests/playwright.local.config.js" >> "$(git rev-parse --git-path info/exclude)"
 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci          # node_modules/ is already gitignored
