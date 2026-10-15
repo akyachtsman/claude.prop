@@ -21,8 +21,8 @@
     },
     ".github/scripts/ui-tests/playwright.config.js": {
       "blob": "c55256cb71b416a79e0ab09a30a5a6afcbc87e83",
-      "reason": "TWO deliberate PROJECT-SPECIFIC hunks kept, both marked in-file: (1) baseURL falls back to this project's Pages URL instead of REPLACE_WITH_YOUR_APP_URL, so a bare local run does not go to an invalid address; (2) launchOptions.executablePath from PW_EXECUTABLE, the local-sandbox hatch for a preinstalled Chromium (exempted in .github/ui-suite-env-exempt.json: CI leaves it unset and Playwright's managed browser runs). The upstream SCREENSHOT_DIR change (GITHUB_WORKSPACE-rooted) WAS applied; verified by a clean 3-way merge against the stamp-era template.",
-      "local": "5d8c3e1d0989adb2328c4e1aac5b4525902d70cc"
+      "reason": "ONE deliberate local hunk kept: baseURL falls back to this project's Pages URL instead of the template's REPLACE_WITH_YOUR_APP_URL placeholder, so a bare local run does not go to an invalid address. It is the template's own fill-in point, so it carries no in-file marker (an earlier version of this record said both hunks were marked; only the removed PW_EXECUTABLE hatch was). The PW_EXECUTABLE hatch was REMOVED on 2026-10-15 (owner ruling relayed by DIR9): local runs use a git-excluded wrapper config instead (test.md -> Sandboxed local runs; CLAUDE.md -> Sandbox Limits), and .github/ui-suite-env-exempt.json was deleted so check-ui-suite-env.py runs unexempted. The upstream SCREENSHOT_DIR change (GITHUB_WORKSPACE-rooted) is applied; verified against the template at a9c8859.",
+      "local": "902d6ba438bcd52b635bc3d8a27cb05d3b8e015c"
     }
   }
 }

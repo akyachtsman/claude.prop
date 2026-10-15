@@ -152,40 +152,29 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   caught instead of staying green. No longer run it by hand. This also CLOSES Codex's
   P2 on #115 ("Add the referenced UI-suite invariant guard", 2026-09-01) — which posted
   3m37s after that PR was merged and went unresolved for five weeks.
-- **`PW_EXECUTABLE` is EXEMPTED in `.github/ui-suite-env-exempt.json`, never wired to an
-  input.** The guard's one true finding here: `playwright.config.js:38` reads it and the
-  composite never sets it. Exempting is the right answer — it is a local-sandbox hatch
-  from the developer's own shell (the `/opt/pw-browsers/chromium` symlink), the config's
-  ternary yields `undefined` when unset, so CI exercises Playwright's own managed
-  browser; letting CI pin the executable would invert *supply the missing thing, never
-  lower the bar*. The entry lives in the project's own file **by design** — upstream's
-  script says so in as many words: editing it would be drift every refresh stops on, and
-  the reason would be lost at the next take.
-  ✅ **The over-claim this project reported is FIXED upstream** (PROP7 #3, in `bbfdcfc2`):
-  an exempted name now prints on its own `spec env exempted, NOT wired` line instead of
-  being credited to a composite that never mentions it. Upstream went further than the
-  report — `is_wired()` classifies by the ACTUAL wiring, so a *stale* exemption for a name
-  the composite has since taken from an input is reported as wired rather than exempted.
-  Verified here before/after on the same tree: `PW_EXECUTABLE` moved off the wired list.
-  ✅ **The smaller over-claim that fix left (handed up as Codex #122) is FIXED too**, in
-  `100d6b45` (taken 2026-10-13): the line now reads `exempted, NOT wired (per its recorded
-  reason)` and `ENV_EXEMPT` documents both kinds of entry (a name something outside the
-  composite sets, and one deliberately never set because its reader handles unset — this
-  project's case). Verified on the refreshed tree: `spec env exempted, NOT wired (per its
-  recorded reason): GITHUB_WORKSPACE, PW_EXECUTABLE`; `GITHUB_WORKSPACE` is upstream's own
-  runner-supplied entry. Nothing was patched locally.
-  ⚠️ `test.md` (taken 2026-10-15) now names a **git-excluded local wrapper config** as the one
-  allowed way to pin `executablePath`, so CI and this guard never see it. This project's
-  hatch is the older form: a committed `PW_EXECUTABLE` read in `playwright.config.js`,
-  exempted above with a recorded reason, and left unset in CI. Kept as it is (the guard
-  passes and the reason is recorded); raised in the 2026-10-15 refresh report for the owner.
+- **There is no `PW_EXECUTABLE` hatch and no `.github/ui-suite-env-exempt.json` any more**
+  (owner ruling, 2026-10-15, relayed by DIR9 and answering this project's pilot finding).
+  The hatch was a committed, env-driven `PW_EXECUTABLE` read in `playwright.config.js`,
+  exempted from `check-ui-suite-env.py` with a recorded reason because the composite never
+  sets it and CI leaves it unset. `test.md` (taken 2026-10-15) now names a **git-excluded
+  local wrapper config** as the one allowed way to pin `executablePath`, so CI and the
+  guard never see it; the project moved to that form. The guard now runs **unexempted**.
+  Measured on the changed tree: `spec env exempted, NOT wired (per its recorded reason):
+  GITHUB_WORKSPACE` and nothing else (`GITHUB_WORKSPACE` is upstream's own runner-supplied
+  entry, in the script, not in a project file); the guard read the kit through
+  `git ls-files` and never saw the wrapper or `node_modules`. Local runs use the wrapper:
+  steps and the build it runs on are under *Sandbox Limits*. History worth keeping: two
+  upstream over-claims about exempted names were reported from here and fixed (PROP7 #3 in
+  `bbfdcfc2`; Codex #122 in `100d6b45`); with no exemption left, this project no longer
+  exercises that path.
 - **Drop-in drift inventory — what a refresh should expect to find.** Four
   installed templates differ from upstream and all four are deliberate: `qa.yml` (three
   local additions — the root-absolute guard above, the unit-test step, the LOCAL OVERRIDE
   comment on the auth secrets), `check-contrast.js` (the four pairs above),
-  `playwright.config.js` (`baseURL` fill-in + the `PW_EXECUTABLE` hatch) and
-  `app.spec.js` (the `installSignedIn` boot) — the last two marked `PROJECT-SPECIFIC`
-  in-file. All four are in `refresh_kept` since the 2026-10-13 refresh, each bound to the
+  `playwright.config.js` (the `baseURL` fill-in only, at the template's own
+  `REPLACE_WITH_YOUR_APP_URL` placeholder, so it carries no marker; the `PW_EXECUTABLE`
+  hatch that used to sit beside it was removed 2026-10-15) and `app.spec.js` (the
+  `installSignedIn` boot, marked `PROJECT-SPECIFIC` in-file). All four are in `refresh_kept` since the 2026-10-13 refresh, each bound to the
   template blob it printed and, since the 2026-10-15 refresh, to the installed copy's own
   blob too (`local`, from `git hash-object --no-filters -- <path>`; a record without it
   binds nothing). How that refresh told a customization from staleness (the
@@ -448,7 +437,7 @@ Supabase MCP (impersonated, rolled-back). The password-reset email round-trip is
 verified **manually** (owner must set Auth Site URL + Redirect URLs to the Pages
 URL and `http://localhost:8099`).
 
-## Sandbox Limits (measured 2026-10-05; chromium counts, webkit cause and the curl row re-measured 2026-10-13 — re-derive, don't trust past its expiry)
+## Sandbox Limits (measured 2026-10-05; webkit cause and the curl row re-measured 2026-10-13; chromium counts re-measured 2026-10-15 through the git-excluded wrapper — re-derive, don't trust past its expiry)
 `test.md` → *Sandboxed local runs* requires each project to record what it cannot
 run in an agent sandbox, **with the causes and what would make this wrong**.
 
@@ -457,8 +446,8 @@ Two of the four Playwright projects are **webkit** (`tablet` = iPad gen 7,
 `--project=desktop` run alone overstates what runs here.
 | Project | Band | Runs here? |
 |---|---|---|
-| `desktop` (chromium) | laptop | **Yes** — 52 passed / 3 skipped (2026-10-13) |
-| `mobile-chrome` (chromium) | phone | **Yes** — 52 passed / 3 skipped (2026-10-13) |
+| `desktop` (chromium) | laptop | **Yes** — 52 passed / 3 skipped (2026-10-15, via the wrapper on Chromium 141.0.7390.37, @playwright/test 1.63.0) |
+| `mobile-chrome` (chromium) | phone | **Yes** — 52 passed / 3 skipped (2026-10-15, via the wrapper on Chromium 141.0.7390.37, @playwright/test 1.63.0) |
 | `tablet` (webkit) | tablet | **No** — `browserType.launch` fails, 55/55 (2026-10-13) |
 | `iphone` (webkit) | phone | **No** — same cause, 55/55 |
 | Unit tests, all static guards | — | **Yes** — no network |
@@ -511,12 +500,35 @@ makes local runs meaningful here; it is not luck.
 bar:** `python3 -m http.server 8099` and `APP_URL=http://127.0.0.1:8099/`, every
 assertion intact against the same built tree. Never relax an assertion, add a
 retry, skip a case, disable TLS verification, or unset `HTTPS_PROXY` to make a
-sandbox run green. For the browser path, `global.md` → *Network Access Playbook*
-rung 6 governs; use `PW_EXECUTABLE=/opt/pw-browsers/chromium` (a **symlink** — do
-not append a subpath, and prefer it to the versioned `chromium-<n>` directory,
-which moves on every browser bump). **Do not pass `--reporter=line` when the JSON
+sandbox run green. **Do not pass `--reporter=line` when the JSON
 report is needed**: a CLI reporter *replaces* the config's list, so the json
 reporter never writes and the #348 gate has nothing to read.
+
+**The browser path: a git-excluded wrapper (owner ruling, 2026-10-15).** The egress
+policy blocks the Playwright browser download, but the sandbox ships a Chromium.
+`global.md` → *Network Access Playbook* rung 6 and `test.md` → *Sandboxed local runs*
+("When the ladder cannot fetch your build but the preinstalled one launches") allow ONE
+way to use it: a LOCAL-ONLY wrapper config that pins `launchOptions.executablePath`,
+kept out of git so CI and the UI-suite env guard never see it. It lives in the exclude
+file, not in the repo, so **recreate it in each fresh container**:
+```
+cd .github/scripts/ui-tests
+cat > playwright.local.config.js <<'EOF'
+import base from './playwright.config.js';
+export default { ...base, use: { ...base.use, launchOptions: { executablePath: '/opt/pw-browsers/chromium' } } };
+EOF
+echo ".github/scripts/ui-tests/playwright.local.config.js" >> "$(git rev-parse --git-path info/exclude)"
+PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci          # node_modules/ is already gitignored
+# with `python3 -m http.server 8099` serving the repo root:
+APP_URL=http://127.0.0.1:8099/ npx playwright test -c playwright.local.config.js --project=desktop --project=mobile-chrome
+```
+Run the two chromium projects only (the webkit ones would be handed a Chromium binary).
+`/opt/pw-browsers/chromium` is a **symlink**: do not append a subpath, and prefer it to
+the versioned `chromium-<n>` directory, which moves on every browser bump. **Report every
+result from the wrapper as run on that build and name it**: on 2026-10-15
+`/opt/pw-browsers/chromium --version` printed `Chromium 141.0.7390.37`, while the
+installed `@playwright/test` is 1.63.0 and expects a newer one. Confirm `git status` is
+empty afterwards (output goes to the gitignored `.agent-reports/`).
 
 **What would make this wrong:** webkit's OS deps becoming present, or
 `cdn.playwright.dev` and `playwright.download.prss.microsoft.com` being allowed (the
