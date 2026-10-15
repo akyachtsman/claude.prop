@@ -32,6 +32,12 @@ This project's look is its own — established at kickoff via `/design-intake`
 | Validate workflow YAML | `python3 -c "import yaml, sys; yaml.safe_load(open('.github/workflows/qa.yml'))"` |
 | Workflow + action YAML as GitHub parses it (anchors, aliases, merge keys that PyYAML accepts and GitHub refuses) | `python3 .github/scripts/check-yaml-anchors.py` |
 
+`npx html-validate` is a local command only: CI never runs it. DIR9 reported (2026-10-15)
+that on a fresh machine it can crash in npm 10's peer resolution
+(`Cannot read properties of null (reading 'edgesOut')`, from vitest 5.0.5); the fix is
+`npm_config_legacy_peer_deps=true`. **Not reproduced here:** it exited 0 with and without the
+variable, though this container may be resolving a cached copy.
+
 ## Application Architecture
 Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
 - `index.html` — app shell: top bar (brand + property switcher/verdict pills on
@@ -168,6 +174,11 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   project's case). Verified on the refreshed tree: `spec env exempted, NOT wired (per its
   recorded reason): GITHUB_WORKSPACE, PW_EXECUTABLE`; `GITHUB_WORKSPACE` is upstream's own
   runner-supplied entry. Nothing was patched locally.
+  ⚠️ `test.md` (taken 2026-10-15) now names a **git-excluded local wrapper config** as the one
+  allowed way to pin `executablePath`, so CI and this guard never see it. This project's
+  hatch is the older form: a committed `PW_EXECUTABLE` read in `playwright.config.js`,
+  exempted above with a recorded reason, and left unset in CI. Kept as it is (the guard
+  passes and the reason is recorded); raised in the 2026-10-15 refresh report for the owner.
 - **Drop-in drift inventory — what a refresh should expect to find.** Four
   installed templates differ from upstream and all four are deliberate: `qa.yml` (three
   local additions — the root-absolute guard above, the unit-test step, the LOCAL OVERRIDE
@@ -175,7 +186,9 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   `playwright.config.js` (`baseURL` fill-in + the `PW_EXECUTABLE` hatch) and
   `app.spec.js` (the `installSignedIn` boot) — the last two marked `PROJECT-SPECIFIC`
   in-file. All four are in `refresh_kept` since the 2026-10-13 refresh, each bound to the
-  template blob it printed. How that refresh told a customization from staleness (the
+  template blob it printed and, since the 2026-10-15 refresh, to the installed copy's own
+  blob too (`local`, from `git hash-object --no-filters -- <path>`; a record without it
+  binds nothing). How that refresh told a customization from staleness (the
   question Phase 1.5's bare `DRIFT` lines cannot answer): compare each installed file to
   the template **at the stamp** — identical means the local copy is just the old
   template and every hunk is upstream; different means look at the diff. Sixteen files
@@ -183,8 +196,15 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   itself, `STALE` or `CUSTOM` per file, and `refresh-merge.sh` runs the 3-way merge, since
   `569a0ae`. The `569a0ae` refresh measured: 12 installed files compared, 8 match, 3 `STALE`,
   1 `CUSTOM` (`qa.yml`, the known one), 0 `DRIFT`. The five script templates in that delta
-  sit outside its loop, so they were classified by hand against the stamp and the pin:
-  all five `STALE`, no local edit.) For the three that carry local hunks, a
+  sat outside its loop, so they were classified by hand against the stamp and the pin:
+  all five `STALE`, no local edit. **From `a9c8859` the loop also covers every installed
+  `.github/scripts/<name>` that has a template** (claude.directives#451, asked for from
+  this project). The `a9c8859` refresh measured: 22 files compared, 17 match, 3 `STALE`
+  (`pages-retry.yml`, `check-ui-suite-env.py`, `package.json`), 2 `CUSTOM` (`qa.yml`,
+  `check-contrast.js`), 0 `DRIFT`, 1 `MODE` (`workflow-ref-guard.py` was `100644`, the
+  template `100755`; restored). Once re-recorded with `local`, both `CUSTOM` lines read
+  `(recorded in refresh_kept: <reason>)`, meaning decided, not re-asked. The kit under
+  `.github/scripts/ui-tests/` is still outside this loop.) For the three that carry local hunks, a
   `git merge-file` 3-way merge with the stamp-era template as the base isolates exactly
   the local content. A fifth difference, found and RESOLVED by this refresh, was not a
   customization at all: ⚠️ **`check-job-bounds.py` had been 70 lines stale since
@@ -213,6 +233,9 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   The skill says so itself, in Phase 3: *"Phase 1.5 does not inspect customized paths like
   `.github/scripts/ui-tests/**`"* — it was documented all along and still got mis-credited
   here, so read that line rather than inferring the loop's reach from a past write-up.
+  ✅ **That limit is lifted for scripts** (`a9c8859`, see above): the loop now classifies
+  installed `.github/scripts/<name>` files that have a template. The Playwright kit is
+  still outside it.
   So treat an unmarked, unlisted DRIFT as staleness until the diff proves otherwise, grep
   the in-file marker rather than trusting this list, and on any refresh **confirm each
   dispositioned file was actually written, not merely classified**.
@@ -267,6 +290,12 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   directory, and prints the recorded reason instead of saying nothing. `qa.yml` printed
   nothing (a workflow whose template is not in the delta), so "silent until its template
   moves" now holds for `qa.yml` alone. Nothing refused: the recorded blobs still matched.
+  **The fifth refresh (`569a0ae → a9c8859`, 2026-10-15) is the first with the `local`
+  requirement** (claude.directives#451), and it refused exactly as DIR9 predicted: four
+  `UNAPPLIED` lines, one per record (`qa.yml`, whose template also moved, plus
+  `check-contrast.js`, `playwright.config.js` and `app.spec.js`, whose templates did not),
+  each ending `(local <blob>)`. The printed `local` blobs matched `git hash-object
+  --no-filters -- <path>`. Recording `{blob, local, reason}` for each cleared it.
   **`claude.directives#398` is CLOSED upstream** (`cron-notify.yml` now names its three files
   by full path), and the hole is moot here regardless: on 2026-10-13 the owner confirmed
   this project has no scheduled task, so `cron-notify.yml` and the starter `notify-task.js`
@@ -278,9 +307,13 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   in `569a0ae`): a refusal used to burn Phase 2's verdict (re-run `refresh-delta.sh` before
   the second try, or it said "NOT classified for THIS head") and used to exit 0. The markers
   now survive a refusal, and the exit status is the verdict: 0 stamped, 1 refused, 2 could
-  not run. **Not exercised here:** the `569a0ae` run stamped on its first try (exit 0, last
-  line `stamped: <sha>`), so the refusal path is read from the command text, not measured.
-  Until one is seen, still read the last line, not just the status.
+  not run. **Exercised at `a9c8859` (2026-10-15):** the first run refused (exit 1, `stamp
+  left at 569a0ae…`, four `UNAPPLIED` lines); after the records were re-recorded,
+  `refresh-stamp.sh` ALONE (no `refresh-delta.sh` re-run) stamped (exit 0, last line
+  `stamped: a9c8859d…`), so Phase 2's verdict did survive the refusal. Still read the last
+  line, not just the status. `synced` is the date the sha last CHANGED, not the last check
+  (owner ruling, 2026-10-14); this run changed the sha, so the unchanged-sha branch (file
+  left byte-identical) was **not exercised here**.
 - **`.claude/settings.json` matches `templates/claude-settings.json` as sets since the
   2026-10-13 refresh** (37 `allow`, 1 `ask`, 5 `enabledPlugins`; no `refresh_declined`).
   **Owner decision, 2026-10-13:** take the template whole — the 25 `allow` entries the file
@@ -493,7 +526,8 @@ Pages URL becoming browser-reachable. Re-measure rather than trusting this table
 — and a local failure is not evidence about the suite until CI has ruled on the
 same commit.
 
-**KD-1 (UI-test kit defects list):** `CLEAR`, re-verified 2026-10-13 at `569a0ae` by
+**KD-1 (UI-test kit defects list):** `CLEAR`, re-verified 2026-10-15 at `a9c8859` (and
+2026-10-13 at `569a0ae`) by
 `kit-defects.sh`, which now extracts each entry's Check from the fetched list and runs it in
 every kit directory the workflows name (output: `KD-1 .github/scripts/ui-tests: CLEAR`;
 `SUMMARY: 1 entr(ies) checked — 0 AFFECTED, 0 UNDECIDED, 1 CLEAR`). The earlier pass, at
