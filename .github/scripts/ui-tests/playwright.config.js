@@ -46,9 +46,6 @@ export default defineConfig({
     // comma-separated list of paths relative to APP_URL — the ENTRY scenario
     // load-gates each one (test.md → UI coverage gates).
     baseURL: (process.env.APP_URL || 'https://akyachtsman.github.io/claude.prop/').replace(/\/?$/, '/'),
-    // PROJECT-SPECIFIC: use a preinstalled Chromium when PW_EXECUTABLE is set
-    // (remote sandboxes ship one and block the browser download).
-    launchOptions: process.env.PW_EXECUTABLE ? { executablePath: process.env.PW_EXECUTABLE } : undefined,
     headless: true,
     // ⚠️ BOTH OF THESE DEFAULT TO 0 = NO TIMEOUT IN PLAYWRIGHT TEST, and that is
     // the whole reason they are here. Left unset, an action or a navigation is
