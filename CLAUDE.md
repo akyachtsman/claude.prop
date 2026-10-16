@@ -308,14 +308,25 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   **The sixth refresh (`a9c8859 → bde28c9`, 2026-10-15)** had a 13-path delta of which two
   had an installed copy (`codex-monitor.yml`, `pages-retry.yml`; both `STALE`, taken). It is
   the first run of the `RE-RECORD` line (`f0e2838`, #457): it printed nothing, meaning all
-  four `refresh_kept` records still bind. A `CUSTOM` line for a record that DOES bind still
-  quotes the reason in full (here ~900 characters), and so do `refresh-stamp.sh`'s three
-  `KEPT:` lines: the 60-character cut applies only to the two warning lines for a record
-  that no longer binds. The stamp itself went through first time (exit 0, last line
-  `stamped: bde28c97…`, no refusal). `refresh-vars.sh` takes its baseline
-  from the last commit that touched `.claude/directive-sync.json`, which any `refresh_kept`
-  re-record moves without moving the stamp (here `dd86de9`, not `a64568c`); harmless in
-  this delta, reported upstream.
+  four `refresh_kept` records still bind. The stamp went through first time (exit 0, last
+  line `stamped: bde28c97…`, no refusal). Two things it exposed were reported and are FIXED
+  upstream in `e78b6dd` (#459): `refresh-vars.sh` took its baseline from the last commit that
+  touched `.claude/directive-sync.json` (any `refresh_kept` re-record moves it without moving
+  the stamp), and the `CUSTOM` and `KEPT:` lines quoted a binding record's reason in full
+  (~900 characters, burying the verdict).
+  **The seventh refresh (`bde28c9 → e78b6dd`, 2026-10-16)** had a 7-path delta of which one
+  had an installed copy (`pages-retry.yml`: `STALE`, taken; upstream's `run_attempt < 4`
+  bound on a newer failed run, matching the job's own `if:`). Drift: 22 compared, 19 match,
+  1 `STALE`, 2 `CUSTOM` (both recorded and still binding), 0 `DRIFT`, 0 `MODE`, no
+  `RE-RECORD` line. Both #459 fixes verified in this repo: the vars baseline printed
+  `6152443` (the merge that wrote `bde28c9`), and the `CUSTOM` lines dropped from ~900
+  to 235 and 253 characters with the reason cut to 60. The kit-directory `KEPT:` form is not
+  exercised here (no directory records). This run changed the sha, so the unchanged-sha
+  branch was again **not exercised in place**; it was measured on 2026-10-16 in a scratch
+  clone of this repo against a local mirror at `bde28c9` (exit 0, `stamped: … (unchanged;
+  file not rewritten)`, `directive-sync.json` byte-identical, `synced` 2026-10-15 left
+  alone on a 2026-10-16 run). The first genuinely in-place no-delta run is the NEXT
+  `/refresh-repo`, if upstream has not moved.
 - **`.claude/settings.json` matches `templates/claude-settings.json` as sets since the
   2026-10-13 refresh** (37 `allow`, 1 `ask`, 5 `enabledPlugins`; no `refresh_declined`).
   **Owner decision, 2026-10-13:** take the template whole — the 25 `allow` entries the file
