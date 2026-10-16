@@ -325,8 +325,18 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   branch was again **not exercised in place**; it was measured on 2026-10-16 in a scratch
   clone of this repo against a local mirror at `bde28c9` (exit 0, `stamped: … (unchanged;
   file not rewritten)`, `directive-sync.json` byte-identical, `synced` 2026-10-15 left
-  alone on a 2026-10-16 run). The first genuinely in-place no-delta run is the NEXT
-  `/refresh-repo`, if upstream has not moved.
+  alone on a 2026-10-16 run). The first genuinely in-place no-delta run followed, below.
+  **The eighth refresh (stamp already at `e78b6dd`, 2026-10-16)** was that run: upstream had
+  not moved, so `refresh-delta.sh` printed `OK: stamp already at e78b6dd… — no delta`. Drift:
+  22 compared, 20 match, 0 `STALE`, 2 `CUSTOM` (recorded, still binding), 0 `DRIFT`, 0
+  `MODE`, no `RE-RECORD` line; KD-1 `CLEAR`; no new variables or secrets (the vars baseline
+  printed `44e8aa7`, the merge that wrote the stamp). `refresh-stamp.sh` exited 0 with
+  `stamped: … (unchanged; file not rewritten)` and `.claude/directive-sync.json` kept its
+  checksum, inode, mtime and size, so the run left nothing to commit and shipped no PR.
+  Measure that with inode and mtime, not bytes alone: on a same-day second run `synced`
+  already equals today, so the old rewrite-`synced`-to-today behaviour would have produced
+  identical content (the scratch-clone simulation discriminated by date instead: stamp
+  2026-10-15, run 2026-10-16).
 - **`.claude/settings.json` matches `templates/claude-settings.json` as sets since the
   2026-10-13 refresh** (37 `allow`, 1 `ask`, 5 `enabledPlugins`; no `refresh_declined`).
   **Owner decision, 2026-10-13:** take the template whole — the 25 `allow` entries the file
