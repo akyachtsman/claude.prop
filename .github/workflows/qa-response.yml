@@ -28,7 +28,7 @@ permissions:
 
 jobs:
   respond:
-    uses: akyachtsman/claude.directives/.github/workflows/shared-qa-response.yml@f667e89d7a8b86ce1e269489d03da20261e9fd79
+    uses: akyachtsman/claude.directives/.github/workflows/shared-qa-response.yml@55af14e497d7490b7b0d83cf0528f33659df9b41
     with:
       tests-dir: .github/scripts/ui-tests
       ui-timeout-minutes: 120
