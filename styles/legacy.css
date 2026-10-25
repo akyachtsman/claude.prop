@@ -772,8 +772,8 @@ body {
    if needed), the center slot (title/switcher/pills/actions) drops to a
    full-width row below and wraps, and the switcher subtitle truncates instead of
    forcing width. Prevents horizontal page scroll at phone and iPad-portrait
-   width (the dashboard's one-line topbar needs about 914px, so 960 not 680);
-   desktop is unchanged. Placed after the base .topbar rules so its flex
+   width (at 681-960px the dashboard was 914px wide, so 960 not 680); wider
+   screens wrap the nav instead (the min-width: 961px rule below). Placed after the base .topbar rules so its flex
    shorthand wins. */
 @media (max-width: 960px) {
   .topbar { flex-wrap: wrap; gap: var(--space-2); padding: var(--space-2) var(--space-3); min-height: 0; }
@@ -783,6 +783,14 @@ body {
      past the screen (measured 7px over at 390-393px on the dashboard). */
   .topbar__pills { flex-wrap: wrap; }
   .switcher__title .sub { display: block; overflow: hidden; text-overflow: ellipsis; }
+}
+/* Above the phone reflow, the dashboard's centre group (switcher, pills,
+   undo/redo) needs about 1290px on one line. Below that it used to shrink past
+   its content and paint over the nav, so Undo sat on Restore at 1024-1080px.
+   Now the centre keeps its content width and the nav wraps to a second row. */
+@media (min-width: 961px) {
+  .topbar { flex-wrap: wrap; row-gap: 0; }
+  .topbar__center { min-width: min-content; }
 }
 /* final one-screen rhythm trim */
 .legacy-card .legacy-input { min-height: 26px; }

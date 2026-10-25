@@ -146,3 +146,48 @@ test('S41 overlays fit — the "Move your local deals in?" prompt fits the scree
   await expect(page.locator('.modal__overlay')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
+
+// The dashboard's top bar: every control is on screen and is what a tap at its
+// centre lands on. A sideways-scroll check cannot see this case: between 961 and
+// about 1290px the switcher, pills and undo/redo used to paint over the nav
+// without widening the page, so a tap on Restore hit Redo. Checked at the
+// project's own width, then at 1024 (iPad landscape) and 1280 (a small laptop).
+async function topbarProblems(page) {
+  return page.evaluate(() => {
+    const problems = [];
+    const controls = document.querySelectorAll('.topbar button, .topbar a, .topbar .legacy-pill, .topbar .account > *');
+    for (const c of controls) {
+      const b = c.getBoundingClientRect();
+      if (!b.width || !b.height) continue;
+      const name = (c.getAttribute('aria-label') || c.textContent || c.className).trim().slice(0, 30);
+      if (b.left < 0 || b.right > innerWidth + 1 || b.top < 0) { problems.push(`OFF SCREEN: ${name}`); continue; }
+      const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+      if (!hit || !(c === hit || c.contains(hit))) problems.push(`COVERED: ${name} (a tap lands on ${hit ? hit.className || hit.tagName : 'nothing'})`);
+    }
+    return problems;
+  });
+}
+
+test('S41 top bar fits — every dashboard top-bar control is on screen and tappable', async ({ page, renderWitness }) => {
+  renderWitness();
+  test.setTimeout(60_000);
+  const errors = watchErrors(page);
+  await installSignedIn(page);
+  await page.goto('./', { waitUntil: 'load' });
+  await page.click('button:has-text("Load sample deal")');
+  await page.waitForSelector('.kpi-strip');
+  // Reload and reopen from the list, so no "Sample deal loaded." toast sits over the bar.
+  await page.goto('./#/', { waitUntil: 'load' });
+  await page.reload({ waitUntil: 'load' });
+  await page.locator('.lcard__name').first().click();
+  await page.waitForSelector('.kpi-strip');
+  await page.mouse.move(1, page.viewportSize().height - 1);
+  expect(await topbarProblems(page), `at ${page.viewportSize().width}px`).toEqual([]);
+
+  test.info().annotations.push({ type: 'viewport-override', description: 'widths 1024 and 1280' });
+  for (const width of [1024, 1280]) {
+    await page.setViewportSize({ width, height: page.viewportSize().height });
+    expect(await topbarProblems(page), `at ${width}px`).toEqual([]);
+  }
+  expect(errors).toEqual([]);
+});
