@@ -222,7 +222,7 @@ const pairs = [
   // PROJECT-SPECIFIC (see CLAUDE.md). Upstream checks accent/surface at the LARGE-text
   // floor (3.0). Here --color-accent is a SMALL-text colour in eight places —
   // .authgate__brand, .authgate__status--ok, .authgate__link, .modal__status--ok,
-  // .photos-btn:hover, .archive-restore:hover, .th-sort__caret, .link-open — at
+  // .photos-btn:hover, .archive-restore:hover, .legacy-th-sort__caret, .link-open — at
   // --font-sm 13px / --font-xs 12px, neither of which is WCAG large text. So the
   // normal-text floor applies, and the page background is checked too. At 3.0 a
   // palette scoring 3.54 passed while every one of those labels failed AA. (Codex, #109.)

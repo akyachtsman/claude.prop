@@ -7,7 +7,7 @@
     ".github/scripts/check-contrast.js": {
       "blob": "36e6918e52e6da12b39442af94b19d495b1b660f",
       "reason": "FOUR deliberate PROJECT-SPECIFIC contrast pairs, each marked in-file and documented in CLAUDE.md: accent/surface at the 4.5 normal-text floor plus accent/bg (accent is a small-text colour in eight places at 13px/12px, so upstream's 3.0 large-text floor passed a palette whose labels all failed AA); on-navy/accent (.switcher__btn and .topbar__action keep on-navy over an accent hover fill); accent-hover/accent-light (the NOI chip, found by deriving pairs from components.css, shipping 4.32:1 at 11px bold); and on-danger/danger (the gallery delete glyph — this app never renders danger as a foreground, which is what upstream checks). Restoring the template would delete four real AA checks and re-admit the failures they caught (Codex, #109).",
-      "local": "7750bdaa7ae34b93e0dae3d8ec9e353cf528548e"
+      "local": "958ab93fd125bebae834622717038981e57aa2fb"
     },
     ".github/scripts/ui-tests/tests/app.spec.js": {
       "blob": "823167be7a14d7057e433aafa59d2fc70b654888",
@@ -24,5 +24,6 @@
       "reason": "ONE deliberate local hunk kept: baseURL falls back to this project's Pages URL instead of the template's REPLACE_WITH_YOUR_APP_URL placeholder, so a bare local run does not go to an invalid address. It is the template's own fill-in point, so it carries no in-file marker (an earlier version of this record said both hunks were marked; only the removed PW_EXECUTABLE hatch was). The PW_EXECUTABLE hatch was REMOVED on 2026-10-15 (owner ruling relayed by DIR9): local runs use a git-excluded wrapper config instead (test.md -> Sandboxed local runs; CLAUDE.md -> Sandbox Limits), and .github/ui-suite-env-exempt.json was deleted so check-ui-suite-env.py runs unexempted. The upstream SCREENSHOT_DIR change (GITHUB_WORKSPACE-rooted) is applied; verified against the template at a9c8859.",
       "local": "902d6ba438bcd52b635bc3d8a27cb05d3b8e015c"
     }
-  }
+  },
+  "house_style": true
 }
