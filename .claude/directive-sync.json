@@ -1,6 +1,6 @@
 {
   "upstream": {
-    "sha": "d23c82297deea3c6c84fcc9125631ac7edf5fcb2",
+    "sha": "7e99c1aa197c56a58d27a27d01239e77cd042ad9",
     "synced": "2026-10-25"
   },
   "refresh_kept": {
@@ -16,13 +16,23 @@
     },
     ".github/workflows/qa.yml": {
       "blob": "9648a8f93a9bf215bdc3e48e96685ba6d4e4f5ab",
-      "local": "3b8c2b75119be3bb1c73a91a5c337fec854b3e60",
-      "reason": "THREE deliberate local additions kept on top of the template, verified by a 3-way merge against the stamp-era template (everything else is the head template verbatim): (1) the PROJECT-SPECIFIC 'No root-absolute paths' step in static-checks (Pages serves this app under /claude.prop/, so a leading-slash URL is green locally and red only live); (2) the PROJECT-SPECIFIC unit-test step (node --test over tests/*.test.mjs), now the last static-checks step since upstream removed the guards it followed; (3) the LOCAL OVERRIDE comment under the auth-secrets setup note (DO NOT set TEST_AUTH_CREDENTIAL/EMAIL here). BUILD_CMD/SITE_DIR/BUILD_PATHS stay at the shipped empties: branch-source, no build. Refreshed to d23c822 (2026-10-25): upstream's removal of the five guards and the ui-changes job taken."
+      "local": "f34e31d80d825bcf82aefa64f0dcbb83140e001f",
+      "reason": "pilot of #460 step 4: a caller of claude.directives' shared-qa.yml pinned to 55af14e (claude.directives #479, re-pinned in #135); kept, never merged or overwritten from the template. Its project-specific checks (the root-absolute guard, the Node unit tests, contrast-script) live in the caller, not in a template copy."
     },
     ".github/scripts/ui-tests/playwright.config.js": {
       "blob": "9a2b4ad9a65ab1f9ce5afbd0395af8aaecbb3573",
       "local": "4c62ed60fbece8343dd13b343f3fcd48ab7e9fce",
       "reason": "ONE deliberate local hunk kept: baseURL falls back to this project's Pages URL instead of the template's REPLACE_WITH_YOUR_APP_URL placeholder, so a bare local run does not go to an invalid address. It is the template's own fill-in point, so it carries no in-file marker. Local runs pin the sandbox Chromium only through a git-excluded wrapper config (CLAUDE.md -> Sandbox Limits). Refreshed to d23c822 (2026-10-25): upstream's two comment hunks taken by refresh-merge.sh with 0 conflicts."
+    },
+    ".github/workflows/qa-live.yml": {
+      "blob": "3c424c73de947e96d296f3e0e035dc5ef6d1ea53",
+      "local": "c88ca9aa0c84fce01bd798ac063116755c0f5ff3",
+      "reason": "pilot of #460 step 4: a caller of claude.directives' shared-qa-live.yml pinned to 55af14e (claude.directives #479, re-pinned in #135); kept, never merged or overwritten from the template. Its project-specific checks (the root-absolute guard, the Node unit tests, contrast-script) live in the caller, not in a template copy."
+    },
+    ".github/workflows/qa-response.yml": {
+      "blob": "5bd1e5d501452ef09730646ec18e6e7812de7142",
+      "local": "bd207fb1cd0e51019f7b4814e35819395e43e0a9",
+      "reason": "pilot of #460 step 4: a caller of claude.directives' shared-qa-response.yml pinned to 55af14e (claude.directives #479, re-pinned in #135); kept, never merged or overwritten from the template. Its project-specific checks (the root-absolute guard, the Node unit tests, contrast-script) live in the caller, not in a template copy."
     }
   },
   "house_style": true
