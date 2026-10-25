@@ -1,8 +1,9 @@
 # qa.yml — caller of claude.directives' shared-qa.yml (#460 step 4 pilot).
-# The shared workflow runs the secret scan, the upstream contrast guardrail and
-# the Playwright suite against a local server; its jobs show as
-# "qa / Static Checks" and "qa / UI Tests (local server)". What it does and how
-# it differs from the old copy: claude.directives docs/internal/shared-workflows.md.
+# The shared workflow runs the secret scan, the contrast guardrail (this project's
+# own script, via contrast-script) and the Playwright suite against a local
+# server; its jobs show as "qa / Static Checks" and "qa / UI Tests (local
+# server)". What it does and how it differs from the old copy:
+# claude.directives docs/internal/shared-workflows.md.
 #
 # Pinned to an exact claude.directives commit, not a tag (owner, 2026-10-25).
 # Rollback is reverting the pilot PR, which restores the full copy.
@@ -11,12 +12,16 @@
 # does not pass into a called workflow. BUILD_PATHS stays in the top-level
 # `env:`: the toolkit's Pages edit reminder reads it there, no workflow does.
 #
-# PROJECT-SPECIFIC: the `project-checks` job carries the three checks the old
-# copy ran in its Static Checks job that the shared workflow has no slot for
-# (see CLAUDE.md): the root-absolute path guard, this project's own
-# check-contrast.js (four local pairs on top of upstream's, each marked
-# `// PROJECT-SPECIFIC` in the file) and the Node unit tests. `qa` waits on it,
-# as the old copy's UI job waited on its static checks.
+# PROJECT-SPECIFIC: the `project-checks` job carries the two checks the old
+# copy ran in its Static Checks job that the shared workflow takes no command
+# for (see CLAUDE.md): the root-absolute path guard and the Node unit tests.
+# `qa` waits on it, so a red project check stops the suite; a sibling job in
+# `needs` is the documented slot for project checks (claude.directives #479).
+#
+# Contrast: `contrast-script` makes the shared Static Checks run this project's
+# own .github/scripts/check-contrast.js (13 pairs: upstream's plus four marked
+# `// PROJECT-SPECIFIC` in the file) instead of the shipped one. That copy and
+# the commonjs package.json beside it stay in the repo.
 #
 # Secrets go by name, never `secrets: inherit` (claude.directives #467).
 # ⚠️ LOCAL OVERRIDE — DO NOT set TEST_AUTH_CREDENTIAL or TEST_AUTH_EMAIL on this
@@ -112,15 +117,6 @@ jobs:
             exit 1
           fi
 
-      # ── Contrast guardrail, this project's pairs (PROJECT-SPECIFIC) ─────────
-      # The shared workflow runs upstream's check-contrast.js, which does not
-      # carry this project's four extra pairs (CLAUDE.md lists them; grep the
-      # file for `// PROJECT-SPECIFIC`). This runs the local copy, so those
-      # pairs stay blocking. CommonJS: .github/scripts/package.json declares
-      # "type": "commonjs".
-      - name: Contrast guardrail, project pairs (WCAG AA)
-        run: node .github/scripts/check-contrast.js
-
       # ── Store unit tests (PROJECT-SPECIFIC — see CLAUDE.md) ─────────────────
       # Node-native tests for the storage layer, reconcile, math input, media
       # and import parsing. Browser-free — shims localStorage/navigator — so
@@ -130,7 +126,7 @@ jobs:
 
   qa:
     needs: [project-checks]
-    uses: akyachtsman/claude.directives/.github/workflows/shared-qa.yml@f667e89d7a8b86ce1e269489d03da20261e9fd79
+    uses: akyachtsman/claude.directives/.github/workflows/shared-qa.yml@55af14e497d7490b7b0d83cf0528f33659df9b41
     with:
       # Path to the directory containing playwright.config.js and package.json
       tests-dir: .github/scripts/ui-tests
@@ -138,6 +134,8 @@ jobs:
       build-cmd: ''
       site-dir: '.'
       contrast-args: ''
+      # This project's copy, with its four added pairs, runs instead of the shared one.
+      contrast-script: .github/scripts/check-contrast.js
       # Blocking: the suite runs fully against the bundled local server.
       advisory-run: false
       # The fleet floor for a ui-suite caller; raise it, never lower it.
