@@ -46,18 +46,25 @@ async function shortScreen(page) {
   await page.setViewportSize({ width: vp.width, height: SHORT_HEIGHT });
 }
 
-const PNG = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==',
-  'base64');
+// A photo at a real camera size, 1200x800, so the lightbox has to shrink it to fit
+// (a 1x1 stub fits anywhere and would leave the lightbox check vacuous).
+const PHOTO = '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800">'
+  + '<rect width="1200" height="800" fill="#4a6a8a"/></svg>';
 
 // Opens each overlay in turn and checks it, closing it before the next.
 async function walkOverlays(page) {
   await page.route('https://ex.com/**', (route) =>
-    route.fulfill({ status: 200, contentType: 'image/png', body: PNG }));
+    route.fulfill({ status: 200, contentType: 'image/svg+xml', body: PHOTO }));
   await installSignedIn(page);
   await page.goto('./', { waitUntil: 'load' });
   await page.click('button:has-text("Load sample deal")');
   await page.waitForSelector('.kpi-strip');
+
+  // ── The dashboard itself stays within the screen's width. Measured against the
+  // declared viewport, not innerWidth: mobile Chromium widens its layout viewport
+  // to fit an overflowing page, so innerWidth grows with the overflow it should catch.
+  const pageWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+  expect(pageWidth, 'the dashboard must not scroll sideways').toBeLessThanOrEqual(page.viewportSize().width + 1);
 
   // ── KPI formula popup (focus, so it opens on a touch screen too)
   await page.locator('.kpi').first().focus();
@@ -75,9 +82,16 @@ async function walkOverlays(page) {
   expect(await grid.evaluate((g) => g.scrollHeight > g.clientHeight), 'the grid must hold more than it shows').toBe(true);
   await expectFits(page, '.modal__overlay');
 
-  // ── Lightbox, over the gallery
+  // ── Lightbox, over the gallery. The photo must still be shown at a useful
+  // size: shrinking it to nothing would also keep the arrows on screen.
   await page.locator('.gallery__img').first().click();
   await expectFits(page, '.lightbox');
+  const vp = page.viewportSize();
+  const shown = await page.locator('.lightbox__img').evaluate((img) => {
+    const b = img.getBoundingClientRect();
+    return { w: b.width, h: b.height };
+  });
+  expect(Math.max(shown.w / vp.width, shown.h / vp.height), 'the photo fills over half the screen one way').toBeGreaterThan(0.5);
   await page.locator('.lightbox__close').click();
   await page.click('.gallery button:has-text("Done")');
   await expect(page.locator('.gallery')).toHaveCount(0);

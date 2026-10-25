@@ -771,9 +771,11 @@ body {
    phone, so it reflows — brand + nav stay at the top (nav wraps to its own line
    if needed), the center slot (title/switcher/pills/actions) drops to a
    full-width row below and wraps, and the switcher subtitle truncates instead of
-   forcing width. Prevents horizontal page scroll at phone width; desktop is
-   unchanged. Placed after the base .topbar rules so its flex shorthand wins. */
-@media (max-width: 680px) {
+   forcing width. Prevents horizontal page scroll at phone and iPad-portrait
+   width (the dashboard's one-line topbar needs about 914px, so 960 not 680);
+   desktop is unchanged. Placed after the base .topbar rules so its flex
+   shorthand wins. */
+@media (max-width: 960px) {
   .topbar { flex-wrap: wrap; gap: var(--space-2); padding: var(--space-2) var(--space-3); min-height: 0; }
   .topbar__center { order: 3; flex: 1 1 100%; flex-wrap: wrap; gap: var(--space-2) var(--space-3); }
   .topbar__nav { flex-wrap: wrap; }
@@ -929,7 +931,9 @@ body.is-readonly #view button:not(.topbar__link):not(.switcher__btn) {
   position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
   gap: var(--space-3); padding: var(--space-6); background: rgba(10, 20, 34, 0.88);
 }
-.lightbox__img { max-width: min(90vw, 1100px); max-height: 86vh; max-height: 86dvh; object-fit: contain; border-radius: var(--radius-md); }
+/* min-width: 0 lets the photo shrink between the arrows: a flex item's default
+   minimum is its own width, which pushed both arrows off a phone's screen. */
+.lightbox__img { min-width: 0; max-width: min(90vw, 1100px); max-height: 86vh; max-height: 86dvh; object-fit: contain; border-radius: var(--radius-md); }
 .lightbox__nav {
   flex: none; width: 44px; height: 44px; border: none; border-radius: var(--radius-pill);
   background: rgba(255, 255, 255, 0.14); color: #fff; font-size: 26px; line-height: 1; cursor: pointer;
@@ -944,3 +948,5 @@ body.is-readonly #view button:not(.topbar__link):not(.switcher__btn) {
 }
 .lightbox__close:hover, .lightbox__close:focus-visible { background: rgba(255, 255, 255, 0.28); }
 .lightbox__cap { position: fixed; bottom: 18px; left: 0; right: 0; text-align: center; color: #E6EEF8; font-size: var(--font-sm); font-variant-numeric: tabular-nums; }
+/* On a phone the desktop padding leaves the photo about half the screen wide. */
+@media (max-width: 680px) { .lightbox { padding: var(--space-2); gap: var(--space-1); } }
