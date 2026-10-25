@@ -777,6 +777,9 @@ body {
   .topbar { flex-wrap: wrap; gap: var(--space-2); padding: var(--space-2) var(--space-3); min-height: 0; }
   .topbar__center { order: 3; flex: 1 1 100%; flex-wrap: wrap; gap: var(--space-2) var(--space-3); }
   .topbar__nav { flex-wrap: wrap; }
+  /* The three verdict pills wrap at phone width instead of widening the page
+     past the screen (measured 7px over at 390-393px on the dashboard). */
+  .topbar__pills { flex-wrap: wrap; }
   .switcher__title .sub { display: block; overflow: hidden; text-overflow: ellipsis; }
 }
 /* final one-screen rhythm trim */
@@ -854,6 +857,11 @@ body.is-readonly #view button:not(.topbar__link):not(.switcher__btn) {
   border-radius: var(--radius-lg); box-shadow: var(--shadow-md);
   padding: var(--space-6); width: 100%; max-width: 420px;
   display: flex; flex-direction: column; gap: var(--space-3);
+  /* Fits a short screen (an iPhone on its side) and scrolls inside itself by
+     finger rather than running off the top and bottom; design.md -> iPhone and
+     iPad. vh first for engines without dvh. */
+  max-height: 88vh; max-height: 88dvh;
+  overflow-y: auto; overscroll-behavior: contain;
 }
 .modal__close {
   position: absolute; top: 10px; right: 12px; z-index: 1;
@@ -898,7 +906,8 @@ body.is-readonly #view button:not(.topbar__link):not(.switcher__btn) {
 .gallery__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .gallery__grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: var(--space-3); max-height: 52vh; overflow-y: auto;
+  gap: var(--space-3); max-height: 52vh; max-height: 52dvh; overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .gallery__empty { color: var(--color-text-secondary); font-size: var(--font-sm); margin: 0; padding: var(--space-6) 0; text-align: center; }
 .gallery__cell { position: relative; margin: 0; }
@@ -920,7 +929,7 @@ body.is-readonly #view button:not(.topbar__link):not(.switcher__btn) {
   position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
   gap: var(--space-3); padding: var(--space-6); background: rgba(10, 20, 34, 0.88);
 }
-.lightbox__img { max-width: min(90vw, 1100px); max-height: 86vh; object-fit: contain; border-radius: var(--radius-md); }
+.lightbox__img { max-width: min(90vw, 1100px); max-height: 86vh; max-height: 86dvh; object-fit: contain; border-radius: var(--radius-md); }
 .lightbox__nav {
   flex: none; width: 44px; height: 44px; border: none; border-radius: var(--radius-pill);
   background: rgba(255, 255, 255, 0.14); color: #fff; font-size: 26px; line-height: 1; cursor: pointer;

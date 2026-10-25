@@ -103,3 +103,29 @@ export async function installSignedIn(page, { email = 'tester@example.com', seed
 
   return { rows };
 }
+
+/**
+ * Put one deal in the LOCAL store and clear the once-per-account reconcile key
+ * on every navigation, so a signed-in boot with `reconcile: true` shows the
+ * "Move your local deals in?" prompt on each load (js/account.js returns early
+ * once `propanalytics.reconciled.<uid>` is set). Register it before
+ * installSignedIn. Used by auth.spec.js (DISMISS account modal) and fit.spec.js.
+ * @param {import('@playwright/test').Page} page
+ */
+export async function seedLocalDealForReconcile(page) {
+  const localDeal = {
+    id: 'p-local-dismiss', schemaVersion: 1, name: 'Dismiss Fixture',
+    info: { askingPrice: 500000, rentableSF: 5000, lotSize: '', yearBuilt: '', zoning: '', hvacAge: '', roofAge: '', parking: '', ceilingHeight: '', appraisedValue: 0, apn: '', bedrooms: '', baths: '' },
+    targets: { desiredCap: 0.06, desiredDscr: 1.25 },
+    offer: { offerPrice: 450000, fees: 0, improvements: 0 },
+    loans: [{ ltv: 0.7, rate: 0.065, termYears: 25, maturityYears: 0, type: 'CONV' }, { ltv: 0, rate: 0.065, termYears: 25, maturityYears: 0, type: 'IO' }],
+    tenants: [], expenses: [],
+    assumptions: { minOppCostEquity: 0.15, taxRate: 0.28, collectionLoss: 0.05, cashflowAppr: 0.02, capitalAppr: 0.02 },
+  };
+  await page.addInitScript((d) => {
+    localStorage.setItem('propanalytics.v1', JSON.stringify(d));
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith('propanalytics.reconciled.'))
+      .forEach((k) => localStorage.removeItem(k));
+  }, [localDeal]);
+}
