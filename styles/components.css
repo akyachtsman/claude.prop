@@ -1,909 +1,352 @@
-/* ── components.css — reusable elements, all values from tokens.css ────────
-   Built at /design-intake (2026-07-14, "banker navy"; one-screen landscape
-   density per owner feedback). Every page uses these classes so the look
-   stays consistent page-to-page. iPad rules: 44px tap targets, 48px inputs,
-   16px+ input font, :focus-visible everywhere, reduced-motion honored. */
+/* ── components.css — this project's reusable components ─────────────────────
+   The HOUSE set (design.md, owner rulings 2026-10-19), built on tokens.css. Each
+   block names the design.md section it implements. Every value references
+   var(--…), so re-theming happens in tokens.css alone. A screen never adds its
+   own button, card, pill or dialog class: a size or layout need is a modifier on
+   the shared one. Meets the craft rules in design.md (44px targets,
+   :focus-visible, reduced motion). The behaviour these need (the confirmation
+   dialog, the Archived (N) fit, the empty state, inline messages) lives in ONE
+   shared script per project, never per page. */
 
-/* base ---------------------------------------------------------------- */
-* { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
+/* ── Page base: the canvas, text colour and font every page starts from ─────── */
+/* border-box, so padding and borders stay inside a component's width and a
+   width: 100% card never overflows its grid track on a phone. */
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--color-bg); }
 body {
-  margin: 0;
-  background: var(--color-bg);
-  color: var(--color-text-primary);
-  font-family: var(--font-sans);
-  font-size: var(--font-sm);
-  line-height: 1.45;
-  font-variant-numeric: tabular-nums;
+  margin: 0; background: var(--color-bg); color: var(--color-text-primary);
+  font: var(--font-base)/1.5 var(--font-sans);
+  -webkit-text-size-adjust: 100%;
+  /* A long unbroken name (a file name, an id) wraps instead of pushing the page
+     sideways, wherever it sits. anywhere, not break-word: break-word gives a
+     flex item no break points when it sizes, so free text in a flex row (Back,
+     a dialog title, a menu action) would still hold the row open. One rule for
+     the page, so no component has to remember it. */
+  overflow-wrap: anywhere;
 }
-:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-  border-radius: var(--radius-sm);
+/* The two places that keep whole words: a table, so its columns size to whole
+   words and a wide one scrolls in its own box (.table-wrap), and the controls
+   with short fixed labels, so a squeezed row never splits a word in a button. */
+.table, .btn, .pill, .tag, .segmented [role="tab"] { overflow-wrap: break-word; }
+/* ...and the controls are never wider than their box, so a single word longer
+   than the whole row (a long translation) still splits rather than push the
+   page sideways. */
+.btn, .pill, .tag, .segmented [role="tab"] { max-width: 100%; }
+/* A picture or video never paints wider than its box (a phone photo is
+   thousands of pixels wide), keeping its shape as it shrinks. */
+img, video { max-width: 100%; height: auto; }
+/* hidden always hides: a component's own display (a flex pop-over, a dialog
+   backdrop) would otherwise override the browser's rule and show it. */
+[hidden] { display: none !important; }
+/* Form controls take the house font too; browsers give them their own. */
+button, input, select, textarea { font-family: inherit; }
+h1, h2, h3 { line-height: 1.25; margin: 0 0 var(--space-3); }
+h1 { font-size: var(--font-2xl); } h2 { font-size: var(--font-xl); } h3 { font-size: var(--font-lg); }
+a { color: var(--color-accent); }
+a:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; }
+/* The page's content box: the inset the body's margin: 0 removed, 16px on a
+   phone, 24px from a tablet up, centred and capped on a wide screen. A banner
+   (full width) sits outside it. */
+.page { max-width: 1440px; margin: 0 auto; padding: var(--space-4); }
+@media (min-width: 700px) { .page { padding: var(--space-6); } }
+/* An action link standing on its own (Back, Clear filters, any link that does
+   something rather than sits in a sentence) gets the 44px target a link in
+   running text is exempt from. Works on <a> or <button>. */
+.link-action {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  min-height: var(--size-target-min); min-width: var(--size-target-min);
+  background: none; border: 0; padding: 0 var(--space-1);
+  font: 600 var(--font-sm)/1.2 var(--font-sans); color: var(--color-accent);
+  text-decoration: none;
 }
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; }
-}
+.link-action:hover { text-decoration: underline; }
+.link-action:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; border-radius: var(--radius-sm); }
 
-/* top bar — brand · property switcher · verdicts · nav ----------------- */
-.topbar {
-  background: var(--color-navy);
-  color: var(--color-on-navy);
-  display: flex; align-items: center; gap: var(--space-4);
-  padding: 0 var(--space-4);
-  min-height: 52px;
-}
-.topbar__brand {
-  display: flex; align-items: center; gap: var(--space-2);
-  font-weight: 800; font-size: var(--font-base); letter-spacing: 0.02em;
-  color: var(--color-on-navy); text-decoration: none; white-space: nowrap;
-}
-.topbar__brand svg { flex: none; }
-.switcher { display: flex; align-items: center; gap: var(--space-2); }
-.switcher__btn {
-  flex: none;                         /* arrows keep their size — never shrink or overflow */
-  font: inherit; font-weight: 700; color: var(--color-on-navy);
-  background: var(--color-navy-soft); border: none; cursor: pointer;
-  min-width: 44px; min-height: 44px; border-radius: var(--radius-sm);
-  display: inline-flex; align-items: center; justify-content: center;
-  transition: background 0.15s ease;
-}
-.switcher__btn:hover, .switcher__btn:focus-visible { background: var(--color-accent); }
-/* Cap + truncate the title so the switcher yields width to the verdict pills
-   instead of pushing them into the nav (full name is in the deal card + list). */
-.switcher__title { flex: 0 1 auto; min-width: 0; max-width: 130px; transition: max-width 0.15s ease; }
-.switcher__title:focus-within { max-width: 260px; }   /* room to type an address when editing */
-.switcher__title h1 {
-  margin: 0; font-size: var(--font-lg); font-weight: 800; line-height: 1.2;
-  color: var(--color-on-navy); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-/* Editable property name/address — looks like the title, hints edit on hover/focus */
-.switcher__name {
-  width: 100%; margin: 0; padding: 0; font: inherit; font-size: var(--font-lg); font-weight: 800; line-height: 1.2;
-  color: var(--color-on-navy); background: transparent; border: none;
-  border-bottom: 1px solid transparent; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.switcher__name::placeholder { color: var(--color-on-navy-muted); font-weight: 600; }
-.switcher__name:hover { border-bottom-color: var(--color-on-navy-muted); }
-.switcher__name:focus { outline: none; border-bottom-color: var(--color-accent); }
-.switcher__title .sub {
-  display: block; font-size: var(--font-xs); color: var(--color-on-navy-muted);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-/* The switcher title/subtitle truncate (min-width:0 lives on the title, not the
-   whole switcher) so the prev/next buttons keep their size and a third verdict
-   pill never collides with them. */
-/* Tight rows (≤1600, incl. the 1440 one-screen target): the auto left margin
-   floats the pills into the middle of the space between the (left) switcher and
-   the (right, also margin-left:auto) undo/redo actions. The row is nearly full
-   at 1440, so this is the widest the pills can sit without crowding the nav.
-   Wide rows get true topbar centering — see the min-width:1600 rule below. */
-.topbar__pills { display: flex; gap: var(--space-2); flex-wrap: nowrap; margin-left: auto; }
-/* Compact the topbar verdict pills so all three (CAP, DSCR, 5Y NPV) fit the
-   signed-in row without crowding the nav. */
-.topbar__pills .pill { font-size: 11px; padding: 2px 7px; }
-/* Wide rows (the owner's full-screen ≥1600 target): pin the pills to the true
-   center of the topbar — not merely the middle of the switcher↔actions gap,
-   which reads left-of-center because the nav on the right is heavy. Absolute
-   positioning takes the pills out of the center's flex flow, so the switcher
-   stays left and the undo/redo actions float right (their own margin-left:auto)
-   with no gap left behind. Because .topbar's horizontal padding is symmetric,
-   left:50% + translateX(-50%) lands on the true window midline. 1600 is the
-   width at which a centered 3-pill block clears both the switcher and the
-   actions/nav; below it the in-flow rule above keeps the 1440 one-screen target
-   collision-free. */
-@media (min-width: 1600px) {
-  .topbar { position: relative; }
-  .topbar__pills {
-    position: absolute; left: 50%; top: 0; bottom: 0;
-    transform: translateX(-50%); align-items: center; margin: 0;
-  }
-}
-.topbar__nav { margin-left: auto; display: flex; gap: var(--space-1); }
-.topbar__link {
-  color: var(--color-on-navy); text-decoration: none;
-  font-weight: 600; font-size: var(--font-sm);
-  padding: 10px var(--space-3); min-height: 44px;
-  display: inline-flex; align-items: center;
-  border-radius: var(--radius-sm);
-  transition: background 0.15s ease;
-}
-.topbar__link:hover, .topbar__link:focus-visible { background: var(--color-navy-soft); }
-.topbar__link--active { background: var(--color-navy-soft); }
-
-/* page frame — full-width, one-screen density -------------------------- */
-.page { max-width: 1760px; margin: 0 auto; padding: var(--space-2) var(--space-4); }
-.eyebrow {
-  font-size: var(--font-xs); font-weight: 700; text-transform: uppercase;
-  letter-spacing: var(--tracking-wide); color: var(--color-text-secondary);
-}
-
-/* cards ----------------------------------------------------------------- */
-.card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-}
-.card > .eyebrow { display: block; margin-bottom: var(--space-2); }
-.grid { display: grid; gap: var(--space-2); grid-template-columns: repeat(12, 1fr); }
-.col-12 { grid-column: span 12; }
-.col-6 { grid-column: span 6; }
-.col-5 { grid-column: span 5; }
-.col-4 { grid-column: span 4; }
-.col-3 { grid-column: span 3; }
-.stack { display: flex; flex-direction: column; gap: var(--space-3); }
-@media (max-width: 1100px) {
-  .col-6, .col-5, .col-4, .col-3 { grid-column: span 6; }
-}
-@media (max-width: 760px) {
-  .col-6, .col-5, .col-4, .col-3 { grid-column: span 12; }
-}
-
-/* KPI strip — the signature: one framed band, hairline-divided cells ----- */
-.kpi-strip {
-  display: grid;
-  /* minmax(0, 1fr), not bare 1fr: a bare 1fr track won't shrink below its
-     content's min-content width (nowrap labels), so 15 narrow columns of
-     nowrap text overflow the strip past the viewport instead of dividing
-     evenly. minmax(0, ...) lets tracks actually shrink; overflow is then
-     handled per-cell via .kpi__label's ellipsis below. */
-  grid-template-columns: repeat(15, minmax(0, 1fr));
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-  overflow: hidden;
-  margin-bottom: var(--space-2);
-}
-.kpi {
-  padding: 6px 5px;                        /* tighter than --space-2 (8px) — 15 cols need the room */
-  border-top: 1px solid var(--color-border);
-  border-left: 1px solid var(--color-border);
-  min-height: 52px;
-  min-width: 0;                            /* let the cell shrink; label truncates instead of overflowing */
-  background: var(--gen-shade);            /* generated fields share a consistent shade */
-}
-.kpi:nth-child(-n+15) { border-top: none; }
-.kpi:nth-child(15n+1) { border-left: none; }
-.kpi__label {
-  font-size: 9px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.02em; color: var(--color-text-secondary); line-height: 1.2;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.kpi__value {
-  font-size: 15px; font-weight: 800; color: var(--color-navy);
-  margin-top: 2px; line-height: 1.15;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.kpi__value--pass { color: var(--color-pass); }
-.kpi__value--fail { color: var(--color-fail); }
-.kpi__note {
-  font-size: 10px; color: var(--color-text-secondary); margin-top: 1px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-/* formula popup: focusable KPI cells reveal their calculation on hover/focus */
-.kpi--info { cursor: help; }
-.kpi-tip {
-  position: fixed; z-index: 100; width: max-content; max-width: 300px;
-  background: var(--color-surface); color: var(--color-text-primary);
-  border: 1px solid var(--color-border); border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md); padding: 6px 9px;
-  font-size: 11px; font-weight: 600; line-height: 1.35; font-variant-numeric: tabular-nums;
-  opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.12s ease;
-}
-.kpi-tip--on { opacity: 1; visibility: visible; }
-.sr-only {
-  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
-  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
-}
-/* "just changed" cue — a small teal corner fold on the changed value that
-   persists until the next edit (cleared/re-marked then). */
-.flash { position: relative; }
-.flash::after {
-  content: ""; position: absolute; top: 0; right: 0; width: 0; height: 0;
-  border-top: 12px solid var(--color-accent); border-left: 12px solid transparent;
-  pointer-events: none;
-}
-@media (max-width: 1100px) {
-  /* 5, not 6: 15 KPIs ÷ 5 = 3 clean rows, no dangling half-empty row */
-  .kpi-strip { grid-template-columns: repeat(5, 1fr); }
-  .kpi:nth-child(-n+15) { border-top: 1px solid var(--color-border); }
-  .kpi:nth-child(15n+1) { border-left: 1px solid var(--color-border); }
-  .kpi:nth-child(-n+5) { border-top: none; }
-  .kpi:nth-child(5n+1) { border-left: none; }
-}
-@media (max-width: 760px) {
-  .kpi-strip { grid-template-columns: repeat(3, 1fr); }
-  .kpi:nth-child(-n+5) { border-top: 1px solid var(--color-border); }
-  .kpi:nth-child(5n+1) { border-left: 1px solid var(--color-border); }
-  .kpi:nth-child(-n+3) { border-top: none; }
-  .kpi:nth-child(3n+1) { border-left: none; }
-}
-
-/* pills ------------------------------------------------------------------ */
-.pill {
-  display: inline-flex; align-items: center; gap: var(--space-1);
-  font-size: var(--font-xs); font-weight: 700;
-  padding: 3px var(--space-2); border-radius: var(--radius-pill);
-  background: var(--color-neutral-bg); color: var(--color-neutral-text);
-  white-space: nowrap;
-}
-.pill--pass { background: var(--color-pass-bg); color: var(--color-pass-text); }
-.pill--fail { background: var(--color-fail-bg); color: var(--color-fail-text); }
-
-/* buttons ------------------------------------------------------------------ */
+/* ── Buttons (§4): .btn is Secondary; add .btn-primary, .btn-danger or .btn-delete */
 .btn {
-  font: inherit; font-weight: 700; font-size: var(--font-base);
-  min-height: 44px; padding: 10px var(--space-5);
-  border-radius: var(--radius-md); border: 1px solid transparent;
-  cursor: pointer; display: inline-flex; align-items: center; gap: var(--space-2);
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-.btn--primary { background: var(--color-accent); color: var(--color-on-accent); }
-.btn--primary:hover, .btn--primary:focus-visible { background: var(--color-accent-hover); }
-.btn--ghost {
+  min-height: var(--size-target-min); padding: var(--space-2) var(--space-4);
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  border: 1px solid var(--color-border-input); border-radius: var(--radius-md); cursor: pointer;
   background: var(--color-surface); color: var(--color-text-primary);
-  border-color: var(--color-border);
+  font: 600 var(--font-sm)/1.2 var(--font-sans); text-decoration: none;
+  transition: background .15s ease, border-color .15s ease;
 }
-.btn--ghost:hover, .btn--ghost:focus-visible { border-color: var(--color-border-hover); background: var(--color-bg); }
+.btn:hover { border-color: var(--color-text-secondary); }
+/* Focus needs its OWN indicator, not the hover state: accent -> accent-hover is a
+   ~1.4:1 shift, so a keyboard user cannot tell where focus is (design.md ->
+   Accessibility, non-negotiable). Outline sits outside the box, so it also reads
+   against whatever surface the button is on. */
+.btn:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; }
+.btn-secondary { /* the same look as .btn; named so markup can say it */ }
+.btn-primary {
+  background: var(--color-accent); border-color: var(--color-accent);
+  color: var(--color-on-accent);
+}
+.btn-primary:hover, .btn-primary:focus-visible {
+  background: var(--color-accent-hover); border-color: var(--color-accent-hover);
+}
+.btn-danger { color: var(--color-danger); border-color: var(--color-danger); }
+.btn-danger:hover, .btn-danger:focus-visible { background: var(--color-danger-bg); }
+/* The filled red final button of a Delete permanently / Permanently archive
+   confirmation, and nowhere else. */
+.btn-delete {
+  background: var(--color-danger); border-color: var(--color-danger);
+  color: var(--color-on-danger);
+}
+.btn-delete:hover, .btn-delete:focus-visible {
+  background: var(--color-danger-hover); border-color: var(--color-danger-hover);
+}
+/* Busy: native `disabled`. Pressable later: aria-disabled="true", which looks
+   the same but stays focusable to say why; the shared script cancels its
+   click, Enter and Space (§4), because ARIA alone stops nothing. */
+.btn:disabled, .btn[aria-disabled="true"] { opacity: .55; cursor: not-allowed; }
+/* Icon-only: still a 44px target; needs aria-label AND title (§3). */
+.btn-icon { min-width: var(--size-target-min); padding: 0; }
+.btn-icon svg { width: 18px; height: 18px; }
 
-/* inputs --------------------------------------------------------------------- */
+/* ── Cards and grids (§5) ─────────────────────────────────────────────────── */
+.grid {
+  display: grid; gap: var(--space-4);
+  grid-template-columns: repeat(3, minmax(0, 1fr));   /* laptop */
+}
+@media (max-width: 1199px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }   /* tablet */
+@media (max-width: 699px)  { .grid { grid-template-columns: minmax(0, 1fr); } }              /* phone */
+.card {
+  position: relative; text-align: left; width: 100%;
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg); padding: var(--space-6); box-shadow: var(--shadow-sm);
+  color: var(--color-text-primary); font: inherit;
+}
+/* An actionless card that is itself the control: a native <button> or <a>,
+   never role="button" on a <div> (the keyboard cannot reach that). */
+button.card, a.card { cursor: pointer; display: block; text-decoration: none; }
+/* A card WITH actions: the title's button opens the card through an overlay
+   stretched over it; the actions sit above the overlay (never a button inside
+   a button). */
+.card-open { all: unset; display: block; cursor: pointer; }
+/* The card's own radius: .card-open's all: unset leaves it none to inherit. */
+.card-open::after { content: ""; position: absolute; inset: 0; border-radius: var(--radius-lg); }
+.card-open:focus-visible::after { outline: 3px solid var(--color-accent); outline-offset: 2px; }
+.card:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; }
+/* Names wrap; never an ellipsis or a line clamp (§1.6, §5). */
+.card-title { display: block; font-size: var(--font-lg); font-weight: 600; }
+.card-sub { font-size: var(--font-sm); color: var(--color-text-secondary); }
+/* At most two icon buttons, top-right, Edit then Archive; 3+ become one ⋮ menu.
+   Always visible: never hover-only, so they show on a phone. The padding
+   belongs to the actions box, so a press within 8px of an icon button lands
+   on the box, never on the card's open target beneath it (8px between targets). */
+.card-actions {
+  position: absolute; z-index: 1; top: 0; right: 0; padding: var(--space-2);
+  display: flex; gap: var(--space-2);
+}
+/* The corner is reserved by layout, not per element: a float the size of the
+   actions box (less the card's own padding) sits top-right, so every line in
+   the card (title, context, a pill, a row of its own) flows around it. */
+.card:has(.card-actions) { display: flow-root; }
+.card:has(.card-actions)::before {
+  content: ""; float: right;
+  width: calc(2 * var(--size-target-min) + 3 * var(--space-2) - var(--space-6));
+  height: calc(var(--size-target-min) + 2 * var(--space-2) - var(--space-6));
+}
+/* .card.card-add, not .card-add: it must outrank button.card / a.card's
+   display: block, since the Add card is itself a native button or link. */
+.card.card-add {
+  border-style: dashed; border-color: var(--color-border-input); box-shadow: none; display: flex; align-items: center;
+  justify-content: center; gap: var(--space-2); color: var(--color-accent); font-weight: 600;
+}
+
+/* ── Lists and tables (§6) ────────────────────────────────────────────────── */
+/* Wider or taller than the screen: scrolls inside its own box, so the page
+   never scrolls sideways and the sticky header stays visible. */
+.table-wrap { overflow: auto; max-width: 100%; max-height: 70vh; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.table { width: 100%; border-collapse: collapse; background: var(--color-surface); }
+.table th, .table td { padding: var(--space-3); border-bottom: 1px solid var(--color-border); text-align: left; }
+.table th {
+  position: sticky; top: 0; background: var(--color-surface);
+  font-size: var(--font-sm); color: var(--color-text-secondary); font-weight: 600;
+}
+/* A sortable header's control: a native button, so the keyboard reaches it.
+   aria-sort stays on the <th>. */
+.th-sort {
+  all: unset; cursor: pointer; font: inherit; color: inherit;
+  display: inline-flex; align-items: center;
+  min-height: var(--size-target-min); min-width: var(--size-target-min);   /* a 44px target */
+}
+/* A cell holding a 44px control keeps 4px above and below, so controls in
+   neighbouring rows (and the header) stay 8px apart (§ Accessibility, targets). */
+.table th:has(> .th-sort) { padding-top: var(--space-1); padding-bottom: var(--space-1); }
+.th-sort:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; border-radius: var(--radius-sm); }
+/* A row's opening control (§6), a link or a button in its name cell: a 44px
+   target, not the height of one line of text. */
+.row-open {
+  display: inline-flex; align-items: center; cursor: pointer; text-align: left;
+  min-height: var(--size-target-min); min-width: var(--size-target-min);
+  background: none; border: 0; padding: 0; font: inherit; color: var(--color-accent);
+}
+.table td:has(> .row-open) { padding-top: var(--space-1); padding-bottom: var(--space-1); }
+.row-open:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; border-radius: var(--radius-sm); }
+/* A row's own actions (§6): the last cell, right-aligned, icon buttons 8px
+   apart; a .menu-btn takes their place at three or more. */
+.row-actions { display: flex; justify-content: flex-end; gap: var(--space-2); }
+/* No nowrap: .row-actions is a non-wrapping flex row already, and nowrap here
+   would reach a ⋮ menu placed inside the cell and stop its labels wrapping. */
+.table td:has(> .row-actions) { width: 1%; padding-top: var(--space-1); padding-bottom: var(--space-1); }
+
+/* ── Forms and fields (§12) ───────────────────────────────────────────────── */
 .field { display: flex; flex-direction: column; gap: var(--space-1); }
-.field__label { font-size: var(--font-sm); font-weight: 600; color: var(--color-text-secondary); }
+.label { font-size: var(--font-sm); font-weight: 600; color: var(--color-text-primary); }
+.label .req { color: var(--color-danger); }
+/* max-width: a <select> sizes to its longest option, which may be a sentence. */
 .input {
-  font: inherit; font-size: 16px;             /* never below 16px (iOS zoom) */
-  min-height: 48px; padding: 10px var(--space-3);
-  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  max-width: 100%; min-height: var(--size-input-min); padding: var(--space-2) var(--space-4);
+  font-size: var(--font-input-min); /* never below 16px: prevents iOS zoom on focus */
+  border: 1px solid var(--color-border-input); border-radius: var(--radius-sm);
   background: var(--color-surface); color: var(--color-text-primary);
-  width: 100%;
 }
-.input:hover { border-color: var(--color-border-hover); }
-.input:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 0; border-color: var(--color-accent); }
-.input--estimate { background: var(--color-accent-light); } /* model-estimated default */
-/* Dashboard-wide edit lock: every field shades and goes read-only/disabled
-   (distinct from the accent-tinted "estimate" fill — these are protected
-   ACTUAL values, not computed ones) when #view carries .is-locked. A single
-   container class + descendant selector, rather than per-element classes, so
-   toggling covers every card without walking the DOM twice. */
-.is-locked .input { background: var(--color-bg); color: var(--color-text-secondary); cursor: not-allowed; }
-.is-locked input[type="checkbox"] { cursor: not-allowed; opacity: 0.6; }
-/* The lock toggle sits right in front of the Offer Price field — a compact
-   icon button, not a labelled one, so it fits beside the input without
-   crowding it (the Offer Price column is widened below to make room). */
-.offer-lock { display: flex; align-items: center; gap: 4px; }
-.offer-lock .input { min-width: 0; }
-.dash-lock-btn {
-  flex: none; width: 26px; height: 26px; padding: 0; line-height: 1;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px; cursor: pointer;
-  background: var(--color-surface); color: var(--color-text-secondary);
-  border: 1px solid var(--color-border); border-radius: var(--radius-sm);
-}
-.dash-lock-btn:hover, .dash-lock-btn:focus-visible { border-color: var(--color-border-hover); background: var(--color-bg); }
-.dash-lock-btn--locked { background: var(--color-bg); border-color: var(--color-border-hover); color: var(--color-navy); }
+/* The same 3px accent ring as every other control: a pale halo alone is about
+   1.1:1 against the surface and cannot be seen. */
+.input:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 1px; border-color: var(--color-accent); }
+/* Placeholder text at 4.5:1 (secondary on the surface is 5.56:1); the search box
+   uses it as its label. Firefox dims placeholders by default, hence opacity. */
+.input::placeholder { color: var(--color-text-secondary); opacity: 1; }
+/* Locked: greyed and not focusable (pair with `disabled`), padlock after the label. */
+.input:disabled { background: var(--color-bg); color: var(--color-text-secondary); cursor: not-allowed; }
 
-/* Target CAP + Target DSCR share one wider deal-cell, stacked one above the
-   other. Each row is a slider PLUS a directly-editable readout field (right
-   end) — both permanently back-solve the Offer Price (goalSeekOffer); the
-   readout always shows the deal's live actual value, and doubles as a
-   precise alternative to dragging. */
-.deal-cell--target-combo { display: flex; flex-direction: column; gap: 4px; justify-content: center; }
-.target-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.target-row + .target-row { padding-top: 4px; border-top: 1px solid var(--color-border); }
-.target-row__label {
-  flex: none; font-size: 9px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.03em; color: var(--color-text-secondary); width: 52px;
-}
-.target-sweep-slider { flex: 1; min-width: 0; }
-/* the editable readout — a normal .input, just pinned to a compact width so
-   it reads like a slider readout rather than a full-width field */
-.target-row .input, .target-row .input-pct { flex: none; width: 76px; }
-
-/* checkbox rows (expense include toggles), two-up grid for density ------------ */
-.check-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--space-4); }
-.check-grid .check-row { min-width: 0; }
-.check-row {
-  display: flex; align-items: center; gap: var(--space-2);
-  padding: 0;
-}
-.check-row input[type="checkbox"] {
-  width: 24px; height: 24px; accent-color: var(--color-accent); flex: none;
-  margin: 0;
-}
-.check-row label { flex: 1; cursor: pointer; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.check-row--off label, .check-row--off .amount-input {
-  color: var(--color-text-secondary); text-decoration: line-through;
-}
-.pct { font-size: 10px; color: var(--color-text-secondary); font-weight: 600; margin-left: 2px; }
-.check-grid .exp-cell { min-width: 0; display: flex; flex-direction: column; }
-/* "use default" toggle under tax/insurance — checked pre-fills the formula estimate,
-   cleared zeroes the field; formula shown in a tiny font. */
-.exp-default {
-  display: flex; align-items: center; gap: 4px;
-  margin-left: 32px; font-size: 9px; color: var(--color-text-secondary);
-  line-height: 1.3; cursor: pointer; white-space: nowrap; min-width: 0;
-}
-.exp-default input[type="checkbox"] {
-  width: 13px; height: 13px; accent-color: var(--color-accent); flex: none; margin: 0;
-}
-.exp-default__formula { font-style: italic; overflow: hidden; text-overflow: ellipsis; }
-
-/* data tables ------------------------------------------------------------------ */
-/* A comfortably grabbable, always-visible horizontal scrollbar (the browser
-   default is thin/auto-hiding and hard to hit precisely, especially where the
-   pro-forma table sits flush against the stats row beneath it) + a little
-   bottom padding so the bar isn't flush against that next line. Shared by the
-   pro-forma, Compare, and Archive tables. */
-.table-wrap {
-  overflow-x: auto; padding-bottom: 6px;
-  scrollbar-width: auto; scrollbar-color: var(--color-border-hover) var(--color-bg);
-}
-.table-wrap::-webkit-scrollbar { height: 12px; }
-.table-wrap::-webkit-scrollbar-track { background: var(--color-bg); border-radius: var(--radius-pill); }
-.table-wrap::-webkit-scrollbar-thumb { background: var(--color-border-hover); border-radius: var(--radius-pill); border: 2px solid var(--color-bg); }
-.table-wrap::-webkit-scrollbar-thumb:hover { background: var(--color-text-secondary); }
-/* Click-and-drag panning (js/dom.js dragScroll): the styled scrollbar above
-   still auto-hides at rest on macOS-style overlay-scrollbar setups regardless
-   of CSS, so dragging the table body itself is the reliable fallback — never
-   depends on hitting a thin bar. cursor hints the affordance; dragging disables
-   text selection so a drag doesn't also select cell text. */
-.table-wrap { cursor: grab; }
-.table-wrap.is-dragging { cursor: grabbing; user-select: none; }
-.data-table { width: 100%; border-collapse: collapse; font-size: var(--font-sm); }
-.data-table th {
-  text-align: left; font-size: 10px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.06em;
-  color: var(--color-text-secondary);
-  padding: var(--space-1) var(--space-2);
-  border-bottom: 1px solid var(--color-border);
-}
-.data-table td {
-  padding: 3px var(--space-2);
-  border-bottom: 1px solid var(--color-border);
-}
-.data-table tr:last-child td { border-bottom: none; }
-.data-table .num, .data-table th.num { text-align: right; white-space: nowrap; }
-.data-table td.num .input { text-align: right; }   /* numeric inputs line up with the column's totals */
-/* Numeric inputs inset their text by border+padding; shift the right-aligned
-   display cells (headers, totals) in the income table to match, so each numeric
-   column reads as one straight right edge. */
-.data-table--dense th.num, .data-table--dense td.num:not(:has(input)) { padding-right: calc(2 * var(--space-2) + 1px); }
-.data-table .income-yr { text-align: left; padding-left: var(--space-3); }   /* keep the /yr total near its row, not the far edge */
-.data-table .total td { font-weight: 700; border-top: 2px solid var(--color-border); }
-.neg { color: var(--color-fail); }
-/* generated shade on computed table cells (income/pro-forma) — numeric cells
-   that hold a value, not an input, a label, or a blank placeholder. Compare
-   view keeps its own best/worst fills. */
-.data-table:not(.compare-table) td.num:not(:has(input)):not(:empty) { background: var(--gen-shade); }
-/* Income totals footer: gross rent → collection-loss deduction → effective rent
-   (feeds NOI). One shaded band in three tiers, each separated by a visible rule;
-   the effective figure — the one that feeds NOI — is emphasized in navy. */
-.data-table .rent-totals td { background: var(--gen-shade); border-bottom: none; }
-.data-table .rent-totals td:first-child { white-space: nowrap; }
-/* Tier dividers use an inset shadow, not a collapsed border: a flashed cell
-   gets position:relative and would otherwise paint its background over a shared
-   row border (making the line vanish after an edit). An inset shadow is owned
-   by the cell and can't be covered. */
-.data-table .rent-totals--gross td, .data-table .rent-totals--loss td { box-shadow: inset 0 -1px 0 var(--color-border-hover); }
-.data-table .rent-totals--eff td { box-shadow: none; }
-.data-table .rent-totals--loss td { color: var(--color-text-secondary); font-weight: 600; }
-.data-table .rent-totals--loss .income-yr { color: var(--color-fail); font-weight: 700; }
-.data-table .rent-totals--eff .rt-label--eff { color: var(--color-navy); font-weight: 700; }
-.data-table .rent-totals--eff .income-yr { color: var(--color-navy); font-weight: 800; }
-.rt-chip { display: inline-block; margin-left: var(--space-2); font-size: 11px; font-weight: 700;
-           padding: 1px 7px; border-radius: var(--radius-pill); vertical-align: 1px; }
-.rt-chip--loss { background: var(--color-fail-bg); color: var(--color-fail-text); }
-.rt-chip--noi { background: var(--color-accent-light); color: var(--color-accent-hover); }  /* accent is 4.32:1 here — below AA at 11px; accent-hover is 6.07 (see CLAUDE.md) */
-
-/* one-line fact rows (label left, value right) ---------------------------------- */
-.facts { display: grid; grid-template-columns: 1fr 1fr; gap: 2px var(--space-4); margin: 0; }
-.facts--1col { grid-template-columns: 1fr; }
-.facts div {
-  display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2);
-  border-bottom: 1px solid var(--color-border); padding: 1px 0; min-height: 19px;
-  min-width: 0;
-}
-.facts dt {
-  font-size: 10px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.05em; color: var(--color-text-secondary); white-space: nowrap;
-  overflow: hidden; text-overflow: ellipsis;
-}
-.facts dd { margin: 0; font-weight: 700; text-align: right; white-space: nowrap; flex: none;
-  background: var(--gen-shade); border-radius: 4px; padding: 0 6px; }
-
-/* bar chart (pure CSS, values from tokens) --------------------------------------- */
-.chart { margin-top: var(--space-2); }
-.chart__plot {
-  display: grid; grid-auto-flow: column;
-  gap: var(--space-4); height: 70px;   /* keep in sync with H_PX in dashboard.js */
-  padding: 0 var(--space-2);
-  position: relative;
-}
-/* continuous zero baseline at the pos/neg split */
-.chart__plot::before {
-  content: ''; position: absolute; left: var(--space-2); right: var(--space-2);
-  top: var(--pf-top, 100%); border-top: 1px solid var(--color-border);
-}
-.chart__group {
-  position: relative; display: grid;
-  grid-template-rows: var(--pf-top, 60px) var(--pf-bot, 12px);
-  justify-items: center;
-}
-.chart__lane { display: flex; gap: 2px; justify-content: center; width: 100%; }
-.chart__lane--up { align-items: flex-end; }      /* bars grow up to the zero line */
-.chart__lane--down { align-items: flex-start; }  /* bars hang down from the zero line */
-.chart__bar { width: 16px; border-radius: 3px 3px 0 0; min-height: 2px; }
-.chart__lane--down .chart__bar { border-radius: 0 0 3px 3px; }
-.chart__bar--cf { background: var(--chart-1); }
-.chart__bar--ap { background: var(--chart-2); }
-.chart__bar--neg { background: var(--color-fail); }   /* negative cashflow reads as a loss, not a gain */
-.chart__xlabels {
-  display: grid; grid-auto-flow: column; gap: var(--space-4);
-  padding: 3px var(--space-2) 0; text-align: center;
-  font-size: 10px; color: var(--color-text-secondary); font-weight: 700;
-}
-.legend { display: flex; gap: var(--space-4); margin-top: var(--space-1); font-size: 10px; color: var(--color-text-secondary); flex-wrap: wrap; }
-.legend span { display: inline-flex; align-items: center; gap: var(--space-1); }
-.legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
-.legend .sw-cf { background: var(--chart-1); }
-.legend .sw-ap { background: var(--chart-2); }
-.fineprint { color: var(--color-text-secondary); font-size: 10px; margin: var(--space-1) 0 0; }
-
-/* pro-forma horizon control + 5↔10 boundary + per-horizon stat rows */
-.pf-head { display: flex; align-items: center; gap: var(--space-2); justify-content: center; margin: var(--space-1) 0 0; }
-.pf-head__lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-secondary); }
-.pf-slider { width: 96px; accent-color: var(--color-accent); cursor: pointer; }
-.chart__group--boundary { border-right: 2px dashed var(--color-border); margin-right: var(--space-2); padding-right: var(--space-2); }
-.data-table th.cell--boundary, .data-table td.cell--boundary { border-right: 2px solid var(--color-border-hover); }
-.pf-stats { margin-top: var(--space-1); }
-.pf-stat { display: flex; flex-wrap: wrap; gap: 2px var(--space-3); align-items: baseline; font-size: 11px; color: var(--color-text-secondary); padding: 2px 0; }
-.pf-stat--boundary { border-top: 2px dashed var(--color-border); margin-top: 2px; padding-top: var(--space-1); }
-.pf-stat__label { font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-navy); min-width: 52px; }
-.pf-stat b { color: var(--color-navy); font-weight: 800; }
-/* narrow viewports: compact the bars/gaps so a 10-year chart fits without
-   pushing the page wide (the table already scrolls inside .table-wrap) */
-@media (max-width: 760px) {
-  .chart__plot, .chart__xlabels { gap: 6px; }
-  .chart__bar { width: 9px; }
-  .chart__group--boundary { margin-right: 4px; padding-right: 4px; }
+/* ── Search and toolbar (§16): search box, filters, then + Add at the right ── */
+/* Wraps on a phone; the search box takes the row's free width. */
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.toolbar-add { margin-left: auto; } /* the + Add button, always last */
+/* A native input cannot hold an icon, so the search box is a wrapper: the
+   magnifying glass (from the icon set, aria-hidden) sits over the input's
+   left padding. Markup: <label class="search"><svg aria-hidden="true">…</svg>
+   <input class="input" type="search" placeholder="Search things…" aria-label="Search things"></label> */
+.search { position: relative; display: flex; flex: 1 1 240px; min-width: 0; max-width: 100%; }
+.search .input { width: 100%; padding-left: calc(var(--space-4) + 18px + var(--space-2)); }
+.search svg {
+  position: absolute; left: var(--space-4); top: 50%; transform: translateY(-50%);
+  width: 18px; height: 18px; color: var(--color-text-secondary); pointer-events: none;
 }
 
-/* methodology / notes -------------------------------------------------------------- */
-.notes details {
-  border: 1px solid var(--color-border); border-radius: var(--radius-sm);
-  padding: 0 var(--space-3); margin-bottom: var(--space-1);
-  background: var(--color-surface);
+/* design.md sets a 24x24px floor (larger than the browser default, ~13px). */
+.checkbox {
+  width: var(--size-check-min); height: var(--size-check-min);
+  accent-color: var(--color-accent); cursor: pointer;
 }
-.notes summary {
-  cursor: pointer; font-weight: 700; min-height: 44px; font-size: var(--font-sm);
-  display: flex; align-items: center;
-  color: var(--color-text-primary);
-}
-.notes h3 { font-size: var(--font-sm); margin: var(--space-2) 0 var(--space-1); }
-.notes p { color: var(--color-text-secondary); margin-top: 0; font-size: var(--font-xs); }
+.checkbox:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; }
 
-/* density on mouse-driven screens — touch keeps 44px targets (iPad rule) */
-@media (pointer: fine) {
-  .notes summary { min-height: 36px; }
-  .switcher__btn { min-height: 36px; min-width: 36px; }
-  .topbar__link { min-height: 36px; }
-  .topbar { min-height: 48px; }
+/* ── Status pills and tags (§14): words in a pill, one meaning per colour ──── */
+.pill {
+  display: inline-flex; align-items: center; padding: 2px var(--space-2);
+  border-radius: var(--radius-pill); font-size: var(--font-xs); font-weight: 600;
+  background: var(--color-neutral-bg); color: var(--color-neutral);
+}
+.pill-success { background: var(--color-success-bg); color: var(--color-success); }
+.pill-warning { background: var(--color-warning-bg); color: var(--color-warning); }
+.pill-danger  { background: var(--color-danger-bg);  color: var(--color-danger); }
+.pill-info    { background: var(--color-info-bg);    color: var(--color-info); }
+.pill-expired { background: var(--color-expired-bg); color: var(--color-expired); }
+/* A kind of thing, not a status: never a status colour. */
+.tag {
+  display: inline-flex; padding: 2px var(--space-2); border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border); font-size: var(--font-xs); color: var(--color-text-secondary);
 }
 
-/* app views (dashboard editable, list, compare) ------------------------- */
-.topbar__center { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-2); }
-.topbar__viewtitle { font-weight: 800; font-size: var(--font-lg); color: var(--color-on-navy); }
-/* Header action bar (Compare / Archive / New / Import) — shown on the list-type
-   views, right-aligned in the otherwise-empty center slot so it reads as part of
-   the header nav. Not rendered on the dashboard (its center is already full). */
-/* The action bar's buttons are plain topbar links (same as the static nav on the
-   right), so it reads as one continuous header — not a row of boxed buttons. */
-.topbar__actbar { display: flex; gap: var(--space-1); margin-left: auto; flex-wrap: wrap; align-items: center; }
-.topbar__link { background: transparent; border: none; font: inherit; cursor: pointer; }
+/* ── Empty states (§15) ───────────────────────────────────────────────────── */
+.empty-state { text-align: center; padding: var(--space-12) var(--space-6); color: var(--color-text-secondary); }
+.empty-state .empty-title { font-size: var(--font-base); font-weight: 700; color: var(--color-text-primary); margin-bottom: 6px; }
+.empty-state .empty-sub { font-size: var(--font-sm); max-width: 360px; margin: 0 auto; line-height: 1.5; }
+.empty-state .empty-act { margin-top: var(--space-4); }
+.empty-state.empty-sm { padding: var(--space-6) var(--space-3); }
 
-/* editable field grids inside cards — dense for one-screen fit */
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px var(--space-3); }
-.form-grid .field { min-width: 0; }
-.field__label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0; }
-.card { padding: var(--space-2) var(--space-3); }
-.card > .eyebrow { margin-bottom: var(--space-1); }
-.card .input { min-height: 28px; padding: 2px var(--space-2); font-size: var(--font-sm); }
-@media (pointer: coarse) { .card .input { min-height: 44px; font-size: 16px; } }
-/* Loan 1 / Loan 2 side by side: LTV/Rate/Amort/Maturity/Type as rows, one
-   column per loan (mirrors the reference workbook's Finance Amount 1/2
-   columns) — far more compact than two stacked per-loan blocks, which is
-   what makes a normalized second loan slot fit the one-screen budget (S11).
-   Each .loan-cols__row is `display:contents` so its label + N field cells
-   become direct items of the parent grid, flowing into its row/columns. */
-.loan-cols { display: grid; grid-template-columns: 56px repeat(2, 1fr); gap: 1px 5px; align-items: center; margin-top: 2px; }
-.loan-cols__row { display: contents; }
-/* ellipsis truncates the rendered label only — textContent (what S19 asserts
-   against) stays the full "Balloon due" regardless of visual width */
-.loan-cols__label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.loan-cols__head { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-navy); text-align: center; }
-.loan-cols--facts { margin-top: 3px; }
-.loan-cols__val {
-  display: block; text-align: center; font-weight: 700; font-size: var(--font-xs);
-  background: var(--gen-shade); border-radius: 4px; padding: 2px 4px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+/* ── Dialogs (§9, §10): one shell; sized to the window, never a fixed width ── */
+.dialog-backdrop {
+  position: fixed; inset: 0; z-index: var(--z-dialog); background: var(--color-backdrop);
+  display: flex; align-items: center; justify-content: center; padding: var(--space-4);
 }
-.amount-input { max-width: 84px; text-align: right; }
-.check-row { min-height: 30px; }
-@media (pointer: coarse) { .check-row { min-height: 44px; } }
-.check-row .amount-input { flex: none; }
+.dialog {
+  width: min(480px, 94vw); max-height: 88vh; display: flex; flex-direction: column;
+  background: var(--color-surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+}
+/* A native <dialog> opened with showModal() takes the same shell. */
+dialog.dialog { border: 0; padding: 0; color: inherit; }
+/* .dialog's display: flex would override the browser's hiding of a closed one. */
+dialog.dialog:not([open]) { display: none; }
+dialog.dialog::backdrop { background: var(--color-backdrop); }
+.dialog-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-4) var(--space-6); }
+.dialog-title { font-size: var(--font-lg); font-weight: 600; margin: 0; min-width: 0; }
+.dialog-body { padding: 0 var(--space-6) var(--space-4); overflow: auto; }
+/* Cancel (secondary) on the left, the act on the right, right-aligned. */
+.dialog-footer { display: flex; justify-content: flex-end; gap: var(--space-2); padding: var(--space-4) var(--space-6); border-top: 1px solid var(--color-border); }
 
-/* deal summary — full-width framed band above the cards (mirrors workbook).
-   5 cells: Offer Price carries the lock icon, so it gets a wider column;
-   Target CAP + Target DSCR share one combined, double-wide cell (stacked
-   rows, see .deal-cell--target-combo) so their sweep sliders get the full
-   length freed up by no longer being two separate cells. */
-.deal-strip {
-  display: grid; grid-template-columns: 1.35fr repeat(3, 0.93fr) 1.86fr;
-  background: var(--color-surface); border: 1px solid var(--color-border);
-  border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
-  overflow: hidden; margin-bottom: var(--space-2);
+/* ── Archived (N) pop-over (§7): stays inside the window, long lists scroll ── */
+.archived-btn { /* a .btn: the archive icon, then "Archived (N)"; hidden when N is 0 */ }
+.archived-pop, .menu-pop {
+  position: fixed; z-index: var(--z-popover); width: min(360px, 94vw); max-height: min(60vh, 480px);
+  overflow: auto; background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-lg); padding: var(--space-2);
 }
-.deal-strip .deal-cell { padding: 5px var(--space-3); border-left: 1px solid var(--color-border); }
-.deal-strip .deal-cell:first-child { border-left: none; }
-@media (max-width: 1100px) {
-  .deal-strip { grid-template-columns: repeat(3, 1fr); }
-  .deal-cell--target-combo { grid-column: span 2; }
-}
-@media (max-width: 760px) {
-  .deal-strip { grid-template-columns: repeat(2, 1fr); }
-  .deal-cell--target-combo { grid-column: span 2; }
-}
-.deal-strip .input { min-height: 28px; padding: 2px var(--space-2); font-size: var(--font-sm); }
-@media (pointer: coarse) { .deal-strip .input { min-height: 44px; font-size: 16px; } }
-.deal-cell { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.deal-cell__label {
-  font-size: 10px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.04em; color: var(--color-text-secondary);
-}
-.deal-cell__val {
-  font-weight: 800; color: var(--color-navy); font-size: var(--font-sm);
-  min-height: 26px; display: flex; align-items: center; padding: 2px var(--space-2);
-  border: 1px solid transparent; border-radius: var(--radius-md);
-}
-.deal-cell--accent .deal-cell__val { background: var(--gen-shade); }
-@media (pointer: coarse) { .deal-cell__val { min-height: 44px; } }
-/* percentage entry — number input with a trailing % sign */
-.input-pct { display: flex; align-items: center; gap: 4px; width: 100%; }
-.input-pct .input { flex: 1; min-width: 0; }
-.input-pct__sign { flex: none; font-weight: 700; font-size: var(--font-sm); color: var(--color-text-secondary); }
+.archived-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-2); }
 
-/* denser 3-up info grid — reclaims the vertical the deal strip adds so the
-   dashboard stays one-screen (S11). Collapses to 2-up / 1-up on narrow. */
-.form-grid--3 { grid-template-columns: repeat(3, 1fr); }
-@media (max-width: 1100px) { .form-grid--3 { grid-template-columns: 1fr 1fr; } }
-@media (max-width: 760px) { .form-grid--3 { grid-template-columns: 1fr; } }
+/* ── The ⋮ menu (§5): a disclosure of native buttons, placed by the same fit ── */
+.menu-btn { /* a .btn-icon in .card-actions: aria-label="More actions", aria-expanded, aria-controls */ }
+.menu-pop { width: min(240px, 94vw); display: flex; flex-direction: column; gap: var(--space-2); } /* 8px between targets */
+.menu-item {
+  display: flex; align-items: center; gap: var(--space-2); width: 100%; min-height: var(--size-target-min);
+  padding: 0 var(--space-3); border: 0; border-radius: var(--radius-sm); background: transparent;
+  color: var(--color-text-primary); font: 500 var(--font-sm) var(--font-sans); text-align: left; cursor: pointer;
+}
+.menu-item:hover { background: var(--color-accent-light); }
+.menu-item:focus-visible { outline: 3px solid var(--color-accent); outline-offset: -3px; }
+.menu-item.danger { color: var(--color-danger); }
+.menu-item.danger:hover { background: var(--color-danger-bg); } /* the checked danger pair, never accent-light */
 
-/* list view */
-.list-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-3); }
-.list-head h1 { margin: 0; font-size: var(--font-2xl); font-weight: 800; color: var(--color-navy); }
-.list-head__actions { display: flex; gap: var(--space-2); }
-/* Cards sized ~15% smaller than the token defaults (explicit px, not the
-   shared --space and --font tokens, so this shrink stays scoped to the list
-   grid) so more fit across a row before wrapping. */
-.lcard-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 10px; }
-.lcard {
-  position: relative;
-  background: var(--color-surface); border: 1px solid var(--color-border);
-  border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+/* ── Upload box (§13) ─────────────────────────────────────────────────────── */
+.upload {
+  display: flex; flex-direction: column; align-items: center; gap: var(--space-2);
+  padding: var(--space-6); text-align: center; color: var(--color-text-secondary);
+  border: 2px dashed var(--color-border-input); border-radius: var(--radius-md); background: var(--color-surface);
 }
-.lcard:hover, .lcard:focus-within { border-color: var(--color-accent); box-shadow: var(--shadow-md); }
-.lcard__open {
-  text-align: left; font: inherit; cursor: pointer; background: none; border: none;
-  width: 100%; padding: 10px 14px;
-  display: flex; flex-direction: column; gap: 10px;
-}
-/* Card footer: explicit, labelled Archive + Delete actions (siblings of the
-   full-area open button). */
-.lcard__foot { display: flex; gap: 7px; padding: 7px 10px 10px; border-top: 1px solid var(--color-border); }
-.lcard__act {
-  flex: 1; min-height: 29px; padding: 5px 7px;
-  font: inherit; font-size: var(--font-sm); font-weight: 600; cursor: pointer;
-  background: var(--color-surface); color: var(--color-text-secondary);
-  border: 1px solid var(--color-border); border-radius: var(--radius-sm);
-}
-.lcard__act:hover, .lcard__act:focus-visible { border-color: var(--color-border-hover); background: var(--color-bg); color: var(--color-text-primary); }
-.lcard__head { display: flex; align-items: center; gap: 10px; }
-.lcard__mono {
-  flex: none; width: 34px; height: 34px; border-radius: var(--radius-sm);
-  background: var(--color-navy); color: var(--color-on-navy);
-  display: inline-flex; align-items: center; justify-content: center;
-  font-weight: 800; font-size: var(--font-sm);
-}
-.lcard__title { min-width: 0; flex: 1; display: flex; flex-direction: column; }
-.lcard__name { font-weight: 700; color: var(--color-navy); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lcard__sub { font-size: var(--font-xs); color: var(--color-text-secondary); }
-/* Fixed 6-slot grid (3x2) — always the same six metrics, never fewer/more, so
-   the card's shape never shifts based on what a deal has data for. */
-.lcard__kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
-.lcard__kpi { display: flex; flex-direction: column; }
-.lcard__kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary); font-weight: 700; }
-.lcard__kpi-val { font-weight: 800; color: var(--color-navy); }
+/* While a file is over the box, its words go text-primary: the one pair checked on
+   accent-light (design.md -> Accessibility), as on a menu item's hover. */
+.upload.is-over { border-color: var(--color-accent); background: var(--color-accent-light); color: var(--color-text-primary); }
+.upload .upload-limits { font-size: var(--font-sm); }
+.upload img { max-height: 160px; border-radius: var(--radius-sm); } /* the chosen photo's thumbnail (§13) */
 
-/* empty state */
-.empty { max-width: 480px; margin: 10vh auto; text-align: center; }
-.empty h2 { color: var(--color-navy); margin: 0 0 var(--space-2); }
-.empty p { color: var(--color-text-secondary); margin: 0 0 var(--space-4); }
-.empty__actions { display: flex; gap: var(--space-2); justify-content: center; flex-wrap: wrap; }
-
-/* compare view, Side by side layout only: a checkbox-per-property picker grid
-   above the table (properties are columns there, so there's no "row" to put
-   a checkbox in front of). Table layout embeds its checkbox in the table
-   itself instead — see .compare-check-col below. */
-.compare-picker {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: var(--space-1) var(--space-4); margin: var(--space-2) 0 var(--space-3);
-}
-.compare-picker:empty { margin: 0; }
-.compare-row {
-  display: flex; align-items: center; gap: var(--space-2);
-  min-height: 36px; padding: 4px 0; cursor: pointer; min-width: 0;
-}
-.compare-row input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--color-accent); flex: none; margin: 0; }
-.compare-row__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
-.compare-row--off { opacity: 0.6; }
-.compare-row--off .compare-row__name { color: var(--color-text-secondary); font-weight: 400; }
-/* divider: the "out of comparison range" line, spanning every column of the grid */
-.compare-divider {
-  grid-column: 1 / -1;
-  display: flex; align-items: center; gap: var(--space-3);
-  margin: var(--space-1) 0; font-size: var(--font-xs); font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary);
-}
-.compare-divider::before, .compare-divider::after { content: ''; flex: 1; border-top: 1px solid var(--color-border); }
-/* Table layout's in-row divider: a full-width row between the included and
-   excluded property rows, same "out of range" label as .compare-divider. */
-.compare-divider-row td {
-  padding: var(--space-1) var(--space-2); font-size: var(--font-xs); font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary);
-  text-align: center; background: var(--color-bg);
-  border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border);
-}
-/* Table layout's excluded rows: dimmed, values still visible but no best/worst highlight */
-.compare-table-row--off { opacity: 0.6; }
-.compare-table-row--off .compare-name { font-weight: 400; color: var(--color-text-secondary); }
-/* checkbox column leading every Table-layout row (included or excluded) */
-.compare-check-col { width: 40px; min-width: 40px !important; text-align: center; padding-left: 6px !important; padding-right: 6px !important; }
-.compare-check-col input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--color-accent); margin: 0; vertical-align: middle; }
-.compare-table th, .compare-table td { min-width: 120px; }
-.compare-table td:first-child, .compare-table th:first-child { position: sticky; left: 0; background: var(--color-surface); font-weight: 600; z-index: 1; }
-/* Table layout only: the checkbox is first-child now, so the Prospect name
-   (second column) needs its own sticky offset to stay pinned during scroll. */
-.compare-table--rows td:nth-child(2), .compare-table--rows th:nth-child(2) {
-  position: sticky; left: 40px; background: var(--color-surface); font-weight: 600; z-index: 1;
-}
-.cell--best { color: var(--color-pass-text); font-weight: 800; background: var(--color-pass-bg); }
-.cell--worst { color: var(--color-fail-text); background: var(--color-fail-bg); }
-.compare-verdict td { padding-top: var(--space-2); }
-/* layout toggle (Table / Side by side) */
-.compare-controls { margin: var(--space-2) 0; }
-.seg { display: inline-flex; border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; }
-.seg__btn { font: inherit; font-size: var(--font-sm); font-weight: 600; min-height: 40px; padding: 6px var(--space-3); background: var(--color-surface); border: none; cursor: pointer; color: var(--color-text-secondary); }
-.seg__btn + .seg__btn { border-left: 1px solid var(--color-border); }
-.seg__btn--on { background: var(--color-navy); color: var(--color-on-navy); }
-/* rows table: one property per row, many metric columns — narrow, tight cells
-   (more columns are expected, so keep them compact and let .table-wrap scroll) */
-.compare-table--rows th, .compare-table--rows td { min-width: 76px; padding-left: 6px; padding-right: 6px; }
-.compare-table--rows th:nth-child(2), .compare-table--rows td:nth-child(2) { min-width: 176px; }
-.compare-name { display: block; font-weight: 700; color: var(--color-navy); }
-.compare-table--rows .compare-verdict { display: inline-block; margin-top: 3px; }
-/* Archive table: the compare rows layout + a per-row action column. The name is
-   a button (reopens the deal) that reads like the compare name. */
-.archive-name { display: block; background: none; border: none; padding: 0; cursor: pointer; text-align: left; text-decoration: underline; text-decoration-color: transparent; }
-.archive-name:hover, .archive-name:focus-visible { text-decoration-color: currentColor; }
-/* Prospect cell on ONE line: name · verdict · R/× actions, never stacked */
-.archive-prospect { display: flex; align-items: center; gap: var(--space-2); flex-wrap: nowrap; }
-.archive-prospect .archive-name { white-space: nowrap; }
-.archive-prospect .compare-verdict { margin-top: 0; }
-.archive-table .archive-actions { display: flex; gap: 6px; margin-top: 0; flex-wrap: nowrap; flex: none; }
-.btn--sm { min-height: 30px; padding: 4px var(--space-3); font-size: var(--font-xs); }
-/* R (restore) + × (permanent delete): equal compact squares, always on one row */
-.archive-restore, .archive-del { flex: none; width: 30px; min-width: 30px; padding: 0; justify-content: center; font-weight: 800; }
-.archive-del { color: var(--color-text-secondary); font-size: 18px; }
-.archive-del:hover, .archive-del:focus-visible { border-color: var(--color-fail); color: var(--color-fail); background: var(--color-fail-bg); }
-.archive-restore:hover, .archive-restore:focus-visible { border-color: var(--color-accent); color: var(--color-accent); }
-/* sortable column headers: the whole header is a button; a caret shows the
-   active sort (a faint ↕ appears on hover for the rest, signalling it's sortable) */
-.compare-table th.th-sort { padding: 0; }
-.th-sort__btn {
-  display: flex; align-items: center; gap: 3px; width: 100%;
-  font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit;
-  background: none; border: none; cursor: pointer;
-  padding: var(--space-1) var(--space-2);
-}
-.compare-table th.num .th-sort__btn { justify-content: flex-end; }
-.th-sort__btn:hover { color: var(--color-navy); }
-.th-sort__btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
-.th-sort__caret { font-size: 9px; opacity: 0; transition: opacity .12s; }
-.th-sort__btn:hover .th-sort__caret { opacity: .5; }
-.th-sort--on .th-sort__caret { opacity: 1; color: var(--color-accent); }
-.th-sort--on .th-sort__label { color: var(--color-navy); }
-
-/* toast */
+/* ── Messages (§18): errors next to what failed; toasts for success ───────── */
+.inline-msg { font-size: var(--font-sm); margin-top: var(--space-1); color: var(--color-text-secondary); }
+.inline-msg.err { color: var(--color-danger); } /* set role="alert" with it */
+.inline-msg.ok { color: var(--color-success); }
 .toast {
-  position: fixed; top: var(--space-4); left: 50%; transform: translateX(-50%);
-  z-index: 50; padding: 10px var(--space-4); border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md); font-weight: 600; font-size: var(--font-sm);
-  background: var(--color-navy); color: var(--color-on-navy);
+  position: fixed; z-index: var(--z-toast); left: 50%; bottom: var(--space-6); transform: translateX(-50%);
+  max-width: min(480px, 94vw); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md);
+  background: var(--color-text-primary); color: var(--color-surface); box-shadow: var(--shadow-md);
 }
-.toast--success { background: var(--color-pass); }
+.toast.err { background: var(--color-danger); color: var(--color-on-danger); }
+/* Announcements, maintenance, lockdown: full width, in the flow, never floating. */
+.banner { width: 100%; padding: var(--space-3) var(--space-4); background: var(--color-info-bg); color: var(--color-info); }
 
-/* top-bar actions (Save/Delete relocated from the dashboard body) */
-.topbar__actions { display: flex; gap: var(--space-1); margin-left: auto; }
-.topbar__action { background: var(--color-navy-soft); }
-.topbar__action:hover, .topbar__action:focus-visible { background: var(--color-accent); }
-.topbar__action:disabled { opacity: 0.4; cursor: default; background: var(--color-navy-soft); }
-/* Phone width: the desktop topbar (brand + center + 4 nav links) is wider than a
-   phone, so it reflows — brand + nav stay at the top (nav wraps to its own line
-   if needed), the center slot (title/switcher/pills/actions) drops to a
-   full-width row below and wraps, and the switcher subtitle truncates instead of
-   forcing width. Prevents horizontal page scroll at phone width; desktop is
-   unchanged. Placed after the base .topbar rules so its flex shorthand wins. */
-@media (max-width: 680px) {
-  .topbar { flex-wrap: wrap; gap: var(--space-2); padding: var(--space-2) var(--space-3); min-height: 0; }
-  .topbar__center { order: 3; flex: 1 1 100%; flex-wrap: wrap; gap: var(--space-2) var(--space-3); }
-  .topbar__nav { flex-wrap: wrap; }
-  .switcher__title .sub { display: block; overflow: hidden; text-overflow: ellipsis; }
+/* ── Segmented control (§11): role="tablist" / role="tab" / aria-selected ──── */
+/* Each tab is a native <button role="tab">; the arrow keys come from the shared script (§11). */
+/* More tabs than a phone row holds wrap onto a second line inside the control. */
+.segmented { display: inline-flex; flex-wrap: wrap; max-width: 100%; border: 1px solid var(--color-border-input); border-radius: var(--radius-md); padding: 2px; gap: var(--space-2); }
+.segmented [role="tab"] {
+  min-height: var(--size-target-min); min-width: var(--size-target-min); padding: 0 var(--space-4); border: 0; border-radius: var(--radius-sm);
+  background: transparent; color: var(--color-text-primary); font: 600 var(--font-sm) var(--font-sans); cursor: pointer;
 }
-/* final one-screen rhythm trim */
-.card .input { min-height: 26px; }
-@media (pointer: coarse) { .card .input { min-height: 44px; } }
-.form-grid { gap: 1px var(--space-3); }
+/* §14: selection is blue whatever the brand accent; the inset edge gives the
+   selected state its 3:1 against the control, which the pale fill alone lacks. */
+.segmented [role="tab"][aria-selected="true"] { background: var(--color-info-bg); color: var(--color-info); box-shadow: inset 0 0 0 2px var(--color-info); }
+.segmented [role="tab"]:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; }
 
-/* account control (topbar) --------------------------------------------------- */
-.account { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
-.account__email {
-  font-size: var(--font-sm); color: var(--color-on-navy-muted);
-  max-width: 7ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.account__btn { white-space: nowrap; }
-
-/* auth gate (full-page sign-in wall) ----------------------------------------- */
-body.is-gated .topbar__nav,
-body.is-gated .topbar__center { display: none; }
-.authgate {
-  min-height: calc(100vh - 56px);
-  display: flex; align-items: center; justify-content: center;
-  padding: var(--space-6);
-}
-.authgate__card {
-  background: var(--color-surface); border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg); box-shadow: var(--shadow-md);
-  padding: var(--space-8); width: 100%; max-width: 420px;
-  display: flex; flex-direction: column; gap: var(--space-3); text-align: left;
-}
-.authgate__brand {
-  font-weight: 700; font-size: var(--font-sm); letter-spacing: var(--tracking-wide);
-  text-transform: uppercase; color: var(--color-accent);
-}
-.authgate__title { font-size: var(--font-2xl); font-weight: 700; color: var(--color-text-primary); margin: 0; }
-.authgate__sub { font-size: var(--font-base); color: var(--color-text-secondary); margin: 0; line-height: 1.5; }
-.authgate__field { margin-top: var(--space-2); }
-.authgate__send { width: 100%; justify-content: center; }
-.authgate__status { min-height: 1.2em; font-size: var(--font-sm); color: var(--color-text-secondary); margin: 0; }
-.authgate__status--ok { color: var(--color-accent); font-weight: 600; }
-.authgate__field[hidden] { display: none; }
-.authgate__links {
-  display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2);
-  margin-top: var(--space-1);
-}
-.authgate__link {
-  background: none; border: none; padding: 0; cursor: pointer;
-  font: inherit; font-size: var(--font-sm); color: var(--color-accent); font-weight: 600;
-}
-.authgate__link:hover, .authgate__link:focus-visible { text-decoration: underline; }
-
-/* offline read-only banner --------------------------------------------------- */
-.offline-banner {
-  background: var(--color-neutral-bg); color: var(--color-neutral-text);
-  font-size: var(--font-sm); font-weight: 600; text-align: center;
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--color-border);
-}
-.offline-banner[hidden] { display: none; }
-/* signed-in + offline: block editing affordances (choke-point is the guarantee) */
-body.is-readonly #view .input,
-body.is-readonly #view button:not(.topbar__link):not(.switcher__btn) {
-  opacity: 0.55; pointer-events: none;
+.section-header {
+  font-size: var(--font-sm); font-weight: 600; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-border); padding-bottom: var(--space-2);
 }
 
-/* modal (sign-in, upload prompt) --------------------------------------------- */
-.modal__overlay {
-  position: fixed; inset: 0; z-index: 50;
-  display: flex; align-items: center; justify-content: center;
-  padding: var(--space-4);
-  background: rgba(19, 46, 78, 0.45);
+/* `transition` alone is not enough: an @keyframes pulse is an animation, and
+   smooth scrolling is motion too. */
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+  html { scroll-behavior: auto !important; }
 }
-.modal__panel {
-  position: relative;
-  background: var(--color-surface); color: var(--color-text-primary);
-  border-radius: var(--radius-lg); box-shadow: var(--shadow-md);
-  padding: var(--space-6); width: 100%; max-width: 420px;
-  display: flex; flex-direction: column; gap: var(--space-3);
-}
-.modal__close {
-  position: absolute; top: 10px; right: 12px; z-index: 1;
-  width: 30px; height: 30px; line-height: 1; padding: 0;
-  display: flex; align-items: center; justify-content: center;
-  font: inherit; font-size: 22px; cursor: pointer;
-  background: none; border: 1px solid transparent; border-radius: var(--radius-sm);
-  color: var(--color-text-secondary);
-}
-.modal__close:hover, .modal__close:focus-visible { border-color: var(--color-border-hover); background: var(--color-bg); color: var(--color-text-primary); }
-.modal__title { font-size: var(--font-xl); font-weight: 700; margin: 0; padding-right: 28px; }
-.modal__body { font-size: var(--font-base); color: var(--color-text-secondary); margin: 0; line-height: 1.5; }
-.modal__status { min-height: 1.2em; font-size: var(--font-sm); }
-.modal__status--ok { color: var(--color-accent); font-weight: 600; }
-.modal__actions { display: flex; justify-content: flex-end; gap: var(--space-2); flex-wrap: wrap; }
-@media (prefers-reduced-motion: no-preference) {
-  .modal__panel { animation: modal-in 0.16s ease-out; }
-  @keyframes modal-in { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
-}
-
-/* photo gallery (modal) + full-size lightbox ---------------------------------- */
-/* Property Info card header row: title + Photos button, no extra height. */
-.card__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-2); }
-.card__head .eyebrow { margin-bottom: 0; }
-.card__head-actions { display: flex; gap: var(--space-2); flex: none; }
-.photos-btn {
-  border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-secondary);
-  border-radius: var(--radius-pill); font: inherit; font-size: var(--font-xs); font-weight: 700;
-  padding: 1px 10px; cursor: pointer; line-height: 1.7; white-space: nowrap; flex: none;
-}
-.photos-btn:hover, .photos-btn:focus-visible { border-color: var(--color-accent); color: var(--color-accent); }
-
-.modal__panel.import-modal { max-width: 560px; }
-.import-ta { width: 100%; resize: vertical; font-family: inherit; font-size: var(--font-sm); min-height: 72px; line-height: 1.4; }
-.modal__panel.desc-modal { max-width: 620px; gap: var(--space-3); }
-.desc-ta { width: 100%; resize: vertical; font-family: inherit; font-size: var(--font-sm); min-height: 180px; line-height: 1.5; }
-.link-open { font-size: var(--font-xs); color: var(--color-accent); font-weight: 600; text-decoration: none; margin-left: 6px; }
-.link-open:hover, .link-open:focus-visible { text-decoration: underline; }
-.link-open[hidden] { display: none; }
-
-.modal__panel.gallery { max-width: 720px; gap: var(--space-4); }
-.gallery__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
-.gallery__grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: var(--space-3); max-height: 52vh; overflow-y: auto;
-}
-.gallery__empty { color: var(--color-text-secondary); font-size: var(--font-sm); margin: 0; padding: var(--space-6) 0; text-align: center; }
-.gallery__cell { position: relative; margin: 0; }
-.gallery__img {
-  width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block;
-  border-radius: var(--radius-md); border: 1px solid var(--color-border);
-  background: var(--gen-shade); cursor: zoom-in;
-}
-.gallery__del {
-  position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border: none;
-  border-radius: var(--radius-pill); background: rgba(19, 46, 78, 0.72); color: var(--color-on-danger);
-  font-size: 15px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center;
-}
-.gallery__del:hover, .gallery__del:focus-visible { background: var(--color-danger); }
-.gallery__add { display: flex; gap: var(--space-2); align-items: flex-start; }
-.gallery__ta { flex: 1; resize: vertical; font-family: inherit; min-height: 42px; }
-
-.lightbox {
-  position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
-  gap: var(--space-3); padding: var(--space-6); background: rgba(10, 20, 34, 0.88);
-}
-.lightbox__img { max-width: min(90vw, 1100px); max-height: 86vh; object-fit: contain; border-radius: var(--radius-md); }
-.lightbox__nav {
-  flex: none; width: 44px; height: 44px; border: none; border-radius: var(--radius-pill);
-  background: rgba(255, 255, 255, 0.14); color: #fff; font-size: 26px; line-height: 1; cursor: pointer;
-}
-.lightbox__nav:hover, .lightbox__nav:focus-visible { background: rgba(255, 255, 255, 0.28); }
-/* Close control for the photo viewer: 44x44 per design.md -> Cross-platform tap
-   targets, pinned clear of the prev/next arrows so a thumb cannot hit both. */
-.lightbox__close {
-  position: fixed; top: 18px; right: 18px; z-index: 1;
-  width: 44px; height: 44px; border: none; border-radius: var(--radius-pill);
-  background: rgba(255, 255, 255, 0.14); color: #fff; font-size: 26px; line-height: 1; cursor: pointer;
-}
-.lightbox__close:hover, .lightbox__close:focus-visible { background: rgba(255, 255, 255, 0.28); }
-.lightbox__cap { position: fixed; bottom: 18px; left: 0; right: 0; text-align: center; color: #E6EEF8; font-size: var(--font-sm); font-variant-numeric: tabular-nums; }

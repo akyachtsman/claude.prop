@@ -36,6 +36,26 @@
   --color-neutral-text:   #44566E;
   --gen-shade:            #E2E9F2;   /* consistent fill marking a generated (computed) field */
 
+  /* color — the house token names (design.md -> Tokens & components; house-style
+     move step 1, 2026-10-25). Owner palette ruling: this project keeps Banker
+     Navy, so each house name takes a value from this palette, or the house's own
+     where the palette has no such colour (warning, info, expired). Pairs, all
+     AA at 11-12px: success/success-bg 6.87, warning 6.37, danger/danger-bg 5.03,
+     neutral/neutral-bg 6.37, info 5.60, expired 7.39; on-danger on danger-hover
+     7.74; success on surface 8.06 and on bg 7.37. Nothing on the old screens
+     uses these yet: the house components read them as screens move (step 2). */
+  /* A field's edge (WCAG 1.4.11): 3.50 on surface, 3.20 on bg. --color-border
+     (1.3:1) stays for edges nothing depends on. */
+  --color-border-input:   #7E8A9B;
+  --color-danger-hover:   #962E23;
+  --color-success:        #135C33;  --color-success-bg: #E0F1E6;   /* = pass-text / pass-bg */
+  --color-warning:        #92400E;  --color-warning-bg: #FEF3C7;
+  --color-danger-bg:      #FAE7E3;  /* = fail-bg; pill text is --color-danger */
+  --color-neutral:        #44566E;  /* = neutral-text; its bg is --color-neutral-bg above */
+  --color-info:           #0E5EB5;  --color-info-bg:    #E7F1FD;
+  --color-expired:        #6B21A8;  --color-expired-bg: #F3E8FF;
+  --color-backdrop:       rgba(19,46,78,.45);   /* the dim layer behind a dialog (as .modal__overlay) */
+
   /* color — data marks (validated: CVD + contrast, light & dark surface) */
   --chart-1:              #3E6FAE;   /* cashflow */
   --chart-2:              #159E86;   /* appreciation */
@@ -49,7 +69,13 @@
 
   /* space */
   --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
-  --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px;
+  --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px; --space-12: 48px;
+
+  /* target sizes — design.md -> Cross-platform & responsive (touch AND pointer) */
+  --size-target-min: 44px;  /* min tap/click target */
+  --size-check-min:  24px;  /* min checkbox */
+  --size-input-min:  48px;  /* min input height */
+  --font-input-min:  16px;  /* never below 16px: prevents iOS zoom on focus */
 
   /* radius */
   --radius-sm: 6px; --radius-md: 10px; --radius-lg: 14px; --radius-pill: 999px;
@@ -57,4 +83,8 @@
   /* shadow */
   --shadow-sm: 0 1px 3px rgba(19,46,78,.08), 0 1px 2px rgba(19,46,78,.05);
   --shadow-md: 0 6px 16px rgba(19,46,78,.09), 0 2px 5px rgba(19,46,78,.06);
+  --shadow-lg: 0 12px 32px rgba(19,46,78,.18);
+
+  /* layers — design.md §10: one shared scale decides stacking */
+  --z-popover: 100; --z-dialog: 200; --z-toast: 300;
 }

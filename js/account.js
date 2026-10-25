@@ -18,7 +18,7 @@ let recovering = false;       // true while a password-reset link is being compl
 // ── modal helper (Banker Navy) ─────────────────────────────────────────────
 function modal(children) {
   const panel = el('div', { class: 'modal__panel', role: 'dialog', 'aria-modal': 'true' }, children);
-  const overlay = el('div', { class: 'modal__overlay' }, [panel]);
+  const overlay = el('div', { class: 'modal__overlay legacy-screen' }, [panel]);
   return { close: mountOverlay(overlay), panel };
 }
 
@@ -60,8 +60,8 @@ function confirmUpload(n) {
       el('p', { class: 'modal__body', text:
         `You have ${n} propert${n === 1 ? 'y' : 'ies'} saved on this device. Copy ${n === 1 ? 'it' : 'them'} into your account so they sync everywhere? Your local copy is kept either way.` }),
       el('div', { class: 'modal__actions' }, [
-        el('button', { class: 'btn btn--ghost', type: 'button', text: 'Not now', onclick: () => finish(false) }),
-        el('button', { class: 'btn btn--primary', type: 'button', text: `Move ${n === 1 ? 'it' : 'them'} in`, onclick: () => finish(true) }),
+        el('button', { class: 'legacy-btn legacy-btn--ghost', type: 'button', text: 'Not now', onclick: () => finish(false) }),
+        el('button', { class: 'legacy-btn legacy-btn--primary', type: 'button', text: `Move ${n === 1 ? 'it' : 'them'} in`, onclick: () => finish(true) }),
       ]),
     ]);
   });
@@ -112,12 +112,12 @@ export function renderAuthScreen(host) {
 // Email + password gate with three modes: sign in / create account / forgot.
 function renderGate(host) {
   let mode = 'signin';
-  const email = el('input', { class: 'input', type: 'email', 'aria-label': 'Email', placeholder: 'you@example.com', autocomplete: 'email' });
-  const password = el('input', { class: 'input', type: 'password', 'aria-label': 'Password', placeholder: 'Password', autocomplete: 'current-password' });
-  const pwField = el('div', { class: 'field authgate__field' }, [password]);
+  const email = el('input', { class: 'legacy-input', type: 'email', 'aria-label': 'Email', placeholder: 'you@example.com', autocomplete: 'email' });
+  const password = el('input', { class: 'legacy-input', type: 'password', 'aria-label': 'Password', placeholder: 'Password', autocomplete: 'current-password' });
+  const pwField = el('div', { class: 'legacy-field authgate__field' }, [password]);
   const title = el('h1', { class: 'authgate__title' });
   const sub = el('p', { class: 'authgate__sub' });
-  const submitBtn = el('button', { class: 'btn btn--primary authgate__send', type: 'button' });
+  const submitBtn = el('button', { class: 'legacy-btn legacy-btn--primary authgate__send', type: 'button' });
   const status = el('p', { class: 'authgate__status', role: 'status' });
   const links = el('div', { class: 'authgate__links' });
 
@@ -178,7 +178,7 @@ function renderGate(host) {
     el('div', { class: 'authgate__card' }, [
       el('div', { class: 'authgate__brand', text: 'Property Analytics' }),
       title, sub,
-      el('div', { class: 'field authgate__field' }, [email]),
+      el('div', { class: 'legacy-field authgate__field' }, [email]),
       pwField, submitBtn, status, links,
     ]),
   ]));
@@ -188,9 +188,9 @@ function renderGate(host) {
 
 // Set-new-password form, shown after the user follows a reset link (recovery).
 function renderRecover(host) {
-  const password = el('input', { class: 'input', type: 'password', 'aria-label': 'New password', placeholder: 'New password', autocomplete: 'new-password' });
+  const password = el('input', { class: 'legacy-input', type: 'password', 'aria-label': 'New password', placeholder: 'New password', autocomplete: 'new-password' });
   const status = el('p', { class: 'authgate__status', role: 'status' });
-  const btn = el('button', { class: 'btn btn--primary authgate__send', type: 'button', text: 'Set new password' });
+  const btn = el('button', { class: 'legacy-btn legacy-btn--primary authgate__send', type: 'button', text: 'Set new password' });
   const submit = async () => {
     if (!password.value || password.value.length < 6) { status.textContent = 'Use at least 6 characters.'; return; }
     btn.disabled = true; status.textContent = 'Saving…';
@@ -211,7 +211,7 @@ function renderRecover(host) {
       el('div', { class: 'authgate__brand', text: 'Property Analytics' }),
       el('h1', { class: 'authgate__title', text: 'Set a new password' }),
       el('p', { class: 'authgate__sub', text: 'Choose a new password for your account (at least 6 characters).' }),
-      el('div', { class: 'field authgate__field' }, [password]),
+      el('div', { class: 'legacy-field authgate__field' }, [password]),
       btn, status,
     ]),
   ]));

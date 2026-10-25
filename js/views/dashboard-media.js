@@ -62,8 +62,8 @@ function openGallery() {
       grid.appendChild(el('figure', { class: 'gallery__cell' }, [img, del]));
     });
   }
-  const ta = el('textarea', { class: 'input gallery__ta', rows: '2', 'aria-label': 'Add photo URLs', placeholder: 'Paste image URLs — one per line…' });
-  const addBtn = el('button', { class: 'btn btn--primary', type: 'button', text: 'Add photos' });
+  const ta = el('textarea', { class: 'legacy-input gallery__ta', rows: '2', 'aria-label': 'Add photo URLs', placeholder: 'Paste image URLs — one per line…' });
+  const addBtn = el('button', { class: 'legacy-btn legacy-btn--primary', type: 'button', text: 'Add photos' });
   addBtn.addEventListener('click', () => {
     const seen = new Set(prop.media.photos);
     const fresh = parsePhotoUrls(ta.value).filter((u) => !seen.has(u));
@@ -73,13 +73,13 @@ function openGallery() {
     renderThumbs(); refreshPhotosBtn(); onEdit();
     toast(`Added ${fresh.length} photo${fresh.length > 1 ? 's' : ''}`, 'success');
   });
-  const closeBtn = el('button', { class: 'btn btn--ghost', type: 'button', text: 'Done' });
+  const closeBtn = el('button', { class: 'legacy-btn legacy-btn--ghost', type: 'button', text: 'Done' });
   const panel = el('div', { class: 'modal__panel gallery', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Property photos' }, [
     el('div', { class: 'gallery__head' }, [el('h2', { class: 'modal__title', text: 'Photos' }), closeBtn]),
     grid,
     el('div', { class: 'gallery__add' }, [ta, addBtn]),
   ]);
-  const overlay = el('div', { class: 'modal__overlay' }, [panel]);
+  const overlay = el('div', { class: 'modal__overlay legacy-screen' }, [panel]);
   renderThumbs();
   // Ignore Escape while the full-size lightbox is up — that layer owns the key,
   // so one Escape closes the lightbox only, not the gallery beneath it.
@@ -104,7 +104,7 @@ function openLightbox(start) {
   // no keyboard and the backdrop looks like part of the photo — design.md
   // -> Cross-platform: every action works by tap, click AND keyboard.
   const shut = el('button', { class: 'lightbox__close', type: 'button', 'aria-label': 'Close photo viewer', title: 'Close', text: '\u00d7' });
-  const box = el('div', { class: 'lightbox', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Photo viewer' }, [shut, prev, img, next, cap]);
+  const box = el('div', { class: 'lightbox legacy-screen', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Photo viewer' }, [shut, prev, img, next, cap]);
   paint();
   const close = mountOverlay(box, {
     onKey: (e) => { if (e.key === 'ArrowLeft') step(-1); else if (e.key === 'ArrowRight') step(1); },
@@ -117,30 +117,30 @@ function openLightbox(start) {
 function openListing() {
   let dirty = false;
   const fieldEls = LISTING_FIELDS.map(([label, key]) => {
-    const inp = el('input', { class: 'input', type: 'text', value: prop.info[key] || '', 'aria-label': label });
+    const inp = el('input', { class: 'legacy-input', type: 'text', value: prop.info[key] || '', 'aria-label': label });
     inp.addEventListener('input', () => { prop.info[key] = inp.value; dirty = true; });
-    return el('label', { class: 'field' }, [el('span', { class: 'field__label', text: label }), inp]);
+    return el('label', { class: 'legacy-field' }, [el('span', { class: 'legacy-field__label', text: label }), inp]);
   });
   // Photos link — a URL to the source listing / photo gallery, with a live
   // "Open ↗" anchor when the value is a valid http(s) link.
-  const linkInp = el('input', { class: 'input', type: 'url', value: prop.info.photosLink || '', 'aria-label': 'Photos link', placeholder: 'https://… listing / photo gallery' });
+  const linkInp = el('input', { class: 'legacy-input', type: 'url', value: prop.info.photosLink || '', 'aria-label': 'Photos link', placeholder: 'https://… listing / photo gallery' });
   const linkOpen = el('a', { class: 'link-open', target: '_blank', rel: 'noopener noreferrer', text: 'Open ↗' });
   const syncLink = () => { const u = safeImageUrl(linkInp.value); if (u) { linkOpen.href = u; linkOpen.hidden = false; } else { linkOpen.removeAttribute('href'); linkOpen.hidden = true; } };
   linkInp.addEventListener('input', () => { prop.info.photosLink = linkInp.value; dirty = true; syncLink(); });
   syncLink();
-  const linkField = el('label', { class: 'field' }, [el('span', { class: 'field__label' }, ['Photos link ', linkOpen]), linkInp]);
-  const ta = el('textarea', { class: 'input desc-ta', rows: '6', 'aria-label': 'Property description', placeholder: 'Description, highlights, building/business extras…' });
+  const linkField = el('label', { class: 'legacy-field' }, [el('span', { class: 'legacy-field__label' }, ['Photos link ', linkOpen]), linkInp]);
+  const ta = el('textarea', { class: 'legacy-input desc-ta', rows: '6', 'aria-label': 'Property description', placeholder: 'Description, highlights, building/business extras…' });
   ta.value = prop.info.description || '';
   ta.addEventListener('input', () => { prop.info.description = ta.value; dirty = true; });
-  const closeBtn = el('button', { class: 'btn btn--ghost', type: 'button', text: 'Done' });
+  const closeBtn = el('button', { class: 'legacy-btn legacy-btn--ghost', type: 'button', text: 'Done' });
   const panel = el('div', { class: 'modal__panel desc-modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Listing details' }, [
     el('div', { class: 'gallery__head' }, [el('h2', { class: 'modal__title', text: 'Listing details' }), closeBtn]),
     el('div', { class: 'form-grid' }, fieldEls),
     linkField,
-    el('span', { class: 'field__label', text: 'Description' }),
+    el('span', { class: 'legacy-field__label', text: 'Description' }),
     ta,
   ]);
-  const overlay = el('div', { class: 'modal__overlay' }, [panel]);
+  const overlay = el('div', { class: 'modal__overlay legacy-screen' }, [panel]);
   const close = mountOverlay(overlay, {
     onClose: () => { refreshListingBtn(); if (dirty) onEdit(); },   // commit + auto-save once
   });

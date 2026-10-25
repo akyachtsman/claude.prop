@@ -16,11 +16,35 @@ https://raw.githubusercontent.com/akyachtsman/claude.directives/main/directives/
 - **Branch policy:** Develop on a `claude/<name>` feature branch; PRs target `main`
 
 ## Design
-This project's look is its own — established at kickoff via `/design-intake`
-(per `directives/design.md`), not a shared company theme. It lives in:
-- `styles/tokens.css` — brand primitives (color, type, spacing, radius, shadow)
-- `styles/components.css` — reusable components
-- **Reference page:** `index.html` ("Banker Navy", established & owner-approved 2026-07-14 — see `specs/property-dashboard/design.md`)
+**There is one house style, and it binds every project** (owner rulings,
+2026-10-19, `directives/design.md`): the house components, words, icons and
+patterns apply here. This project is moving onto it with `/design-intake` step 1c
+(claude.directives #470); `.claude/directive-sync.json` → `"house_style": true`.
+**Owner palette ruling (2026-10-25):** this project keeps its own colours and
+fonts, "Banker Navy" (established & owner-approved 2026-07-14 — see
+`specs/property-dashboard/design.md`). Only the components, words, icons and
+patterns become the house ones, so `/design-intake` 1b applies: token values are
+the project's, token names are the house's. The stylesheets, loaded in this order:
+- `styles/tokens.css` — every house token name with a Banker Navy value, plus the
+  project's own tokens (navy structure, verdicts, chart series, `--gen-shade`).
+- `styles/components.css` — the HOUSE file, verbatim. **Never edit it**:
+  `/refresh-repo` keeps it current and compares it exactly.
+- `styles/legacy.css` — this project's own components (the old
+  `styles/components.css`), with the ten classes it shared with the house file
+  renamed `legacy-<name>` (`legacy-btn`, `legacy-card`, `legacy-field`,
+  `legacy-grid`, `legacy-input`, `legacy-page`, `legacy-pill`,
+  `legacy-table-wrap`, `legacy-th-sort`, `legacy-toast`, each with its `--`/`__`
+  family). Its first block holds back the house page base (overflow-wrap,
+  headings, links, the 3px link focus ring, images, the controls' font) under
+  `.legacy-screen`, the class every old screen's root carries: `#view`, the top
+  bar, the offline banner, each overlay and the toast.
+- **`DESIGN-GAPS.md`** — one line per screen and group that does not meet the
+  standard yet. Step 2 moves the screens one or a few per PR, in the order the
+  owner picks, each dropping its `legacy-` classes and `legacy-screen` and
+  deleting its lines; **step 2 needs its own owner go-ahead.** Step 3 deletes
+  `styles/legacy.css` and the emptied `DESIGN-GAPS.md`.
+- **Reference page:** `index.html` (the Banker Navy look; the house reference page
+  comes with step 2).
 
 ## Application Architecture
 - [main source file/folder] — [brief description]
@@ -122,12 +146,13 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
      `accent / bg`** — `--color-accent` is a SMALL-text colour here in eight places
      (`.authgate__brand`, `.authgate__status--ok`, `.authgate__link`,
      `.modal__status--ok`, `.photos-btn:hover`, `.archive-restore:hover`,
-     `.th-sort__caret`, `.link-open`) at 13px/12px, neither of which is WCAG large text.
+     `.legacy-th-sort__caret`, `.link-open`) at 13px/12px, neither of which is WCAG large text.
   2. **`on-navy / accent`** — `--color-on-accent` is not the only foreground over
      accent: `.switcher__btn` and `.topbar__action` keep `--color-on-navy` while
      their hover fill becomes `--color-accent`.
   3. **`accent-hover / accent-light`** — the NOI chip (`.rt-chip--noi`, rendered at
-     `dashboard.js:482`). Found by DERIVING pairs from `components.css` (every rule
+     `dashboard.js:482`). Found by DERIVING pairs from the old `components.css`, now
+     `styles/legacy.css` (every rule
      declaring both a `color:` and a `background:` from tokens), not by enumerating:
      it was shipping 4.32:1 at 11px bold and no hand-written pair described it.
   4. **`on-danger / danger`** — the gallery delete glyph on its hover fill. This app
@@ -138,8 +163,14 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   `FF`/`F`), and a pair naming the `#FFFFFF` literal — `.gallery__del` now uses
   `var(--color-on-danger)`, so the pair scores by name at 6.01 with no exception.
 
-  **Re-run the derivation in (3) whenever `components.css` gains a new fg/bg
-  pairing.** Its limit: it only sees rules declaring BOTH a `color:` and a
+  **Re-run the derivation in (3) whenever `styles/legacy.css` gains a new fg/bg
+  pairing.** The house `styles/components.css` is not derived here: its text pairs
+  are the hand-check list in `design.md` → *Accessibility*, measured at the
+  house-style move (2026-10-25) and all AA with Banker Navy values (status pairs
+  5.03–7.39, `on-danger` on `danger-hover` 7.74, `text-primary` on `accent-light`
+  12.82; control edge `border-input` 3.50 on surface, 3.20 on bg — upstream's
+  guardrail at `03c55c3` requires those two under the marker and passes them here;
+  this project's installed copy predates them until the next `/refresh-repo`). Its limit: it only sees rules declaring BOTH a `color:` and a
   `background:`, so text that sets a colour and inherits its background — all eight
   in (1) — is invisible to it. Deriving beats enumerating; neither is a proof.
 - **`check-ui-suite-env.py` RUNS here now** — a blocking `static-checks` step

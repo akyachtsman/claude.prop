@@ -36,7 +36,7 @@ export function render(node, children) {
 
 /** Transient toast/notice at the top of the viewport. */
 export function toast(message, kind = 'info') {
-  const t = el('div', { class: `toast toast--${kind}`, role: 'status', text: message });
+  const t = el('div', { class: `legacy-toast legacy-toast--${kind} legacy-screen`, role: 'status', text: message });
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 3200);
 }

@@ -316,9 +316,9 @@ function paintPills(host, m, p) {
   const dscrTxt = `DSCR ${fmt.ratio(m.dscr)} ${dscr ? '≥' : '<'} ${fmt.ratio(BENCHMARK_DSCR)}`;
   // Show the > $0 benchmark explicitly, matching the CAP/DSCR pills' "≥ target" form.
   const npvTxt = `5Y NPV ${fmt.money(m.npv)} ${npvOk ? '>' : '≤'} $0`;
-  if (cap !== null) host.appendChild(el('span', { class: 'pill ' + (cap ? 'pill--pass' : 'pill--fail'), text: capTxt }));
-  if (dscr !== null) host.appendChild(el('span', { class: 'pill ' + (dscr ? 'pill--pass' : 'pill--fail'), text: dscrTxt }));
-  if (npvOk !== null) host.appendChild(el('span', { class: 'pill ' + (npvOk ? 'pill--pass' : 'pill--fail'), text: npvTxt }));
+  if (cap !== null) host.appendChild(el('span', { class: 'legacy-pill ' + (cap ? 'legacy-pill--pass' : 'legacy-pill--fail'), text: capTxt }));
+  if (dscr !== null) host.appendChild(el('span', { class: 'legacy-pill ' + (dscr ? 'legacy-pill--pass' : 'legacy-pill--fail'), text: dscrTxt }));
+  if (npvOk !== null) host.appendChild(el('span', { class: 'legacy-pill ' + (npvOk ? 'legacy-pill--pass' : 'legacy-pill--fail'), text: npvTxt }));
 }
 
 // ── actions ────────────────────────────────────────────────────────────
@@ -358,11 +358,11 @@ function loadSample() {
 // source (parsed in the browser from its embedded JSON-LD). The app detects
 // which and routes it. "Start blank" falls back to createNew.
 function openImport() {
-  const input = el('textarea', { class: 'input import-ta', rows: '3', 'aria-label': 'Listing URL or page source',
+  const input = el('textarea', { class: 'legacy-input import-ta', rows: '3', 'aria-label': 'Listing URL or page source',
     placeholder: 'Paste a Crexi listing URL — or, for LoopNet, the page source (open the listing, Ctrl+U, select all, copy).' });
   const status = el('p', { class: 'modal__status' });
-  const importBtn = el('button', { class: 'btn btn--primary', type: 'button', text: 'Import' });
-  const blankBtn = el('button', { class: 'btn btn--ghost', type: 'button', text: 'Start blank instead' });
+  const importBtn = el('button', { class: 'legacy-btn legacy-btn--primary', type: 'button', text: 'Import' });
+  const blankBtn = el('button', { class: 'legacy-btn legacy-btn--ghost', type: 'button', text: 'Start blank instead' });
   const closeBtn = el('button', { class: 'modal__close', type: 'button', 'aria-label': 'Close', title: 'Close', text: '×' });
   const panel = el('div', { class: 'modal__panel import-modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Add a property from a listing' }, [
     closeBtn,
@@ -371,7 +371,7 @@ function openImport() {
     input, status,
     el('div', { class: 'modal__actions' }, [blankBtn, importBtn]),
   ]);
-  const overlay = el('div', { class: 'modal__overlay' }, [panel]);
+  const overlay = el('div', { class: 'modal__overlay legacy-screen' }, [panel]);
   const close = mountOverlay(overlay);
   closeBtn.addEventListener('click', close);
   const busy = (on) => { importBtn.disabled = on; importBtn.textContent = on ? 'Importing…' : 'Import'; };

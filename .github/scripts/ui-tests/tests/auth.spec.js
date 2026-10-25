@@ -51,8 +51,8 @@ test('S23 auth gate — logged out shows only the sign-in wall (email+password);
   await stubLoggedOut(page);
   await page.goto('./', { waitUntil: 'load' });
   await expect(page.locator('.authgate__title')).toBeVisible();
-  await expect(page.locator('.authgate .input[type="email"]')).toBeVisible();
-  await expect(page.locator('.authgate .input[type="password"]')).toBeVisible();
+  await expect(page.locator('.authgate .legacy-input[type="email"]')).toBeVisible();
+  await expect(page.locator('.authgate .legacy-input[type="password"]')).toBeVisible();
   await expect(page.locator('.authgate__link', { hasText: 'Forgot password?' })).toBeVisible();
   await expect(page.locator('.authgate__link', { hasText: 'Create an account' })).toBeVisible();
   // the app + nav + any data must be hidden behind the gate
@@ -66,8 +66,8 @@ test('S24 password sign-in — valid credentials sign in and reveal the app', as
   const errors = watchErrors(page);
   await stubLoggedOut(page, { signInOk: true });
   await page.goto('./', { waitUntil: 'load' });
-  await page.locator('.authgate .input[type="email"]').fill('me@example.com');
-  await page.locator('.authgate .input[type="password"]').fill('secret123');
+  await page.locator('.authgate .legacy-input[type="email"]').fill('me@example.com');
+  await page.locator('.authgate .legacy-input[type="password"]').fill('secret123');
   await page.locator('.authgate__send', { hasText: 'Sign in' }).click();
   await expect(page.locator('.account__email')).toHaveText('me@example.com');
   await expect(page.locator('.authgate__title')).toHaveCount(0);
@@ -80,8 +80,8 @@ test('S25 forgot password — "Send reset link" shows the check-your-email state
   await page.goto('./', { waitUntil: 'load' });
   await page.locator('.authgate__link', { hasText: 'Forgot password?' }).click();
   await expect(page.locator('.authgate__title')).toHaveText('Reset your password');
-  await expect(page.locator('.authgate .input[type="password"]')).toBeHidden();
-  await page.locator('.authgate .input[type="email"]').fill('me@example.com');
+  await expect(page.locator('.authgate .legacy-input[type="password"]')).toBeHidden();
+  await page.locator('.authgate .legacy-input[type="email"]').fill('me@example.com');
   await page.locator('.authgate__send', { hasText: 'Send reset link' }).click();
   await expect(page.locator('.authgate__status--ok')).toContainText('Check your email');
 });

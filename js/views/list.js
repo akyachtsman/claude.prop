@@ -14,9 +14,9 @@ function monogram(name) {
 function badge(prop, m) {
   const cap = capVerdict(m.cap);
   const dscr = dscrVerdict(m.dscr);
-  if (cap === null && dscr === null) return el('span', { class: 'pill', text: 'No verdict' });
+  if (cap === null && dscr === null) return el('span', { class: 'legacy-pill', text: 'No verdict' });
   const pass = cap !== false && dscr !== false && (cap !== null || dscr !== null);
-  return el('span', { class: 'pill ' + (pass ? 'pill--pass' : 'pill--fail'), text: pass ? 'Meets benchmark' : 'Below benchmark' });
+  return el('span', { class: 'legacy-pill ' + (pass ? 'legacy-pill--pass' : 'legacy-pill--fail'), text: pass ? 'Meets benchmark' : 'Below benchmark' });
 }
 
 export function renderList(container, ctx) {
@@ -29,9 +29,9 @@ export function renderList(container, ctx) {
       el('h2', { text: 'No properties yet' }),
       el('p', { text: 'Add a property to underwrite it against your own CAP and DSCR targets, or load a sample deal to explore.' }),
       el('div', { class: 'empty__actions' }, [
-        el('button', { class: 'btn btn--primary', type: 'button', onclick: () => ctx.importUrl(), text: 'Import a listing' }),
-        el('button', { class: 'btn btn--ghost', type: 'button', onclick: () => ctx.newProperty(), text: 'Add your first property' }),
-        el('button', { class: 'btn btn--ghost', type: 'button', onclick: () => ctx.loadSample(), text: 'Load sample deal' }),
+        el('button', { class: 'legacy-btn legacy-btn--primary', type: 'button', onclick: () => ctx.importUrl(), text: 'Import a listing' }),
+        el('button', { class: 'legacy-btn legacy-btn--ghost', type: 'button', onclick: () => ctx.newProperty(), text: 'Add your first property' }),
+        el('button', { class: 'legacy-btn legacy-btn--ghost', type: 'button', onclick: () => ctx.loadSample(), text: 'Load sample deal' }),
       ]),
     ])]);
     return;

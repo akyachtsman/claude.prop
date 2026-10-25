@@ -56,3 +56,19 @@ layout are locked as the contract every downstream page inherits.
 - The comparison view and property list reuse: topbar, cards, KPI cells,
   pills, data-table (with `makeSortable` per design.md → Tables & sorting).
 - Estimated/model-seeded inputs use `.input--estimate` + an "estimated" pill.
+
+## House-style move, step 1 (2026-10-25)
+By owner ruling (2026-10-19) every project follows the one house style in
+`directives/design.md`; this project moves onto it with `/design-intake` 1c. The
+**owner palette ruling of 2026-10-25 keeps Banker Navy**: the decisions above on
+mood, accent, type and the one-screen density stand, and only the components,
+words, icons and patterns become the house ones. What step 1 changed (no visible
+change, proved by before/after screenshots of every screen at 390 and 1440 px):
+- `styles/components.css` is now the house file, verbatim; this project's own
+  components moved to `styles/legacy.css`, with the ten shared classes renamed
+  `legacy-<name>` (so `.input--estimate` above is now `.legacy-input--estimate`).
+- `styles/tokens.css` declares every house token name, with Banker Navy values.
+- The screens not yet on the house components are listed in `DESIGN-GAPS.md`;
+  step 2 moves them, in the order the owner picks. Until then, the "Rules for
+  downstream pages" above give way to `design.md`: a new screen uses the house
+  components, never a new `legacy-` class.

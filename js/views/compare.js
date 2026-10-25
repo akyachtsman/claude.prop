@@ -48,7 +48,7 @@ export function verdictPill(p, m) {
   const none = cap === null && dscr === null;
   const pass = cap !== false && dscr !== false && (cap !== null || dscr !== null);
   return el('span', { class: 'compare-verdict' }, [el('span', {
-    class: 'pill ' + (none ? '' : pass ? 'pill--pass' : 'pill--fail'),
+    class: 'legacy-pill ' + (none ? '' : pass ? 'legacy-pill--pass' : 'legacy-pill--fail'),
     text: none ? '—' : pass ? 'Meets' : 'Below',
   })]);
 }
@@ -59,7 +59,7 @@ export function renderCompare(container, ctx) {
     render(container, [el('div', { class: 'empty' }, [
       el('h2', { text: 'Compare needs 2+ properties' }),
       el('p', { text: 'Save at least two properties to line them up side by side.' }),
-      el('button', { class: 'btn btn--ghost', type: 'button', onclick: () => ctx.goList(), text: 'Back to properties' }),
+      el('button', { class: 'legacy-btn legacy-btn--ghost', type: 'button', onclick: () => ctx.goList(), text: 'Back to properties' }),
     ])]);
     return;
   }
@@ -117,7 +117,7 @@ export function renderCompare(container, ctx) {
     return b;
   }
 
-  const tableHost = el('div', { class: 'table-wrap' });
+  const tableHost = el('div', { class: 'legacy-table-wrap' });
   dragScroll(tableHost);
 
   function draw() {
@@ -136,12 +136,12 @@ export function renderCompare(container, ctx) {
   function sortHeader(key, label, isNum) {
     const active = sortKey === key;
     const th = el('th', {
-      scope: 'col', class: (isNum ? 'num ' : '') + 'th-sort' + (active ? ' th-sort--on' : ''),
+      scope: 'col', class: (isNum ? 'num ' : '') + 'legacy-th-sort' + (active ? ' legacy-th-sort--on' : ''),
       'aria-sort': active ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none',
     });
-    const btn = el('button', { class: 'th-sort__btn', type: 'button', title: `Sort by ${label}` }, [
-      el('span', { class: 'th-sort__label', text: label }),
-      el('span', { class: 'th-sort__caret', 'aria-hidden': 'true', text: active ? (sortDir === 'asc' ? '▲' : '▼') : '↕' }),
+    const btn = el('button', { class: 'legacy-th-sort__btn', type: 'button', title: `Sort by ${label}` }, [
+      el('span', { class: 'legacy-th-sort__label', text: label }),
+      el('span', { class: 'legacy-th-sort__caret', 'aria-hidden': 'true', text: active ? (sortDir === 'asc' ? '▲' : '▼') : '↕' }),
     ]);
     btn.addEventListener('click', () => {
       if (sortKey === key) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
@@ -248,7 +248,7 @@ export function renderCompare(container, ctx) {
   render(container, [
     el('div', { class: 'list-head' }, [
       el('h1', { text: 'Compare' }),
-      el('button', { class: 'btn btn--ghost', type: 'button', onclick: () => ctx.goList(), text: 'Back to properties' }),
+      el('button', { class: 'legacy-btn legacy-btn--ghost', type: 'button', onclick: () => ctx.goList(), text: 'Back to properties' }),
     ]),
     el('div', { class: 'compare-controls' }, [seg]),
     el('p', { class: 'fineprint', text: 'Uncheck a property to leave it out of the comparison — check it back in anytime. Click a column header to sort. Best value per metric is green, worst is red; no-data is neutral.' }),
