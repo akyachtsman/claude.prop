@@ -771,13 +771,26 @@ body {
    phone, so it reflows — brand + nav stay at the top (nav wraps to its own line
    if needed), the center slot (title/switcher/pills/actions) drops to a
    full-width row below and wraps, and the switcher subtitle truncates instead of
-   forcing width. Prevents horizontal page scroll at phone width; desktop is
-   unchanged. Placed after the base .topbar rules so its flex shorthand wins. */
-@media (max-width: 680px) {
+   forcing width. Prevents horizontal page scroll at phone and iPad-portrait
+   width (at 681-960px the dashboard was 914px wide, so 960 not 680); wider
+   screens wrap the nav instead (the min-width: 961px rule below). Placed after the base .topbar rules so its flex
+   shorthand wins. */
+@media (max-width: 960px) {
   .topbar { flex-wrap: wrap; gap: var(--space-2); padding: var(--space-2) var(--space-3); min-height: 0; }
   .topbar__center { order: 3; flex: 1 1 100%; flex-wrap: wrap; gap: var(--space-2) var(--space-3); }
   .topbar__nav { flex-wrap: wrap; }
+  /* The three verdict pills wrap at phone width instead of widening the page
+     past the screen (measured 7px over at 390-393px on the dashboard). */
+  .topbar__pills { flex-wrap: wrap; }
   .switcher__title .sub { display: block; overflow: hidden; text-overflow: ellipsis; }
+}
+/* Above the phone reflow, the dashboard's centre group (switcher, pills,
+   undo/redo) needs about 1290px on one line. Below that it used to shrink past
+   its content and paint over the nav, so Undo sat on Restore at 1024-1080px.
+   Now the centre keeps its content width and the nav wraps to a second row. */
+@media (min-width: 961px) {
+  .topbar { flex-wrap: wrap; row-gap: 0; }
+  .topbar__center { min-width: min-content; }
 }
 /* final one-screen rhythm trim */
 .legacy-card .legacy-input { min-height: 26px; }
@@ -854,6 +867,11 @@ body.is-readonly #view button:not(.topbar__link):not(.switcher__btn) {
   border-radius: var(--radius-lg); box-shadow: var(--shadow-md);
   padding: var(--space-6); width: 100%; max-width: 420px;
   display: flex; flex-direction: column; gap: var(--space-3);
+  /* Fits a short screen (an iPhone on its side) and scrolls inside itself by
+     finger rather than running off the top and bottom; design.md -> iPhone and
+     iPad. vh first for engines without dvh. */
+  max-height: 88vh; max-height: 88dvh;
+  overflow-y: auto; overscroll-behavior: contain;
 }
 .modal__close {
   position: absolute; top: 10px; right: 12px; z-index: 1;
@@ -898,7 +916,8 @@ body.is-readonly #view button:not(.topbar__link):not(.switcher__btn) {
 .gallery__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .gallery__grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: var(--space-3); max-height: 52vh; overflow-y: auto;
+  gap: var(--space-3); max-height: 52vh; max-height: 52dvh; overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .gallery__empty { color: var(--color-text-secondary); font-size: var(--font-sm); margin: 0; padding: var(--space-6) 0; text-align: center; }
 .gallery__cell { position: relative; margin: 0; }
@@ -920,7 +939,9 @@ body.is-readonly #view button:not(.topbar__link):not(.switcher__btn) {
   position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
   gap: var(--space-3); padding: var(--space-6); background: rgba(10, 20, 34, 0.88);
 }
-.lightbox__img { max-width: min(90vw, 1100px); max-height: 86vh; object-fit: contain; border-radius: var(--radius-md); }
+/* min-width: 0 lets the photo shrink between the arrows: a flex item's default
+   minimum is its own width, which pushed both arrows off a phone's screen. */
+.lightbox__img { min-width: 0; max-width: min(90vw, 1100px); max-height: 86vh; max-height: 86dvh; object-fit: contain; border-radius: var(--radius-md); }
 .lightbox__nav {
   flex: none; width: 44px; height: 44px; border: none; border-radius: var(--radius-pill);
   background: rgba(255, 255, 255, 0.14); color: #fff; font-size: 26px; line-height: 1; cursor: pointer;
@@ -935,3 +956,5 @@ body.is-readonly #view button:not(.topbar__link):not(.switcher__btn) {
 }
 .lightbox__close:hover, .lightbox__close:focus-visible { background: rgba(255, 255, 255, 0.28); }
 .lightbox__cap { position: fixed; bottom: 18px; left: 0; right: 0; text-align: center; color: #E6EEF8; font-size: var(--font-sm); font-variant-numeric: tabular-nums; }
+/* On a phone the desktop padding leaves the photo about half the screen wide. */
+@media (max-width: 680px) { .lightbox { padding: var(--space-2); gap: var(--space-1); } }

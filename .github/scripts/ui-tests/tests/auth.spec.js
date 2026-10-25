@@ -4,7 +4,7 @@
 // leak), a working password sign-in, the forgot-password send state, the
 // signed-in chrome, offline read-only, and the first-sign-in account seed.
 import { test, expect } from '@playwright/test';
-import { installSignedIn } from './_supabase-mock.js';
+import { installSignedIn, seedLocalDealForReconcile } from './_supabase-mock.js';
 
 test.use({ viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false });
 // ⚠️ THE FILE-SCOPE `test.use({ viewport })` ABOVE REPLACES EVERY PROJECT'S WIDTH,
@@ -159,21 +159,7 @@ test('DISMISS account modal — the local-deals prompt closes by control, Escape
   // iphone 6.8s. Three full reloads (the prompt is once-per-account, so each path
   // needs a fresh one), and webkit on this runner is the slow case. 60s is ~9x.
   test.setTimeout(60_000);
-  const localDeal = {
-    id: 'p-local-dismiss', schemaVersion: 1, name: 'Dismiss Fixture',
-    info: { askingPrice: 500000, rentableSF: 5000, lotSize: '', yearBuilt: '', zoning: '', hvacAge: '', roofAge: '', parking: '', ceilingHeight: '', appraisedValue: 0, apn: '', bedrooms: '', baths: '' },
-    targets: { desiredCap: 0.06, desiredDscr: 1.25 },
-    offer: { offerPrice: 450000, fees: 0, improvements: 0 },
-    loans: [{ ltv: 0.7, rate: 0.065, termYears: 25, maturityYears: 0, type: 'CONV' }, { ltv: 0, rate: 0.065, termYears: 25, maturityYears: 0, type: 'IO' }],
-    tenants: [], expenses: [],
-    assumptions: { minOppCostEquity: 0.15, taxRate: 0.28, collectionLoss: 0.05, cashflowAppr: 0.02, capitalAppr: 0.02 },
-  };
-  await page.addInitScript((d) => {
-    localStorage.setItem('propanalytics.v1', JSON.stringify(d));
-    Object.keys(localStorage)
-      .filter((k) => k.startsWith('propanalytics.reconciled.'))
-      .forEach((k) => localStorage.removeItem(k));
-  }, [localDeal]);
+  await seedLocalDealForReconcile(page);
   await installSignedIn(page, { seed: [], reconcile: true });
 
   for (const dismiss of [

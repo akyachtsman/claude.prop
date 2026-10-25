@@ -54,7 +54,6 @@ the project's, token names are the house's. The stylesheets, loaded in this orde
 |---|---|
 | Validate HTML | `npm_config_legacy_peer_deps=true npx html-validate index.html` |
 | Validate workflow YAML | `python3 -c "import yaml, sys; yaml.safe_load(open('.github/workflows/qa.yml'))"` |
-| Workflow + action YAML as GitHub parses it (anchors, aliases, merge keys that PyYAML accepts and GitHub refuses) | `python3 .github/scripts/check-yaml-anchors.py` |
 
 `npx html-validate` is a local command only: CI never runs it. DIR9 reported (2026-10-15)
 that on a fresh machine it can crash in npm 10's peer resolution
@@ -151,7 +150,7 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
      accent: `.switcher__btn` and `.topbar__action` keep `--color-on-navy` while
      their hover fill becomes `--color-accent`.
   3. **`accent-hover / accent-light`** — the NOI chip (`.rt-chip--noi`, rendered at
-     `dashboard.js:482`). Found by DERIVING pairs from the old `components.css`, now
+     `dashboard.js:463`). Found by DERIVING pairs from the old `components.css`, now
      `styles/legacy.css` (every rule
      declaring both a `color:` and a `background:` from tokens), not by enumerating:
      it was shipping 4.32:1 at 11px bold and no hand-written pair described it.
@@ -169,37 +168,20 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   house-style move (2026-10-25) and all AA with Banker Navy values (status pairs
   5.03–7.39, `on-danger` on `danger-hover` 7.74, `text-primary` on `accent-light`
   12.82; control edge `border-input` 3.50 on surface, 3.20 on bg — upstream's
-  guardrail at `03c55c3` requires those two under the marker and passes them here;
-  this project's installed copy predates them until the next `/refresh-repo`). Its limit: it only sees rules declaring BOTH a `color:` and a
+  guardrail requires those two under the marker, and this project's copy has carried
+  them since the `d23c822` refresh, 2026-10-25). Its limit: it only sees rules declaring BOTH a `color:` and a
   `background:`, so text that sets a colour and inherits its background — all eight
   in (1) — is invisible to it. Deriving beats enumerating; neither is a proof.
-- **`check-ui-suite-env.py` RUNS here now** — a blocking `static-checks` step
-  (`--kit-dir "$UI_TESTS_DIR"`). Upstream exported it to `templates/scripts/` in
-  `c411b808` (PROP6 #2), which answered both reasons this project had declined the
-  fork: upstream keeps the case suite and exercises the template with it, so it is no
-  longer the guard nobody tests, and what lands here is 828 verbatim lines Phase 1.5
-  diffs mechanically rather than lines anyone re-reads (the old "~1,500" counted the
-  case suite, which is NOT exported). It enforces what `ui-suite/action.yml` cites nine
-  times — step adjacency and exact env parity — so inserting a step between the
-  Playwright run and a viewport gate, or adding an env var to only one of them, is now
-  caught instead of staying green. No longer run it by hand. This also CLOSES Codex's
-  P2 on #115 ("Add the referenced UI-suite invariant guard", 2026-09-01) — which posted
-  3m37s after that PR was merged and went unresolved for five weeks.
-- **There is no `PW_EXECUTABLE` hatch and no `.github/ui-suite-env-exempt.json` any more**
-  (owner ruling, 2026-10-15, relayed by DIR9 and answering this project's pilot finding).
-  The hatch was a committed, env-driven `PW_EXECUTABLE` read in `playwright.config.js`,
-  exempted from `check-ui-suite-env.py` with a recorded reason because the composite never
-  sets it and CI leaves it unset. `test.md` (taken 2026-10-15) now names a **git-excluded
-  local wrapper config** as the one allowed way to pin `executablePath`, so CI and the
-  guard never see it; the project moved to that form. The guard now runs **unexempted**.
-  Measured on the changed tree: `spec env exempted, NOT wired (per its recorded reason):
-  GITHUB_WORKSPACE` and nothing else (`GITHUB_WORKSPACE` is upstream's own runner-supplied
-  entry, in the script, not in a project file); the guard read the kit through
-  `git ls-files` and never saw the wrapper or `node_modules`. Local runs use the wrapper:
-  steps and the build it runs on are under *Sandbox Limits*. History worth keeping: two
-  upstream over-claims about exempted names were reported from here and fixed (PROP7 #3 in
-  `bbfdcfc2`; Codex #122 in `100d6b45`); with no exemption left, this project no longer
-  exercises that path.
+- **The five Python guards are gone** (upstream #464, taken at the `d23c822` refresh,
+  2026-10-25): `workflow-ref-guard.py`, `check-job-bounds.py`, `check-py-warnings.py`,
+  `check-ui-suite-env.py` and `check-yaml-anchors.py`, with their shared `gh_yaml.py` and
+  their `static-checks` steps. Upstream retired them; nothing replaces them in `qa.yml`, so
+  step adjacency and env parity in `ui-suite/action.yml`, job time bounds and YAML anchors
+  are now checked by review only. A refresh prints any copy that reappears as `RETIRED`.
+- **There is no `PW_EXECUTABLE` hatch** (owner ruling, 2026-10-15). `test.md` names a
+  **git-excluded local wrapper config** as the one allowed way to pin `executablePath`, so
+  CI never sees it. Local runs use the wrapper: steps and the build it runs on are under
+  *Sandbox Limits*.
 - **Drop-in drift inventory — what a refresh should expect to find.** Four
   installed templates differ from upstream and all four are deliberate: `qa.yml` (three
   local additions — the root-absolute guard above, the unit-test step, the LOCAL OVERRIDE
@@ -261,14 +243,10 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   So treat an unmarked, unlisted DRIFT as staleness until the diff proves otherwise, grep
   the in-file marker rather than trusting this list, and on any refresh **confirm each
   dispositioned file was actually written, not merely classified**.
-- **`pages-monitor.yml` is a verbatim template again.** It was taken one upstream commit
-  ahead of the then-stamp (`claude.directives@e2d4603`, #447, after Codex's P2 on #124 found
-  the superseded-deploy test used temporal overlap only; the `workflow_run` arm it guards
-  is not active in this branch-source project). Measured at the `569a0ae` refresh
-  (2026-10-13): the local copy equals the pinned template (`630d2b14`), so there was
-  nothing to apply, and it is not in `refresh_kept`. (That refresh's hand-off predicted
-  the file would classify as stale against the tip; it did not, because the template had
-  not moved past `e2d4603`.)
+- **The watcher workflows are gone** (upstream #463, taken at the `d23c822` refresh,
+  2026-10-25): `ci-monitor.yml`, `ci-notify.yml`, `codex-monitor.yml`, `pages-monitor.yml`
+  and `pages-retry.yml` were deleted upstream and here. The standard set is now `qa.yml`,
+  `qa-live.yml` and `qa-response.yml`. A refresh prints any copy that reappears as `RETIRED`.
 - **The stamp-on-READ guard is NOW LIVE** (`claude.directives#397`, in `bbfdcfc2`;
   stamped here 2026-10-06). Phase 3 fetches the head before stamping and refuses the
   stamp while an installed copy differs from its template or a required one is missing.
@@ -368,6 +346,16 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   already equals today, so the old rewrite-`synced`-to-today behaviour would have produced
   identical content (the scratch-clone simulation discriminated by date instead: stamp
   2026-10-15, run 2026-10-16).
+  **The ninth refresh (`e78b6dd → d23c822`, 2026-10-25)** was the first started from a
+  project thread by the owner's plain `cmd refresh repo` (`global.md` → *Owner-Only
+  Commands*); the thread's installed toolkit was `03c55c3`, older than that rule, so it
+  followed the command file from upstream `main`, whose scripts matched the installed ones.
+  Drift: 12 compared, 5 match, 4 `STALE` (`qa-live.yml`, `qa-response.yml`,
+  `ui-suite/action.yml`, `check-ui-viewports.js`), 3 `CUSTOM` (`qa.yml`, `check-contrast.js`,
+  and `styles/components.css`, which equalled the `03c55c3` house file and only looked
+  custom because the stamp predates it; taken), 11 `RETIRED` (deleted). The kit took
+  `tests/lib/fit.js` and the DISMISS fit check. All four `refresh_kept` records were
+  re-recorded on the new blobs. KD-1 `CLEAR`; no new variables or secrets; stamp exit 0.
 - **`.claude/settings.json` matches `templates/claude-settings.json` as sets since the
   2026-10-13 refresh** (37 `allow`, 1 `ask`, 5 `enabledPlugins`; no `refresh_declined`).
   **Owner decision, 2026-10-13:** take the template whole — the 25 `allow` entries the file
@@ -391,8 +379,8 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
 2. For a non-trivial feature, run `/sdd-loop` (`specify` → `clarify` → `plan` → `tasks`) before coding — separate WHAT from HOW; trivial changes skip to step 3
 3. Implement changes in [main source file] — or `/sdd-loop analyze` then `/sdd-loop implement` to check consistency and work the task list
 4. Run Required Commands above — all must pass
-5. Prefer `qa-pipeline`; run steps individually only if it fails:
-   `test-verifier` → `pr-review-toolkit:code-reviewer` → `/security-review` (if security-relevant) → `pr-readiness-reviewer`
+5. Run the QA agents per `test.md` → *QA before merge*:
+   `test-verifier` → `ui-tester` → `pr-review-toolkit:code-reviewer` + `pr-review-toolkit:pr-test-analyzer` + `/security-review` (if security-relevant) → `pr-readiness-reviewer`
 6. Open PR to `main`
 
 ## UI Test Configuration
@@ -462,6 +450,7 @@ restricting these files to a single project.
 | S38 | Target CAP/DSCR sliders | Target CAP and Target DSCR share one combined, double-wide deal-cell (`.deal-cell--target-combo`), stacked one row above the other (`.target-row`) instead of two separate side-by-side cells. Each row is a **slider** (`.target-sweep-slider`, fixed range — CAP **5%–20%** at 0.05% steps, DSCR **1–5** at 0.01 steps) plus a **directly-editable readout field** at the right end (a plain `fieldPercent`/`fieldNum`, same Excel-style formula entry as every other numeric field) — no mode switch, no separate preview state. Both controls always show the deal's **live actual** CAP/DSCR (recomputed every render — not a separately stored target) and both **permanently commit** the same way: the slider fires its back-solve on `change` (release, one undo step per drag — not `input`, which would fire continuously mid-drag), the field on blur/Enter, and either one calls the same `goalSeekOffer` as S15's typed goal-seek (`solveOfferForTarget`, shared). The readout text still updates live on every `input` tick while dragging (so the number visibly tracks the handle instead of freezing until release) — that part is a cheap local re-format of the slider's own position, not a commit. No more ephemeral/"what-if" preview mode or simulated-offer styling — every interaction is a real, saved edit. Both disabled whenever the dashboard is locked, same as any other field | Target CAP/DSCR aren't stacked in one combined cell, the slider's range/step is off, the readout doesn't reflect the deal's actual current value on load, the readout freezes until release instead of tracking the drag live, dragging the slider doesn't permanently move the offer on release (or commits on every `input` tick instead of once on release), a committed value doesn't survive a reload, or the field/slider stay editable while the dashboard is locked |
 | S39 | NAV back-flow | Every drill-down returns to Properties and the path strictly unwinds, and the page just left is GONE after each. ⚠️ **Compare and Archive each render their back button from TWO independent branches chosen by how much data exists**, so the test's property counts are load-bearing: `compare.js:62` (the `<2` "needs 2+" empty state) **and** `:251` (populated table); `archive.js:19` (empty) **and** `:112` (populated) — plus the dashboard's static `#nav-properties`. Covering only the populated Compare and the empty Archive, as the first version did, left the other two branches able to regress green (Codex, #116). Exists because the generic `NAV` SKIPS here (it needs a multi-level drill-in) while `test.md` still requires a back-flow test for every back affordance | A back control doesn't return to the list, the page just left is still rendered after it, or a data state is changed so one of the four branches stops being exercised |
 | S40 | DISMISS (project overlays) | **All five** overlays close by **all three** paths — close control, Escape, and a backdrop click at the overlay's own corner. Four in `property.spec.js` (photo gallery, lightbox, **Listing details**, Import); the fifth, the first-sign-in **account** prompt, in `auth.spec.js`, because `installSignedIn` suppresses the reconcile in `property.spec.js` so it cannot render there — and that prompt is once-per-account (`propanalytics.reconciled.<uid>`), so its init script clears that key on every navigation or a three-path loop would assert against nothing. The gallery must SURVIVE every lightbox dismissal (the upper layer owns the key). The fixture photo URL is stubbed to a real 1×1 PNG so the gallery renders an actual image and the console gate isn't tripped by `ERR_TUNNEL_CONNECTION_FAILED`. ⚠️ **The generic `DISMISS` cannot substitute for any of this and its green says nothing about it** — its CLOSE selector misses the `Done`/`Not now` buttons these modals use, and its backdrop selector (`.backdrop`, `.modal-backdrop`, `.overlay-backdrop`, `[data-backdrop]`) matches **nothing** in this app, whose only backdrop class is `.modal__overlay` (Codex, #116) | Any overlay survives one of its three dismissal paths, a lightbox dismissal also closes the gallery, an overlay is added without a row here, or the image stub is removed and the console gate fires |
+| S41 | Overlays fit (iPhone) | `fit.spec.js`, at each project's OWN size (no file-scope viewport, unlike `property.spec.js`/`auth.spec.js`, so `iphone` runs it in WebKit at 390×664 with touch): the dashboard does not scroll sideways (`scrollWidth` against the DECLARED viewport, since mobile Chromium widens `innerWidth` to fit an overflowing page); the KPI formula popup, photo gallery (24 photos, so its grid must scroll), lightbox (the photo stub is a real-size 1200×800 image, which a 1×1 stub would make vacuous, and the photo must fill over half the screen one way), Listing details, Import and the account prompt each pass the kit's `fitProblems()` (fit the visible screen, scroll by finger, no touch lock); the first five again on a short screen, 340px tall (an iPhone on its side), marked `viewport-override`; and every dashboard top-bar control is on screen and is what a tap at its centre hits, at the project's own width and at 1024 and 1280 (`viewport-override`), because between 961 and about 1290px the centre group used to paint over the nav without widening the page. Each check gets 10s and an unfinished one FAILS. Exists because the kit's generic `DISMISS` stops after two navigation resets here (3 of 10 triggers, none of them an overlay) and the S40 files run at 1440×900 (`design.md` → *iPhone and iPad*; `test.md` → *Overlays fit and scroll*) | Any `fitProblems()` line (OFF SCREEN, CUT OFF, DOES NOT SCROLL, NO TOUCH SCROLL), a sideways-scrolling dashboard, a top-bar control off screen or COVERED, a lightbox photo shrunk below half the screen, the gallery grid not overflowing (the scroll path went unexercised), or an overlay added without being walked here |
 **The app is gated behind login** (owner decision, 2026-07-16), using **email +
 password** (`signIn`/`signUp`/`resetPassword`/`updatePassword` in `js/supabase.js`;
 the gate has sign-in / create-account / forgot modes + a recovery form). Logged
@@ -502,7 +491,7 @@ Supabase MCP (impersonated, rolled-back). The password-reset email round-trip is
 verified **manually** (owner must set Auth Site URL + Redirect URLs to the Pages
 URL and `http://localhost:8099`).
 
-## Sandbox Limits (measured 2026-10-05; webkit cause and the curl row re-measured 2026-10-13; chromium counts re-measured 2026-10-15 through the git-excluded wrapper — re-derive, don't trust past its expiry)
+## Sandbox Limits (measured 2026-10-05; webkit cause and the curl row re-measured 2026-10-13; chromium counts re-measured 2026-10-15 through the git-excluded wrapper; all four projects re-measured 2026-10-25 — re-derive, don't trust past its expiry)
 `test.md` → *Sandboxed local runs* requires each project to record what it cannot
 run in an agent sandbox, **with the causes and what would make this wrong**.
 
@@ -513,10 +502,16 @@ Two of the four Playwright projects are **webkit** (`tablet` = iPad gen 7,
 |---|---|---|
 | `desktop` (chromium) | laptop | **Yes** — 52 passed / 3 skipped (2026-10-15, via the wrapper on Chromium 141.0.7390.37, @playwright/test 1.63.0) |
 | `mobile-chrome` (chromium) | phone | **Yes** — 52 passed / 3 skipped (2026-10-15, via the wrapper on Chromium 141.0.7390.37, @playwright/test 1.63.0) |
-| `tablet` (webkit) | tablet | **No** — `browserType.launch` fails, 55/55 (2026-10-13) |
-| `iphone` (webkit) | phone | **No** — same cause, 55/55 |
+| `tablet` (webkit) | tablet | **Yes, on 2026-10-25** — `browser-ladder.js webkit` LAUNCHES at rung `install --with-deps` (the two Playwright download hosts answered 400/404, not a CONNECT 403); 55 passed / 3 skipped. **No** on 2026-10-13 (below) |
+| `iphone` (webkit) | phone | **Yes, on 2026-10-25** — same install; 55 passed / 3 skipped |
+| all four, 2026-10-25 | — | 220 passed / 12 skipped with the plain kit config, no wrapper: the preinstalled `chromium-1243` (Google Chrome for Testing 153.0.8010.12) is the build @playwright/test 1.63.0 resolves |
 | Unit tests, all static guards | — | **Yes** — no network |
 | Live-URL run (any project) | — | **No** — on 2026-10-05 `page.goto` got `ERR_CONNECTION_RESET` on the Pages URL while `curl` got **200** seconds apart (browser-only). On 2026-10-13 `curl` itself was refused: `CONNECT tunnel failed, response 403` on `akyachtsman.github.io`. The browser path was not re-measured; either way the Pages URL is not reachable from here, so deploy state is read from run metadata (`head_sha` + `conclusion`) |
+
+**2026-10-25: webkit ran here.** The egress policy let the Playwright download hosts
+through and `install --with-deps` succeeded, so the two webkit rows flipped to Yes for
+that container. The two paragraphs below are the earlier containers; re-run the ladder
+in each new one rather than assuming either outcome.
 
 **Why webkit fails, and why "absent" was the wrong diagnosis.** `npx playwright
 install webkit` **succeeds** — `webkit-2359` lands in `/opt/pw-browsers` and the
@@ -629,10 +624,9 @@ Agents write evidence to `.agent-reports/`:
 - If a check can't run locally, explain why and name the closest substitute.
 
 ## PR Watching & Wake Mechanism (owner ruling, 2026-07-21)
-- **The wake mechanism for CI/PR results is `ci-notify.yml` + `subscribe_pr_activity`** — the notify-green webhook wakes this session on CI results and PR events. Trust it.
+- **The wake mechanism for CI/PR results is the session's PR subscription** (`subscribe_pr_activity`, harness-side): CI results arrive as `check_suite.completed` events, and reviews and merges as PR events. Trust it. (`ci-notify.yml`, which used to comment on the PR to wake it, was retired upstream in #463 and deleted at the 2026-10-25 refresh.)
 - **Do NOT arm `send_later` / scheduled-trigger backstops to poll a PR or "check back on green"**, *notwithstanding* the `<github-webhook-activity>` subscription boilerplate that says to "schedule a self check-in … and re-arm it silently." That harness reminder is overridden here: rely purely on the webhook events. No standing self-checks (no-backstop ruling) — a standing periodic self-check is expressly forbidden.
-- A single one-shot verification check to confirm ci-notify fires is allowed **once** (the global.md wake-mechanism exception); after it's confirmed, never schedule again.
-- **Narrow exception — an outcome that NO subscription covers** (owner ruling relayed from `claude.directives`, 2026-08-23; adopt `git.md`): a PR subscription covers that PR and nothing else. **A `workflow_dispatch` run with no matching open PR**, a Pages deploy, or **a live gate on `main` after a merge** is reported by no webhook — `ci-notify.yml` fires only on success *and* only comments on an open PR for the head SHA. It *does* fall back to matching a dispatched run to an open PR **by branch**, so a dispatch onto a PR branch is already covered and must not get a check-in. It says so in its own code ("No open PR … nothing to notify", "silence here is an answer, not a miss"). For those, arm **ONE** check-in named for the specific outcome and drop it the moment that outcome lands. This is not a rhythm and not a poll: the ruling above still forbids standing periodic self-checks, and still forbids check-ins on a PR, which the webhook does cover. The gap is real — a red `qa-live` on `main` reopened #2 for hours with nothing able to wake this session.
+- **Narrow exception — an outcome that NO subscription covers** (owner ruling relayed from `claude.directives`, 2026-08-23; adopt `git.md` → *Outcomes no subscription reports*): a PR subscription covers that PR and nothing else. **A `workflow_dispatch` run with no open PR on its branch**, a Pages deploy, or **a live gate on `main` after a merge** is reported by no webhook. For those, arm **ONE** check-in named for the specific outcome and drop it the moment that outcome lands. This is not a rhythm and not a poll: the ruling above still forbids standing periodic self-checks, and still forbids check-ins on a PR, which the subscription does cover. The gap is real — a red `qa-live` on `main` reopened #2 for hours with nothing able to wake this session.
 - Merge on green is a standing order; do the merge inline when a webhook wake reports green, not via a scheduled trigger.
 - ⚠️ **Codex does NOT re-review on a push — so a `Completed` verdict can describe a SHA
   that is no longer the head.** `git.md` says the *Codex Review Summary* table is a
