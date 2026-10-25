@@ -6,11 +6,11 @@
 <title>Property Analytics</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23132E4E'/%3E%3Cpath d='M8 22V13l8-6 8 6v9' fill='none' stroke='%230E7C6D' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="styles/tokens.css">
-<link rel="stylesheet" href="styles/components.css">
+<link rel="stylesheet" href="styles/legacy.css">
 </head>
 <body>
 
-<header class="topbar">
+<header class="topbar legacy-screen">
   <a class="topbar__brand" href="#/">
     <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#132E4E"/><path d="M8 22V13l8-6 8 6v9" fill="none" stroke="#0E7C6D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
     Property Analytics
@@ -24,11 +24,11 @@
   </nav>
 </header>
 
-<div id="offline-banner" class="offline-banner" role="status" hidden>
+<div id="offline-banner" class="offline-banner legacy-screen" role="status" hidden>
   You're offline — viewing cached deals. Reconnect to edit.
 </div>
 
-<main id="view" class="page"></main>
+<main id="view" class="legacy-page legacy-screen"></main>
 
 <script type="module" src="js/app.js"></script>
 </body>

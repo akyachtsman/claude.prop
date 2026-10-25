@@ -1,8 +1,36 @@
-/* ── components.css — reusable elements, all values from tokens.css ────────
+/* ── legacy.css — this project's own components, kept during the house move ──
    Built at /design-intake (2026-07-14, "banker navy"; one-screen landscape
-   density per owner feedback). Every page uses these classes so the look
-   stays consistent page-to-page. iPad rules: 44px tap targets, 48px inputs,
-   16px+ input font, :focus-visible everywhere, reduced-motion honored. */
+   density per owner feedback) as styles/components.css. Moved here in step 1
+   of the house-style move (/design-intake 1c, claude.directives #470): every
+   class this file shared with the house components.css is renamed legacy-<name>
+   (with its --/__ family), so the old screens keep their exact look while the
+   house file loads before this one. Step 2 moves the screens one at a time
+   (DESIGN-GAPS.md); step 3 deletes this file once no legacy- class is used.
+   iPad rules: 44px tap targets, 48px inputs, 16px+ input font, :focus-visible
+   everywhere, reduced-motion honored. */
+
+/* house page base, held back on the old screens --------------------------
+   The house components.css loads first and sets a page base (body, headings,
+   links, images, form controls). Each rule below restores the old screens'
+   value under .legacy-screen, the class every old screen's root carries
+   (#view, the top bar, the offline banner, each overlay and the toast), so a
+   screen moved in step 2 drops the class and takes the house base. Each
+   selector is the house's own behind :where(.legacy-screen), so it ties the
+   house rule on specificity and wins on load order, while this file's own
+   class rules further down still win as before. Found by before/after
+   screenshots of every screen at 390 and 1440 px (/design-intake 1c, step 7). */
+/* body's overflow-wrap: anywhere lets cards, grid tracks and table cells
+   shrink below their longest word; inherited, so set once on each root. */
+.legacy-screen { overflow-wrap: normal; }
+:where(.legacy-screen)::before, :where(.legacy-screen)::after,
+:where(.legacy-screen) *::before, :where(.legacy-screen) *::after { box-sizing: content-box; }
+/* revert = the browser's own value, which is what these had before. */
+:where(.legacy-screen) :is(h1, h2, h3) { line-height: revert; margin: revert; font-size: revert; }
+:where(.legacy-screen) a { color: revert; }
+/* the house ring is 3px and outranks this file's bare :focus-visible below */
+:where(.legacy-screen) a:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+:where(.legacy-screen) :is(img, video) { max-width: revert; height: revert; }
+:where(.legacy-screen) :is(button, input, select, textarea) { font-family: revert; }
 
 /* base ---------------------------------------------------------------- */
 * { box-sizing: border-box; }
@@ -81,7 +109,7 @@ body {
 .topbar__pills { display: flex; gap: var(--space-2); flex-wrap: nowrap; margin-left: auto; }
 /* Compact the topbar verdict pills so all three (CAP, DSCR, 5Y NPV) fit the
    signed-in row without crowding the nav. */
-.topbar__pills .pill { font-size: 11px; padding: 2px 7px; }
+.topbar__pills .legacy-pill { font-size: 11px; padding: 2px 7px; }
 /* Wide rows (the owner's full-screen ≥1600 target): pin the pills to the true
    center of the topbar — not merely the middle of the switcher↔actions gap,
    which reads left-of-center because the nav on the right is heavy. Absolute
@@ -112,21 +140,21 @@ body {
 .topbar__link--active { background: var(--color-navy-soft); }
 
 /* page frame — full-width, one-screen density -------------------------- */
-.page { max-width: 1760px; margin: 0 auto; padding: var(--space-2) var(--space-4); }
+.legacy-page { max-width: 1760px; margin: 0 auto; padding: var(--space-2) var(--space-4); }
 .eyebrow {
   font-size: var(--font-xs); font-weight: 700; text-transform: uppercase;
   letter-spacing: var(--tracking-wide); color: var(--color-text-secondary);
 }
 
 /* cards ----------------------------------------------------------------- */
-.card {
+.legacy-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
 }
-.card > .eyebrow { display: block; margin-bottom: var(--space-2); }
-.grid { display: grid; gap: var(--space-2); grid-template-columns: repeat(12, 1fr); }
+.legacy-card > .eyebrow { display: block; margin-bottom: var(--space-2); }
+.legacy-grid { display: grid; gap: var(--space-2); grid-template-columns: repeat(12, 1fr); }
 .col-12 { grid-column: span 12; }
 .col-6 { grid-column: span 6; }
 .col-5 { grid-column: span 5; }
@@ -222,57 +250,57 @@ body {
 }
 
 /* pills ------------------------------------------------------------------ */
-.pill {
+.legacy-pill {
   display: inline-flex; align-items: center; gap: var(--space-1);
   font-size: var(--font-xs); font-weight: 700;
   padding: 3px var(--space-2); border-radius: var(--radius-pill);
   background: var(--color-neutral-bg); color: var(--color-neutral-text);
   white-space: nowrap;
 }
-.pill--pass { background: var(--color-pass-bg); color: var(--color-pass-text); }
-.pill--fail { background: var(--color-fail-bg); color: var(--color-fail-text); }
+.legacy-pill--pass { background: var(--color-pass-bg); color: var(--color-pass-text); }
+.legacy-pill--fail { background: var(--color-fail-bg); color: var(--color-fail-text); }
 
 /* buttons ------------------------------------------------------------------ */
-.btn {
+.legacy-btn {
   font: inherit; font-weight: 700; font-size: var(--font-base);
   min-height: 44px; padding: 10px var(--space-5);
   border-radius: var(--radius-md); border: 1px solid transparent;
   cursor: pointer; display: inline-flex; align-items: center; gap: var(--space-2);
   transition: background 0.15s ease, border-color 0.15s ease;
 }
-.btn--primary { background: var(--color-accent); color: var(--color-on-accent); }
-.btn--primary:hover, .btn--primary:focus-visible { background: var(--color-accent-hover); }
-.btn--ghost {
+.legacy-btn--primary { background: var(--color-accent); color: var(--color-on-accent); }
+.legacy-btn--primary:hover, .legacy-btn--primary:focus-visible { background: var(--color-accent-hover); }
+.legacy-btn--ghost {
   background: var(--color-surface); color: var(--color-text-primary);
   border-color: var(--color-border);
 }
-.btn--ghost:hover, .btn--ghost:focus-visible { border-color: var(--color-border-hover); background: var(--color-bg); }
+.legacy-btn--ghost:hover, .legacy-btn--ghost:focus-visible { border-color: var(--color-border-hover); background: var(--color-bg); }
 
 /* inputs --------------------------------------------------------------------- */
-.field { display: flex; flex-direction: column; gap: var(--space-1); }
-.field__label { font-size: var(--font-sm); font-weight: 600; color: var(--color-text-secondary); }
-.input {
+.legacy-field { display: flex; flex-direction: column; gap: var(--space-1); }
+.legacy-field__label { font-size: var(--font-sm); font-weight: 600; color: var(--color-text-secondary); }
+.legacy-input {
   font: inherit; font-size: 16px;             /* never below 16px (iOS zoom) */
   min-height: 48px; padding: 10px var(--space-3);
   border: 1px solid var(--color-border); border-radius: var(--radius-md);
   background: var(--color-surface); color: var(--color-text-primary);
   width: 100%;
 }
-.input:hover { border-color: var(--color-border-hover); }
-.input:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 0; border-color: var(--color-accent); }
-.input--estimate { background: var(--color-accent-light); } /* model-estimated default */
+.legacy-input:hover { border-color: var(--color-border-hover); }
+.legacy-input:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 0; border-color: var(--color-accent); }
+.legacy-input--estimate { background: var(--color-accent-light); } /* model-estimated default */
 /* Dashboard-wide edit lock: every field shades and goes read-only/disabled
    (distinct from the accent-tinted "estimate" fill — these are protected
    ACTUAL values, not computed ones) when #view carries .is-locked. A single
    container class + descendant selector, rather than per-element classes, so
    toggling covers every card without walking the DOM twice. */
-.is-locked .input { background: var(--color-bg); color: var(--color-text-secondary); cursor: not-allowed; }
+.is-locked .legacy-input { background: var(--color-bg); color: var(--color-text-secondary); cursor: not-allowed; }
 .is-locked input[type="checkbox"] { cursor: not-allowed; opacity: 0.6; }
 /* The lock toggle sits right in front of the Offer Price field — a compact
    icon button, not a labelled one, so it fits beside the input without
    crowding it (the Offer Price column is widened below to make room). */
 .offer-lock { display: flex; align-items: center; gap: 4px; }
-.offer-lock .input { min-width: 0; }
+.offer-lock .legacy-input { min-width: 0; }
 .dash-lock-btn {
   flex: none; width: 26px; height: 26px; padding: 0; line-height: 1;
   display: flex; align-items: center; justify-content: center;
@@ -296,9 +324,9 @@ body {
   letter-spacing: 0.03em; color: var(--color-text-secondary); width: 52px;
 }
 .target-sweep-slider { flex: 1; min-width: 0; }
-/* the editable readout — a normal .input, just pinned to a compact width so
+/* the editable readout — a normal .legacy-input, just pinned to a compact width so
    it reads like a slider readout rather than a full-width field */
-.target-row .input, .target-row .input-pct { flex: none; width: 76px; }
+.target-row .legacy-input, .target-row .input-pct { flex: none; width: 76px; }
 
 /* checkbox rows (expense include toggles), two-up grid for density ------------ */
 .check-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--space-4); }
@@ -335,21 +363,21 @@ body {
    pro-forma table sits flush against the stats row beneath it) + a little
    bottom padding so the bar isn't flush against that next line. Shared by the
    pro-forma, Compare, and Archive tables. */
-.table-wrap {
+.legacy-table-wrap {
   overflow-x: auto; padding-bottom: 6px;
   scrollbar-width: auto; scrollbar-color: var(--color-border-hover) var(--color-bg);
 }
-.table-wrap::-webkit-scrollbar { height: 12px; }
-.table-wrap::-webkit-scrollbar-track { background: var(--color-bg); border-radius: var(--radius-pill); }
-.table-wrap::-webkit-scrollbar-thumb { background: var(--color-border-hover); border-radius: var(--radius-pill); border: 2px solid var(--color-bg); }
-.table-wrap::-webkit-scrollbar-thumb:hover { background: var(--color-text-secondary); }
+.legacy-table-wrap::-webkit-scrollbar { height: 12px; }
+.legacy-table-wrap::-webkit-scrollbar-track { background: var(--color-bg); border-radius: var(--radius-pill); }
+.legacy-table-wrap::-webkit-scrollbar-thumb { background: var(--color-border-hover); border-radius: var(--radius-pill); border: 2px solid var(--color-bg); }
+.legacy-table-wrap::-webkit-scrollbar-thumb:hover { background: var(--color-text-secondary); }
 /* Click-and-drag panning (js/dom.js dragScroll): the styled scrollbar above
    still auto-hides at rest on macOS-style overlay-scrollbar setups regardless
    of CSS, so dragging the table body itself is the reliable fallback — never
    depends on hitting a thin bar. cursor hints the affordance; dragging disables
    text selection so a drag doesn't also select cell text. */
-.table-wrap { cursor: grab; }
-.table-wrap.is-dragging { cursor: grabbing; user-select: none; }
+.legacy-table-wrap { cursor: grab; }
+.legacy-table-wrap.is-dragging { cursor: grabbing; user-select: none; }
 .data-table { width: 100%; border-collapse: collapse; font-size: var(--font-sm); }
 .data-table th {
   text-align: left; font-size: 10px; font-weight: 700;
@@ -364,7 +392,7 @@ body {
 }
 .data-table tr:last-child td { border-bottom: none; }
 .data-table .num, .data-table th.num { text-align: right; white-space: nowrap; }
-.data-table td.num .input { text-align: right; }   /* numeric inputs line up with the column's totals */
+.data-table td.num .legacy-input { text-align: right; }   /* numeric inputs line up with the column's totals */
 /* Numeric inputs inset their text by border+padding; shift the right-aligned
    display cells (headers, totals) in the income table to match, so each numeric
    column reads as one straight right edge. */
@@ -462,7 +490,7 @@ body {
 .pf-stat__label { font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-navy); min-width: 52px; }
 .pf-stat b { color: var(--color-navy); font-weight: 800; }
 /* narrow viewports: compact the bars/gaps so a 10-year chart fits without
-   pushing the page wide (the table already scrolls inside .table-wrap) */
+   pushing the page wide (the table already scrolls inside .legacy-table-wrap) */
 @media (max-width: 760px) {
   .chart__plot, .chart__xlabels { gap: 6px; }
   .chart__bar { width: 9px; }
@@ -504,12 +532,12 @@ body {
 
 /* editable field grids inside cards — dense for one-screen fit */
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px var(--space-3); }
-.form-grid .field { min-width: 0; }
-.field__label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0; }
-.card { padding: var(--space-2) var(--space-3); }
-.card > .eyebrow { margin-bottom: var(--space-1); }
-.card .input { min-height: 28px; padding: 2px var(--space-2); font-size: var(--font-sm); }
-@media (pointer: coarse) { .card .input { min-height: 44px; font-size: 16px; } }
+.form-grid .legacy-field { min-width: 0; }
+.legacy-field__label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0; }
+.legacy-card { padding: var(--space-2) var(--space-3); }
+.legacy-card > .eyebrow { margin-bottom: var(--space-1); }
+.legacy-card .legacy-input { min-height: 28px; padding: 2px var(--space-2); font-size: var(--font-sm); }
+@media (pointer: coarse) { .legacy-card .legacy-input { min-height: 44px; font-size: 16px; } }
 /* Loan 1 / Loan 2 side by side: LTV/Rate/Amort/Maturity/Type as rows, one
    column per loan (mirrors the reference workbook's Finance Amount 1/2
    columns) — far more compact than two stacked per-loan blocks, which is
@@ -554,8 +582,8 @@ body {
   .deal-strip { grid-template-columns: repeat(2, 1fr); }
   .deal-cell--target-combo { grid-column: span 2; }
 }
-.deal-strip .input { min-height: 28px; padding: 2px var(--space-2); font-size: var(--font-sm); }
-@media (pointer: coarse) { .deal-strip .input { min-height: 44px; font-size: 16px; } }
+.deal-strip .legacy-input { min-height: 28px; padding: 2px var(--space-2); font-size: var(--font-sm); }
+@media (pointer: coarse) { .deal-strip .legacy-input { min-height: 44px; font-size: 16px; } }
 .deal-cell { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .deal-cell__label {
   font-size: 10px; font-weight: 700; text-transform: uppercase;
@@ -570,7 +598,7 @@ body {
 @media (pointer: coarse) { .deal-cell__val { min-height: 44px; } }
 /* percentage entry — number input with a trailing % sign */
 .input-pct { display: flex; align-items: center; gap: 4px; width: 100%; }
-.input-pct .input { flex: 1; min-width: 0; }
+.input-pct .legacy-input { flex: 1; min-width: 0; }
 .input-pct__sign { flex: none; font-weight: 700; font-size: var(--font-sm); color: var(--color-text-secondary); }
 
 /* denser 3-up info grid — reclaims the vertical the deal strip adds so the
@@ -688,7 +716,7 @@ body {
 .seg__btn + .seg__btn { border-left: 1px solid var(--color-border); }
 .seg__btn--on { background: var(--color-navy); color: var(--color-on-navy); }
 /* rows table: one property per row, many metric columns — narrow, tight cells
-   (more columns are expected, so keep them compact and let .table-wrap scroll) */
+   (more columns are expected, so keep them compact and let .legacy-table-wrap scroll) */
 .compare-table--rows th, .compare-table--rows td { min-width: 76px; padding-left: 6px; padding-right: 6px; }
 .compare-table--rows th:nth-child(2), .compare-table--rows td:nth-child(2) { min-width: 176px; }
 .compare-name { display: block; font-weight: 700; color: var(--color-navy); }
@@ -702,7 +730,7 @@ body {
 .archive-prospect .archive-name { white-space: nowrap; }
 .archive-prospect .compare-verdict { margin-top: 0; }
 .archive-table .archive-actions { display: flex; gap: 6px; margin-top: 0; flex-wrap: nowrap; flex: none; }
-.btn--sm { min-height: 30px; padding: 4px var(--space-3); font-size: var(--font-xs); }
+.legacy-btn--sm { min-height: 30px; padding: 4px var(--space-3); font-size: var(--font-xs); }
 /* R (restore) + × (permanent delete): equal compact squares, always on one row */
 .archive-restore, .archive-del { flex: none; width: 30px; min-width: 30px; padding: 0; justify-content: center; font-weight: 800; }
 .archive-del { color: var(--color-text-secondary); font-size: 18px; }
@@ -710,29 +738,29 @@ body {
 .archive-restore:hover, .archive-restore:focus-visible { border-color: var(--color-accent); color: var(--color-accent); }
 /* sortable column headers: the whole header is a button; a caret shows the
    active sort (a faint ↕ appears on hover for the rest, signalling it's sortable) */
-.compare-table th.th-sort { padding: 0; }
-.th-sort__btn {
+.compare-table th.legacy-th-sort { padding: 0; }
+.legacy-th-sort__btn {
   display: flex; align-items: center; gap: 3px; width: 100%;
   font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit;
   background: none; border: none; cursor: pointer;
   padding: var(--space-1) var(--space-2);
 }
-.compare-table th.num .th-sort__btn { justify-content: flex-end; }
-.th-sort__btn:hover { color: var(--color-navy); }
-.th-sort__btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
-.th-sort__caret { font-size: 9px; opacity: 0; transition: opacity .12s; }
-.th-sort__btn:hover .th-sort__caret { opacity: .5; }
-.th-sort--on .th-sort__caret { opacity: 1; color: var(--color-accent); }
-.th-sort--on .th-sort__label { color: var(--color-navy); }
+.compare-table th.num .legacy-th-sort__btn { justify-content: flex-end; }
+.legacy-th-sort__btn:hover { color: var(--color-navy); }
+.legacy-th-sort__btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+.legacy-th-sort__caret { font-size: 9px; opacity: 0; transition: opacity .12s; }
+.legacy-th-sort__btn:hover .legacy-th-sort__caret { opacity: .5; }
+.legacy-th-sort--on .legacy-th-sort__caret { opacity: 1; color: var(--color-accent); }
+.legacy-th-sort--on .legacy-th-sort__label { color: var(--color-navy); }
 
 /* toast */
-.toast {
+.legacy-toast {
   position: fixed; top: var(--space-4); left: 50%; transform: translateX(-50%);
   z-index: 50; padding: 10px var(--space-4); border-radius: var(--radius-md);
   box-shadow: var(--shadow-md); font-weight: 600; font-size: var(--font-sm);
   background: var(--color-navy); color: var(--color-on-navy);
 }
-.toast--success { background: var(--color-pass); }
+.legacy-toast--success { background: var(--color-pass); }
 
 /* top-bar actions (Save/Delete relocated from the dashboard body) */
 .topbar__actions { display: flex; gap: var(--space-1); margin-left: auto; }
@@ -752,8 +780,8 @@ body {
   .switcher__title .sub { display: block; overflow: hidden; text-overflow: ellipsis; }
 }
 /* final one-screen rhythm trim */
-.card .input { min-height: 26px; }
-@media (pointer: coarse) { .card .input { min-height: 44px; } }
+.legacy-card .legacy-input { min-height: 26px; }
+@media (pointer: coarse) { .legacy-card .legacy-input { min-height: 44px; } }
 .form-grid { gap: 1px var(--space-3); }
 
 /* account control (topbar) --------------------------------------------------- */
@@ -808,7 +836,7 @@ body.is-gated .topbar__center { display: none; }
 }
 .offline-banner[hidden] { display: none; }
 /* signed-in + offline: block editing affordances (choke-point is the guarantee) */
-body.is-readonly #view .input,
+body.is-readonly #view .legacy-input,
 body.is-readonly #view button:not(.topbar__link):not(.switcher__btn) {
   opacity: 0.55; pointer-events: none;
 }
@@ -848,9 +876,9 @@ body.is-readonly #view button:not(.topbar__link):not(.switcher__btn) {
 
 /* photo gallery (modal) + full-size lightbox ---------------------------------- */
 /* Property Info card header row: title + Photos button, no extra height. */
-.card__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-2); }
-.card__head .eyebrow { margin-bottom: 0; }
-.card__head-actions { display: flex; gap: var(--space-2); flex: none; }
+.legacy-card__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-2); }
+.legacy-card__head .eyebrow { margin-bottom: 0; }
+.legacy-card__head-actions { display: flex; gap: var(--space-2); flex: none; }
 .photos-btn {
   border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-secondary);
   border-radius: var(--radius-pill); font: inherit; font-size: var(--font-xs); font-weight: 700;

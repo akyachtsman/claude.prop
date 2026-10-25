@@ -18,7 +18,7 @@ function fieldNum(value, onChange, opts = {}) {
   // browser's number input would reject "2+2" outright. `inputmode=decimal`
   // keeps the numeric keypad on touch.
   const input = el('input', {
-    class: 'input' + (opts.estimate ? ' input--estimate' : ''),
+    class: 'legacy-input' + (opts.estimate ? ' legacy-input--estimate' : ''),
     type: 'text', inputmode: 'decimal', autocomplete: 'off',
     value: value ?? '', 'aria-label': opts.label || '',
   });
@@ -34,7 +34,7 @@ function fieldNum(value, onChange, opts = {}) {
   return input;
 }
 function fieldText(value, onChange, opts = {}) {
-  const input = el('input', { class: 'input', type: 'text', value: value ?? '', 'aria-label': opts.label || '' });
+  const input = el('input', { class: 'legacy-input', type: 'text', value: value ?? '', 'aria-label': opts.label || '' });
   input.addEventListener('change', () => onChange(input.value));
   return input;
 }
@@ -44,7 +44,7 @@ function fieldPercent(value, onChange, opts = {}) {
   const shown = fmt.percentInput(value);
   const wrap = el('span', { class: 'input-pct' }, [
     el('input', {
-      class: 'input', type: 'text', inputmode: 'decimal', autocomplete: 'off',
+      class: 'legacy-input', type: 'text', inputmode: 'decimal', autocomplete: 'off',
       value: shown, 'aria-label': opts.label || '',
     }),
     el('span', { class: 'input-pct__sign', text: '%' }),
@@ -60,12 +60,12 @@ function fieldPercent(value, onChange, opts = {}) {
   return wrap;
 }
 function fieldDate(value, onChange, opts = {}) {
-  const input = el('input', { class: 'input', type: 'date', value: value ?? '', 'aria-label': opts.label || '' });
+  const input = el('input', { class: 'legacy-input', type: 'date', value: value ?? '', 'aria-label': opts.label || '' });
   input.addEventListener('change', () => onChange(input.value));
   return input;
 }
 function fieldSelect(value, options, onChange, label) {
-  const sel = el('select', { class: 'input', 'aria-label': label || '' },
+  const sel = el('select', { class: 'legacy-input', 'aria-label': label || '' },
     options.map((o) => el('option', { value: o, selected: o === value ? true : null, text: o })));
   sel.addEventListener('change', () => onChange(sel.value));
   return sel;
@@ -396,10 +396,10 @@ export function renderDashboard(container, ctx) {
   // live in dashboard-media.js — its header says why that cut narrows this file's
   // seam rather than widening it.
   const { photosBtn, listingBtn } = mediaButtons({ prop, onEdit });
-  const infoCard = el('section', { class: 'card col-3', 'aria-label': 'Property Info' }, [
-    el('div', { class: 'card__head' }, [
+  const infoCard = el('section', { class: 'legacy-card col-3', 'aria-label': 'Property Info' }, [
+    el('div', { class: 'legacy-card__head' }, [
       el('span', { class: 'eyebrow', text: 'Property Info' }),
-      el('div', { class: 'card__head-actions' }, [listingBtn, photosBtn]),
+      el('div', { class: 'legacy-card__head-actions' }, [listingBtn, photosBtn]),
     ]),
     el('div', { class: 'form-grid form-grid--3' }, infoDefs.map(([label, key, type]) => {
       // Property Type drives the insurance estimate — re-seed a blank insurance on change.
@@ -623,7 +623,7 @@ export function renderDashboard(container, ctx) {
     grid2(assumeDefs.map(([label, key]) =>
       labeledField(label, fieldPercent(prop.assumptions[key], (v) => { prop.assumptions[key] = v; onEdit(); }, { label, step: '0.1' })))),
   ]);
-  const methodCard = el('section', { class: 'card notes', 'aria-label': 'Methodology' }, [
+  const methodCard = el('section', { class: 'legacy-card notes', 'aria-label': 'Methodology' }, [
     el('span', { class: 'eyebrow', text: 'Methodology' }),
     el('details', {}, [
       el('summary', { text: 'Definitions & decision rules (workbook notes)' }),
@@ -648,7 +648,7 @@ export function renderDashboard(container, ctx) {
   render(container, [
     kpiStrip,
     dealStrip,
-    el('div', { class: 'grid' }, [infoCard, incomeCard, expenseCard, debtCard, proformaCard, rightStack]),
+    el('div', { class: 'legacy-grid' }, [infoCard, incomeCard, expenseCard, debtCard, proformaCard, rightStack]),
     kpiTip,
   ]);
   paintDashLock();   // applied after every field exists in the DOM
@@ -774,12 +774,12 @@ export function renderDashboard(container, ctx) {
 // ── helpers ───────────────────────────────────────────────────────────
 function verdictClass(v) { return v === null ? '' : (v ? 'kpi__value--pass' : 'kpi__value--fail'); }
 function card(title, colClass, children) {
-  return el('section', { class: 'card ' + (colClass || ''), 'aria-label': title }, [
+  return el('section', { class: 'legacy-card ' + (colClass || ''), 'aria-label': title }, [
     el('span', { class: 'eyebrow', text: title }), ...children,
   ]);
 }
-function tableWrap(t) { const w = el('div', { class: 'table-wrap' }, [t]); dragScroll(w); return w; }
+function tableWrap(t) { const w = el('div', { class: 'legacy-table-wrap' }, [t]); dragScroll(w); return w; }
 function grid2(children) { return el('div', { class: 'form-grid' }, children); }
 function labeledField(label, input) {
-  return el('label', { class: 'field' }, [el('span', { class: 'field__label', text: label }), input]);
+  return el('label', { class: 'legacy-field' }, [el('span', { class: 'legacy-field__label', text: label }), input]);
 }

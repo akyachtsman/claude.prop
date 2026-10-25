@@ -93,13 +93,13 @@ test('S5 calc fidelity — sample deal KPIs match the actual-close fixture', asy
 
 test('Header pills include the 5-year NPV verdict after CAP and DSCR', async ({ page }) => {
   await loadSample(page);
-  const pills = page.locator('.topbar__pills .pill');
+  const pills = page.locator('.topbar__pills .legacy-pill');
   await expect(pills).toHaveCount(3);
   // order: CAP, DSCR, then 5Y NPV — with the explicit "> $0" benchmark shown.
   await expect(pills.nth(2)).toContainText('5Y NPV');
   await expect(pills.nth(2)).toContainText('-$29,512');   // sample's negative NPV
   await expect(pills.nth(2)).toContainText('≤ $0');       // fails the > $0 benchmark
-  await expect(pills.nth(2)).toHaveClass(/pill--fail/);   // negative → fail
+  await expect(pills.nth(2)).toHaveClass(/legacy-pill--fail/);   // negative → fail
 });
 
 test('S6 commit recalc — KPIs update when a field commits (Enter/blur), not mid-type', async ({ page }) => {
@@ -136,13 +136,13 @@ test('S8 compare — best/worst highlight and per-column verdict', async ({ page
   await expect(page.locator('.compare-table--rows')).toBeVisible();
   await expect(page.locator('.cell--best').first()).toBeVisible();
   await expect(page.locator('.cell--worst').first()).toBeVisible();
-  await expect(page.locator('.compare-verdict .pill').first()).toBeVisible();
+  await expect(page.locator('.compare-verdict .legacy-pill').first()).toBeVisible();
   // sorting: click the CAP header (3rd column) → ascending first, then toggle
   const capTh = page.locator('.compare-table--rows thead th:nth-child(3)');
-  await capTh.locator('.th-sort__btn').click();
+  await capTh.locator('.legacy-th-sort__btn').click();
   await expect(capTh).toHaveAttribute('aria-sort', 'ascending');
   await expect(page.locator('.compare-table--rows tbody tr').first().locator('.compare-name')).toContainText('New property'); // 0% lowest first
-  await capTh.locator('.th-sort__btn').click();
+  await capTh.locator('.legacy-th-sort__btn').click();
   await expect(capTh).toHaveAttribute('aria-sort', 'descending');
   await expect(page.locator('.compare-table--rows tbody tr').first().locator('.compare-name')).toContainText('715 Plumas');   // 5.13% highest
   // toggle to the side-by-side layout (metrics as rows, properties as columns)
@@ -273,12 +273,12 @@ test('S12 deal summary — the band is the single editable source; All-In derive
   await expect(allIn).toHaveText('$355,030');           // derived, painted into the band
   // Offer price now lives only in the band — not duplicated in the Offer & Debt card
   await expect(page.locator('input[aria-label="Offer price"]')).toHaveCount(1);
-  await expect(page.locator('.card[aria-label="Offer & Debt Service"] input[aria-label="Offer price"]')).toHaveCount(0);
+  await expect(page.locator('.legacy-card[aria-label="Offer & Debt Service"] input[aria-label="Offer price"]')).toHaveCount(0);
   // editing it recomputes the derived All-In (300000 × (1 − 0.7269)) and the card's copy
   await summaryOffer.fill('300000');
   await summaryOffer.blur();                             // commit
   await expect(allIn).toHaveText('$81,930');
-  await expect(page.locator('.card[aria-label="Offer & Debt Service"] .facts dd').last()).toHaveText('$81,930');
+  await expect(page.locator('.legacy-card[aria-label="Offer & Debt Service"] .facts dd').last()).toHaveText('$81,930');
 });
 
 test('S13 KPI formula popup — hovering a metric reveals its formula, clamped to viewport', async ({ page }) => {
@@ -299,7 +299,7 @@ test('S13 KPI formula popup — hovering a metric reveals its formula, clamped t
 
 test('S14 pro-forma horizon — slider extends to 10 years with a boundary and 10-yr stats', async ({ page }) => {
   await loadSample(page);
-  const bars = page.locator('.card[aria-label="Pro-Forma"] .chart__group');
+  const bars = page.locator('.legacy-card[aria-label="Pro-Forma"] .chart__group');
   const stats = page.locator('.pf-stat');
   const setHorizon = (v) => page.locator('.pf-slider').evaluate((el, val) => {
     el.value = val; el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -329,7 +329,7 @@ test('S14 pro-forma horizon — slider extends to 10 years with a boundary and 1
 test('S14b table drag-to-scroll — clicking and dragging the pro-forma table pans it (overlay scrollbars auto-hide)', async ({ page }) => {
   await loadSample(page);
   await page.locator('.pf-slider').evaluate((el) => { el.value = '10'; el.dispatchEvent(new Event('input', { bubbles: true })); });
-  const wrap = page.locator('.card[aria-label="Pro-Forma"] .table-wrap');
+  const wrap = page.locator('.legacy-card[aria-label="Pro-Forma"] .legacy-table-wrap');
   await expect.poll(() => wrap.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);   // genuinely overflows
   const before = await wrap.evaluate((el) => el.scrollLeft);
   const box = await wrap.boundingBox();
@@ -380,7 +380,7 @@ test('Target CAP/DSCR sliders — dragging (release) permanently commits, same a
   await capSlider.evaluate((el) => { el.value = '10'; el.dispatchEvent(new Event('change', { bubbles: true })); });
   await expect.poll(async () => (await kpis(page))['CAP']).toBe('10.00%');
   // a real, permanent edit — no simulated styling, and it survives a reload
-  await expect(offer).not.toHaveClass(/input--simulated/);
+  await expect(offer).not.toHaveClass(/legacy-input--simulated/);
   const offerAfterCap = await offer.inputValue();
   expect(offerAfterCap).not.toBe('1300000');
   await page.reload({ waitUntil: 'load' });
@@ -568,16 +568,16 @@ test('S31 import — one box takes a Crexi URL (server) or LoopNet page source (
 
 test('Pills check the FIXED 8% / 1.25 benchmark — a Target goal-seek moves actual CAP but not the bar', async ({ page }) => {
   await loadSample(page);
-  const capPill = page.locator('.topbar__pills .pill').nth(0);
+  const capPill = page.locator('.topbar__pills .legacy-pill').nth(0);
   // Sample CAP 5.13% vs the fixed 8% benchmark → fail.
   await expect(capPill).toContainText('< 8.00%');
-  await expect(capPill).toHaveClass(/pill--fail/);
+  await expect(capPill).toHaveClass(/legacy-pill--fail/);
   // Target CAP is a goal-seek: 5% moves the ACTUAL CAP to 5.00%, but the pill still
   // checks the fixed 8.00% benchmark (not the Target) — so it stays fail at 5% < 8%.
   await setField(page, '.deal-strip input[aria-label="Target CAP"]', '5');
   await expect.poll(async () => (await kpis(page))['CAP']).toBe('5.00%');
   await expect(capPill).toContainText('CAP 5.00% < 8.00%');
-  await expect(capPill).toHaveClass(/pill--fail/);
+  await expect(capPill).toHaveClass(/legacy-pill--fail/);
 });
 
 test('Target CAP/DSCR are live readouts of the actual value — not a separately stored target', async ({ page }) => {
@@ -643,7 +643,7 @@ test('S18 auto-save — edits persist without Save, and switching never prompts'
 
 test('S19 amortization vs. maturity — a balloon is reported without changing DSCR', async ({ page }) => {
   await loadSample(page);
-  const card = page.locator('.card[aria-label="Offer & Debt Service"]');
+  const card = page.locator('.legacy-card[aria-label="Offer & Debt Service"]');
   // sample loan: 25-yr amortization, 10-yr maturity → balloon due at yr 10
   await expect(card).toContainText('Balloon due');
   await expect(card).toContainText('$725,708 · yr 10');
