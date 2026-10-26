@@ -1,7 +1,7 @@
 {
   "upstream": {
-    "sha": "7e99c1aa197c56a58d27a27d01239e77cd042ad9",
-    "synced": "2026-10-25"
+    "sha": "137ed12e5294ade2775d1137651bfba00fbdd6dd",
+    "synced": "2026-10-26"
   },
   "refresh_kept": {
     ".github/scripts/check-contrast.js": {
@@ -25,7 +25,7 @@
       "reason": "ONE deliberate local hunk kept: baseURL falls back to this project's Pages URL instead of the template's REPLACE_WITH_YOUR_APP_URL placeholder, so a bare local run does not go to an invalid address. It is the template's own fill-in point, so it carries no in-file marker. Local runs pin the sandbox Chromium only through a git-excluded wrapper config (CLAUDE.md -> Sandbox Limits). Refreshed to d23c822 (2026-10-25): upstream's two comment hunks taken by refresh-merge.sh with 0 conflicts."
     },
     ".github/workflows/qa-live.yml": {
-      "blob": "3c424c73de947e96d296f3e0e035dc5ef6d1ea53",
+      "blob": "f3381e52809fc97b6d5f1460554b1ec85bd3c7e2",
       "local": "c88ca9aa0c84fce01bd798ac063116755c0f5ff3",
       "reason": "pilot of #460 step 4: a caller of claude.directives' shared-qa-live.yml pinned to 55af14e (claude.directives #479, re-pinned in #135); kept, never merged or overwritten from the template. Its project-specific checks (the root-absolute guard, the Node unit tests, contrast-script) live in the caller, not in a template copy."
     },
