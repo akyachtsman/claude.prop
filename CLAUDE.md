@@ -371,6 +371,17 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   styles/components.js` (installed). KD-1 `CLEAR`; no new variables or secrets; stamp
   exit 0 on the first run. The callers stay pinned to `55af14e`: upstream's
   `shared-*.yml` changed after it only in comments (`@<tag>` → `@v1` examples).
+  **The eleventh refresh (`7e99c1a → 137ed12`, 2026-10-26)** had a one-commit, 4-path
+  delta (#482, answering this project's re-pin notes) with no installed copy: the
+  `qa-live.yml` template (a `CALLER` here, re-recorded on the new template blob),
+  `shared-qa-live.yml`, and `check-ui-viewports.js` with its cases (deleted here, not
+  offered back). Drift: 9 compared, 5 match, 1 `CUSTOM` (`check-contrast.js`, recorded),
+  3 `CALLER`. KD-1 `CLEAR`; stamp exit 0 on the first run. `refresh-vars.sh` printed five
+  `OWNER PRE-MERGE` lines (`APP_PAGES`, `APP_URL`, the three `TEST_AUTH_*` selectors);
+  all five are **false positives**: its baseline is now the caller-era tree, whose callers
+  name no `vars.*`, while the shared workflows read the same five the pre-caller copies
+  did. Nothing is newly read (`APP_URL` is set; the other four are optional and unset, as
+  before). The #482 changes reach CI only on a re-pin of the callers, the owner's call.
 - **`.claude/settings.json` matches `templates/claude-settings.json` as sets since the
   2026-10-13 refresh** (37 `allow`, 1 `ask`, 5 `enabledPlugins`; no `refresh_declined`).
   **Owner decision, 2026-10-13:** take the template whole — the 25 `allow` entries the file
