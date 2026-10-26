@@ -29,6 +29,10 @@ the project's, token names are the house's. The stylesheets, loaded in this orde
   project's own tokens (navy structure, verdicts, chart series, `--gen-shade`).
 - `styles/components.css` — the HOUSE file, verbatim. **Never edit it**:
   `/refresh-repo` keeps it current and compares it exactly.
+- `styles/components.js` — the house shared page script (`House.*`), verbatim and
+  required on a marked project since claude.directives #471/#472 (installed at the
+  2026-10-25 refresh to `7e99c1a`). **Never edit it.** No page loads it yet: each
+  screen adds `<script src="styles/components.js" defer>` as it moves in step 2.
 - `styles/legacy.css` — this project's own components (the old
   `styles/components.css`), with the ten classes it shared with the house file
   renamed `legacy-<name>` (`legacy-btn`, `legacy-card`, `legacy-field`,
@@ -356,6 +360,17 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   custom because the stamp predates it; taken), 11 `RETIRED` (deleted). The kit took
   `tests/lib/fit.js` and the DISMISS fit check. All four `refresh_kept` records were
   re-recorded on the new blobs. KD-1 `CLEAR`; no new variables or secrets; stamp exit 0.
+  **The tenth refresh (`d23c822 → 7e99c1a`, 2026-10-25)** was the first on callers
+  (#460 step 4 pilot): drift printed `qa.yml`, `qa-live.yml` and `qa-response.yml` as
+  `CALLER` (kept, recorded in `refresh_kept` as "pilot of #460 step 4"; the old `qa.yml`
+  template-copy record replaced), and the derivation (directives only, since a caller is
+  not installed) named just `browser-ladder.js` and `package.json`, so the deleted
+  composites, `check-ui-viewports.js` and `package-lock.json` were not offered back.
+  Drift: 8 compared, 3 match, 1 `STALE` (`styles/components.css`, comments only, taken),
+  1 `CUSTOM` (`check-contrast.js`, recorded), 3 `CALLER`, plus `MISSING:
+  styles/components.js` (installed). KD-1 `CLEAR`; no new variables or secrets; stamp
+  exit 0 on the first run. The callers stay pinned to `55af14e`: upstream's
+  `shared-*.yml` changed after it only in comments (`@<tag>` → `@v1` examples).
 - **`.claude/settings.json` matches `templates/claude-settings.json` as sets since the
   2026-10-13 refresh** (37 `allow`, 1 `ask`, 5 `enabledPlugins`; no `refresh_declined`).
   **Owner decision, 2026-10-13:** take the template whole — the 25 `allow` entries the file

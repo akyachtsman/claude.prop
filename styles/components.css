@@ -7,7 +7,7 @@
    :focus-visible, reduced motion) and the iPhone rules (design.md -> iPhone
    and iPad). The behaviour these need (the confirmation
    dialog, the Archived (N) fit, the empty state, inline messages) lives in ONE
-   shared script per project, never per page. */
+   shared script per project, never per page: components.js, beside this file. */
 
 /* ── Page base: the canvas, text colour and font every page starts from ─────── */
 /* border-box, so padding and borders stay inside a component's width and a
@@ -338,7 +338,8 @@ dialog.dialog::backdrop { background: var(--color-backdrop); }
    instead: on a phone it opens the phone's own picker. Markup: the field has
    role="combobox", aria-expanded, aria-controls and aria-activedescendant;
    <div class="list-pop" role="listbox" id="…"> of <div class="list-option"
-   role="option" id="…">. Placed under its field by the shared fit. */
+   role="option" id="…">. House.typeahead (components.js) writes those roles,
+   places it under its field by the shared fit and runs its keys. */
 .list-pop { display: flex; flex-direction: column; }
 .list-option {
   display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
