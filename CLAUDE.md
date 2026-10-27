@@ -369,7 +369,7 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   Drift: 8 compared, 3 match, 1 `STALE` (`styles/components.css`, comments only, taken),
   1 `CUSTOM` (`check-contrast.js`, recorded), 3 `CALLER`, plus `MISSING:
   styles/components.js` (installed). KD-1 `CLEAR`; no new variables or secrets; stamp
-  exit 0 on the first run. The callers stay pinned to `55af14e`: upstream's
+  exit 0 on the first run. The callers stayed pinned to `55af14e`: upstream's
   `shared-*.yml` changed after it only in comments (`@<tag>` → `@v1` examples).
   **The eleventh refresh (`7e99c1a → 137ed12`, 2026-10-26)** had a one-commit, 4-path
   delta (#482, answering this project's re-pin notes) with no installed copy: the
@@ -382,6 +382,16 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   name no `vars.*`, while the shared workflows read the same five the pre-caller copies
   did. Nothing is newly read (`APP_URL` is set; the other four are optional and unset, as
   before). The #482 changes reach CI only on a re-pin of the callers, the owner's call.
+  **The twelfth refresh (`137ed12 → d32a9d0`, v1.1.0, 2026-10-27)** brought the web
+  guards (#493). The installed toolkit (`bdb7be2`) was older than the pin, so it ran the
+  command and scripts from upstream at `d32a9d0`. Drift: 6 compared, 3 match, 2 `STALE`
+  (`session-start.sh`, `.github/scripts/package.json` with nodemailer `^10.1.4`; taken),
+  1 `CUSTOM` (`check-contrast.js`, recorded), 3 `CALLER`. KD-1 `CLEAR`; stamp exit 0 on
+  the first run. On the owner's ask, `qa.yml` alone moved to `d32a9d0`; `qa-live.yml`
+  and `qa-response.yml` stay on `55af14e`. Web guards: `js/app.js`'s two delete
+  `confirm()` calls are in the caller's `guard-skip` until the house-style move gives the
+  screens `components.js` (`DESIGN-GAPS.md`, Archive row); the kit's high
+  `follow-redirects` advisory was fixed with `npm audit fix --package-lock-only`.
 - **`.claude/settings.json` matches `templates/claude-settings.json` as sets since the
   2026-10-13 refresh** (37 `allow`, 1 `ask`, 5 `enabledPlugins`; no `refresh_declined`).
   **Owner decision, 2026-10-13:** take the template whole — the 25 `allow` entries the file
