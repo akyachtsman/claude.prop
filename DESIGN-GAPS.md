@@ -16,6 +16,9 @@ empty, together with `styles/legacy.css`.
 
 The palette is not a gap: by owner ruling (2026-10-25) this project keeps its
 Banker Navy colours and fonts (`CLAUDE.md` → Design).
+Nor is the Archive page itself: by owner ruling (2026-10-27) archived deals keep
+their own compare-style page instead of the §7 Archived (N) pop-over
+(`CLAUDE.md` → Design).
 
 | Screen | Group (design.md) | What breaks | File |
 |---|---|---|---|
@@ -29,7 +32,7 @@ Banker Navy colours and fonts (`CLAUDE.md` → Design).
 | Property dashboard | Cards §5, Buttons §4 | its own card and button classes; KPI tiles are `div tabindex=0` | `js/views/dashboard.js` |
 | Property dashboard | Forms §12 | grid inputs have no visible label | `js/views/dashboard.js` |
 | Compare | Segmented §11, Back §11 | `.seg` with `role=group`; Back is a ghost button; ↕ sort glyph | `js/views/compare.js` |
-| Archive | Archive §7, Lists §6 | a separate page, not the Archived (N) pop-over (owner's call, asked 2026-10-27); Restore and Delete permanently sit in the sticky first column, not the row's last cell | `js/views/archive.js`, `js/app.js` |
+| Archive | Lists §6 | Restore and Delete permanently sit in the sticky first column, not the row's last cell; the table is Compare's legacy one and moves with it | `js/views/archive.js` |
 | Photos gallery | Dialogs §10 | its own modal; "Done"; × removes a saved photo | `js/views/dashboard-media.js` |
 | Photos gallery | Upload §13 | URLs pasted in a textarea | `js/views/dashboard-media.js` |
 | Listing details | Dialogs §10 | its own modal with "Done"; on a short screen (390×340) Done scrolls out of view with the panel (Escape and the backdrop still close it) | `js/views/dashboard-media.js` |

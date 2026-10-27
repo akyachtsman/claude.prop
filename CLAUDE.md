@@ -49,6 +49,12 @@ the project's, token names are the house's. The stylesheets, loaded in this orde
   owner picks, each dropping its `legacy-` classes and `legacy-screen` and
   deleting its lines; **step 2 needs its own owner go-ahead.** Step 3 deletes
   `styles/legacy.css` and the emptied `DESIGN-GAPS.md`.
+- **Owner ruling (2026-10-27): the Archive page stays.** Archived deals keep their own
+  `#/archive` page, laid out like the Compare table (every metric, sorting, best/worst),
+  instead of design.md §7's Archived (N) pop-over, which shows only a name and Restore
+  and would hide the metrics the owner relies on (§1.6). It is an owner exception to §7,
+  not a gap; everything else on the page (Restore, Delete permanently, the shared
+  confirmation, the toasts) follows the house pattern.
 - **Reference page:** `index.html` (the Banker Navy look; the house reference page
   comes with step 2).
 
