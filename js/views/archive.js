@@ -1,6 +1,6 @@
 // views/archive.js — archived properties, shown as rows in a table exactly like
 // the Compare "Table" layout (one row per property, every metric across the top,
-// best value per column highlighted). Each row adds Restore + Delete actions and
+// best value per column highlighted). Each row adds Restore + Delete permanently and
 // a clickable name that reopens the deal. Archiving hides a property from the
 // Properties list and Compare without deleting it; this is where it lives until
 // restored.
@@ -71,6 +71,11 @@ export function renderArchive(container, ctx) {
     });
   }
 
+  function deleteButton(p) {
+    const label = `Delete ${p.name || 'property'} permanently`;
+    return el('button', { class: 'btn btn-icon archive-del', type: 'button', 'aria-label': label, title: label, onclick: (e) => ctx.remove(p, e.currentTarget) }, [window.House.icon('trash')]);
+  }
+
   function draw() {
     const cols = all.map((p) => ({ p, m: compute(p) }));
     // best/worst over the full set — independent of row order.
@@ -80,15 +85,15 @@ export function renderArchive(container, ctx) {
       ...METRICS.map(([label], i) => sortHeader(i, label, true)),
     ]);
     const body = sortRows(cols).map(({ p, m }) => el('tr', {}, [
-      // Name + verdict + the row's actions, all in the sticky-left first column so
-      // Restore stays visible no matter how far the metric columns scroll.
-      // Name + verdict + the R/× actions all on ONE line in the sticky-left column.
+      // Name + verdict + the row's actions, all on ONE line in the sticky-left
+      // first column, so Restore stays visible however far the metrics scroll.
       el('td', {}, [
         el('div', { class: 'archive-prospect' }, [
-          // Actions lead the row (R restore, × permanent delete), then the name + verdict.
+          // The house buttons (design.md §3, §4, §8): a secondary text Restore,
+          // then the trash-can Delete permanently, confirmed by app.js.
           el('div', { class: 'archive-actions' }, [
-            el('button', { class: 'legacy-btn legacy-btn--ghost legacy-btn--sm archive-restore', type: 'button', 'aria-label': `Restore ${p.name || 'property'}`, title: 'Restore to Properties', onclick: () => ctx.restore(p), text: 'R' }),
-            el('button', { class: 'legacy-btn legacy-btn--ghost legacy-btn--sm archive-del', type: 'button', 'aria-label': `Delete ${p.name || 'property'}`, title: 'Permanently delete', onclick: () => ctx.remove(p), text: '×' }),
+            el('button', { class: 'btn archive-restore', type: 'button', 'aria-label': `Restore ${p.name || 'property'}`, title: 'Restore to Properties', onclick: () => ctx.restore(p), text: 'Restore' }),
+            deleteButton(p),
           ]),
           el('button', { class: 'compare-name archive-name', type: 'button', title: 'Open', onclick: () => ctx.open(p.id), text: p.name || 'Untitled' }),
           verdictPill(p, m),
@@ -111,7 +116,7 @@ export function renderArchive(container, ctx) {
       el('h1', { text: 'Archive' }),
       el('button', { class: 'legacy-btn legacy-btn--ghost', type: 'button', onclick: () => ctx.goList(), text: 'Back to properties' }),
     ]),
-    el('p', { class: 'fineprint', text: 'Archived properties, laid out like Compare. Click a column header to sort; best value per metric is green, worst is red. Restore returns a deal to Properties.' }),
+    el('p', { class: 'fineprint', text: 'Archived properties, laid out like Compare. Click a column header to sort; best value per metric is green, worst is red. Restore returns a deal to Properties; Delete permanently removes it for good.' }),
     tableHost,
   ]);
   draw();

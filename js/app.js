@@ -156,12 +156,6 @@ function showList() {
       toast('Archived.', 'info');
       showList();
     },
-    remove: (p) => {
-      if (!confirm(`This will permanently delete "${p.name || 'this property'}".`)) return;
-      if (!store.remove(p.id)) return;   // offline reject (store toasts) — leave the card
-      toast('Deleted.', 'info');
-      showList();   // re-render the list in place
-    },
   });
 }
 
@@ -175,13 +169,24 @@ function showArchive() {
     // Restore: clear the flag and drop back to the list. Re-render in place.
     restore: (p) => {
       if (!store.save({ ...p, archived: false })) return;
-      toast('Restored to Properties.', 'success');
+      toast(`${p.name || 'Property'} restored.`, 'success');
       showArchive();
     },
-    remove: (p) => {
-      if (!confirm(`This will permanently delete "${p.name || 'this property'}".`)) return;
-      if (!store.remove(p.id)) return;
-      toast('Deleted.', 'info');
+    // Delete permanently: the house confirmation (design.md §8, §9). It disables
+    // the asking button while open; once answered, re-check the deal is still
+    // here and still archived before destroying it.
+    remove: async (p, opener) => {
+      const name = p.name || 'this property';
+      const yes = await window.House.confirm({
+        title: `Delete ${name} permanently?`,
+        body: 'This cannot be undone.',
+        confirm: 'Delete permanently', kind: 'delete', opener,
+      });
+      if (!yes) return;
+      const now = store.get(p.id);
+      if (!now || !isArchived(now)) { showArchive(); return; }
+      if (!store.remove(p.id)) return;   // offline reject (store toasts) — leave the row
+      toast(`${p.name || 'Property'} deleted.`, 'info');
       showArchive();
     },
   });

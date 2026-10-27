@@ -142,11 +142,6 @@ jobs:
       advisory-run: false
       # The fleet floor for a ui-suite caller; raise it, never lower it.
       ui-timeout-minutes: 120
-      # js/app.js still calls the browser's confirm() for the two delete
-      # prompts: no page loads styles/components.js (House.confirm) yet.
-      # Removed by the house-style move (step 2), when the screens take it.
-      guard-skip: |
-        native-dialog:js/app.js
     secrets:
       TEST_AUTH_CREDENTIAL: ${{ secrets.TEST_AUTH_CREDENTIAL }}
       TEST_AUTH_EMAIL: ${{ secrets.TEST_AUTH_EMAIL }}

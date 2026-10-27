@@ -109,13 +109,22 @@ async function walkOverlays(page) {
   await expectFits(page, '.modal__overlay');
   await page.locator('.modal__close').click();
   await expect(page.locator('.modal__overlay')).toHaveCount(0);
+
+  // ── Delete permanently confirmation (the house dialog, Archive rows)
+  await page.click('button[aria-label^="Archive 715 Plumas"]');
+  await page.click('#nav-archive');
+  await page.waitForSelector('.archive-table');
+  await page.locator('.archive-del').first().click();
+  await expectFits(page, 'dialog.dialog[open]');
+  await page.locator('dialog.dialog[open] button', { hasText: 'Cancel' }).click();
+  await expect(page.locator('dialog.dialog')).toHaveCount(0);
 }
 
-// BUDGET for each walk: five overlays, each one open, one settle and one fit
+// BUDGET for each walk: six overlays, each one open, one settle and one fit
 // check (capped at 10s, usually a few frames), plus 24 photo stubs. WebKit on CI
 // runs this project's scenarios ~1.5-1.7x slower than tablet (property.spec.js
 // S40's note); 120s leaves room for every check to hit its cap.
-test('S41 overlays fit — gallery, lightbox, Listing details, Import and the KPI formula popup fit the screen and scroll', async ({ page, renderWitness }) => {
+test('S41 overlays fit — gallery, lightbox, Listing details, Import, the delete confirmation and the KPI formula popup fit the screen and scroll', async ({ page, renderWitness }) => {
   renderWitness();
   test.setTimeout(120_000);
   const errors = watchErrors(page);
