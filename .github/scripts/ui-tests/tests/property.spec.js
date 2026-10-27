@@ -790,7 +790,11 @@ test('S21 undo/redo — a committed edit can be reverted and replayed; typing al
   await expect.poll(async () => (await kpis(page))['CAP']).toBe('22.21%');
 });
 
-test('DELETE — deleting happens from the Archive rows (archive first), with confirmation', async ({ page }) => {
+test('DELETE — deleting happens from the Archive rows (archive first), confirmed in the house dialog', async ({ page }) => {
+  const errors = watchErrors(page);
+  // design.md §9: no native confirm(). A browser dialog here is a failure.
+  let nativeAsked = false;
+  page.on('dialog', (d) => { nativeAsked = true; d.dismiss(); });
   await loadSample(page);
   await page.goto('./', { waitUntil: 'load' });
   await page.waitForSelector('.lcard');
@@ -801,12 +805,39 @@ test('DELETE — deleting happens from the Archive rows (archive first), with co
   await expect(page.locator('.lcard')).toHaveCount(0);
   await page.click('#nav-archive');
   await page.waitForSelector('.archive-table');
-  let asked = false;
-  page.on('dialog', (d) => { asked = true; d.accept(); });
-  await page.locator('.archive-del').first().click();
-  await page.waitForTimeout(300);
-  expect(asked).toBe(true);
+  const del = page.locator('.archive-del').first();
+  await expect(del).toHaveAttribute('aria-label', /^Delete 715 Plumas.* permanently$/);
+  await expect(del).toHaveAttribute('title', /^Delete 715 Plumas.* permanently$/);
+
+  // §8: the shared dialog names the thing, says it cannot be undone, offers a
+  // filled red "Delete permanently", and starts on Cancel so Enter never deletes.
+  // §9: the button that asked is disabled while the question is open.
+  await del.click();
+  const dlg = page.locator('dialog.dialog[open]');
+  await expect(dlg).toBeVisible();
+  await expect(dlg.locator('.dialog-title')).toHaveText(/^Delete 715 Plumas.* permanently\?$/);
+  await expect(dlg).toContainText('This cannot be undone.');
+  await expect(dlg.locator('.btn-delete')).toHaveText('Delete permanently');
+  await expect(dlg.locator('button', { hasText: 'Cancel' })).toBeFocused();
+  await expect(del).toBeDisabled();
+
+  // Cancel keeps the deal, and puts focus back on the button that asked.
+  await dlg.locator('button', { hasText: 'Cancel' }).click();
+  await expect(page.locator('dialog.dialog')).toHaveCount(0);
+  await expect(page.locator('.archive-table tbody tr')).toHaveCount(1);
+  await expect(del).toBeEnabled();
+  await expect(del).toBeFocused();
+
+  // Delete permanently destroys it, and the toast names it.
+  await del.click();
+  await page.locator('dialog.dialog[open] .btn-delete').click();
   await expect(page.locator('.empty')).toContainText('No archived properties');   // deleted → archive empty
+  await expect(page.locator('.legacy-toast')).toContainText(/715 Plumas.* deleted\./);
+  await page.goto('./', { waitUntil: 'load' });                 // a fresh load of the list
+  await page.waitForSelector('.lcard, .empty');
+  await expect(page.locator('#nav-archive')).toHaveText('Archive');   // gone for good, not re-archived
+  expect(nativeAsked).toBe(false);
+  expect(errors).toEqual([]);
 });
 
 // (S22 demo-seed removed here: the demo deals now seed per-account via the
@@ -844,9 +875,13 @@ test('S32 archive — archived deals leave Properties/Compare and show as compar
   await expect(page.locator('.archive-table tbody tr')).toHaveCount(1);
   await expect(page.locator('.archive-name')).toContainText('New property');
 
-  // Restore → the row leaves the archive (now empty); it's active again on Properties.
+  // Restore (a house text button, never confirmed) → the row leaves the archive
+  // (now empty), the toast names the deal, and it's active again on Properties.
+  await expect(page.locator('.archive-table .archive-restore')).toHaveText('Restore');
   await page.click('.archive-table .archive-restore');
+  await expect(page.locator('dialog.dialog')).toHaveCount(0);
   await expect(page.locator('.empty')).toContainText('No archived properties');
+  await expect(page.locator('.legacy-toast')).toContainText('New property restored.');
   await page.click('#nav-properties');
   await page.waitForSelector('.lcard');
   await expect(page.locator('.lcard')).toHaveCount(2);
@@ -969,13 +1004,16 @@ test('NAV back-flow — every drill-down returns to Properties and never revisit
 // It is also limited to overlays reachable from the default state: the photo gallery
 // needs the ▦ button, the lightbox needs a photo to exist, and Listing details needs
 // the 🏷 button. So every path below is one nothing else asserts.
+// The Delete permanently confirmation on the Archive rows is the house dialog
+// (styles/components.js, House.confirm): its × is aria-label="Close" and its
+// backdrop is the native <dialog>'s own, so it is walked here by name too.
 // (The first-sign-in account modal is the fifth overlay; `installSignedIn` suppresses
 // the reconcile in this file, so its three paths are covered in auth.spec.js, where
 // reconcile can be enabled.)
 // Backdrop clicks are aimed at (5,5) — the overlay's own corner, clear of the
 // centred panel — because clicking the overlay's centre hits the panel instead and
 // the handlers deliberately only close on `e.target === overlay`.
-test('DISMISS project overlays — gallery, lightbox, Listing details and Import each close by control, Escape AND backdrop', async ({ page }) => {
+test('DISMISS project overlays — gallery, lightbox, Listing details, Import and the delete confirmation each close by control, Escape AND backdrop', async ({ page }) => {
   // BUDGET — derived, per the kit's own convention (app.spec.js: "Every scenario
   // below sets its own test.setTimeout and derives it"); its DISMISS carries
   // 300_000. This one carried NOTHING and inherited the config's 30_000, which is
@@ -990,7 +1028,9 @@ test('DISMISS project overlays — gallery, lightbox, Listing details and Import
   //
   // 12 open-dismiss cycles, and webkit on this runner is ~1.5-1.7x the tablet cost
   // (NAV back-flow 7.3s -> 11.0s; Photos gallery 9.4s -> 16.1s), so the slowest
-  // engine needs ~33s. 180s is ~5x that. Re-derive if a sixth overlay is added:
+  // engine needs ~33s. 180s is ~5x that. The delete confirmation (sixth
+  // overlay, four paths) brings it to 16 cycles, ~44s on the slowest engine at
+  // the same rate, so 180s is still ~4x. Re-derive if another overlay is added:
   // the cost is per cycle, not per test.
   test.setTimeout(180_000);
   const errors = watchErrors(page);
@@ -1069,6 +1109,26 @@ test('DISMISS project overlays — gallery, lightbox, Listing details and Import
     await expect(page.locator('.modal__overlay')).toHaveCount(1);
     await dismiss();
     await expect(page.locator('.modal__overlay')).toHaveCount(0);
+  }
+
+  // ── Delete permanently confirmation (the house dialog, Archive rows): ×,
+  // Cancel, Escape, backdrop. A native <dialog>'s backdrop press lands on the
+  // dialog element outside its box, so the press is at the window's corner.
+  // Every path must leave the deal where it was.
+  await page.click('button[aria-label^="Archive 715 Plumas"]');
+  await page.click('#nav-archive');
+  await page.waitForSelector('.archive-table');
+  for (const dismiss of [
+    async () => page.locator('dialog.dialog[open] button[aria-label="Close"]').click(),
+    async () => page.locator('dialog.dialog[open] button', { hasText: 'Cancel' }).click(),
+    async () => page.keyboard.press('Escape'),
+    async () => page.mouse.click(5, 5),
+  ]) {
+    await page.locator('.archive-del').first().click();
+    await expect(page.locator('dialog.dialog[open]')).toBeVisible();
+    await dismiss();
+    await expect(page.locator('dialog.dialog')).toHaveCount(0);
+    await expect(page.locator('.archive-table tbody tr')).toHaveCount(1);
   }
 
   expect(errors).toEqual([]);

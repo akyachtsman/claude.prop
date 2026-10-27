@@ -6,8 +6,8 @@
   "refresh_kept": {
     ".github/scripts/check-contrast.js": {
       "blob": "7daeb6204a05e1e75f68172a244d75af86854578",
-      "local": "397ade8f1dd596f7403b5fa5e60ba09ac04475b2",
-      "reason": "FOUR deliberate PROJECT-SPECIFIC contrast pairs, each marked in-file and documented in CLAUDE.md: accent/surface at the 4.5 normal-text floor plus accent/bg (accent is a small-text colour in eight places at 13px/12px); on-navy/accent (.switcher__btn and .topbar__action keep on-navy over an accent hover fill); accent-hover/accent-light (the NOI chip); and on-danger/danger (the gallery delete glyph; no screen renders danger as a foreground until house-style step 2). Refreshed to d23c822 (2026-10-25) by refresh-merge.sh: upstream's control-edge section and new comments taken; its one conflict, a reworded comment over the replaced pairs, resolved to the local pairs."
+      "local": "9d80405ff428b3c8189087c005aca7e628af2580",
+      "reason": "FOUR deliberate PROJECT-SPECIFIC contrast pairs, each marked in-file and documented in CLAUDE.md: accent/surface at the 4.5 normal-text floor plus accent/bg (accent is a small-text colour in seven places at 13px/12px); on-navy/accent (.switcher__btn and .topbar__action keep on-navy over an accent hover fill); accent-hover/accent-light (the NOI chip); and on-danger/danger (the gallery delete glyph; no screen renders danger as a foreground until house-style step 2). Refreshed to d23c822 (2026-10-25) by refresh-merge.sh: upstream's control-edge section and new comments taken; its one conflict, a reworded comment over the replaced pairs, resolved to the local pairs."
     },
     ".github/scripts/ui-tests/tests/app.spec.js": {
       "blob": "e0e84eac8d78a742ea7db54302bc8997c9a28708",
