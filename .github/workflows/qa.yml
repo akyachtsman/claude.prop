@@ -5,7 +5,9 @@
 # server)". What it does and how it differs from the old copy:
 # claude.directives docs/internal/shared-workflows.md.
 #
-# Pinned to an exact claude.directives commit, not a tag (owner, 2026-10-25).
+# Pinned to an exact claude.directives commit, not a tag (owner, 2026-10-25):
+# v1.1.0's commit, which adds the web guards (claude.directives #493). The
+# qa-live and qa-response callers stay on 55af14e.
 # Rollback is reverting the pilot PR, which restores the full copy.
 #
 # Settings the old copy kept in `env:` are `with:` inputs below, because `env`
@@ -126,7 +128,7 @@ jobs:
 
   qa:
     needs: [project-checks]
-    uses: akyachtsman/claude.directives/.github/workflows/shared-qa.yml@55af14e497d7490b7b0d83cf0528f33659df9b41
+    uses: akyachtsman/claude.directives/.github/workflows/shared-qa.yml@d32a9d0cb6f17b77c3771503ec0bfe95931c9043  # v1.1.0
     with:
       # Path to the directory containing playwright.config.js and package.json
       tests-dir: .github/scripts/ui-tests
@@ -140,6 +142,11 @@ jobs:
       advisory-run: false
       # The fleet floor for a ui-suite caller; raise it, never lower it.
       ui-timeout-minutes: 120
+      # js/app.js still calls the browser's confirm() for the two delete
+      # prompts: no page loads styles/components.js (House.confirm) yet.
+      # Removed by the house-style move (step 2), when the screens take it.
+      guard-skip: |
+        native-dialog:js/app.js
     secrets:
       TEST_AUTH_CREDENTIAL: ${{ secrets.TEST_AUTH_CREDENTIAL }}
       TEST_AUTH_EMAIL: ${{ secrets.TEST_AUTH_EMAIL }}

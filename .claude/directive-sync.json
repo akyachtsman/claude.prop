@@ -1,7 +1,7 @@
 {
   "upstream": {
-    "sha": "137ed12e5294ade2775d1137651bfba00fbdd6dd",
-    "synced": "2026-10-26"
+    "sha": "d32a9d0cb6f17b77c3771503ec0bfe95931c9043",
+    "synced": "2026-10-27"
   },
   "refresh_kept": {
     ".github/scripts/check-contrast.js": {
