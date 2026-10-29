@@ -126,6 +126,26 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   `verify_jwt` gated. Everything else is still computed client-side.
 - Export/import is user-initiated JSON; import validates shape + schema version
   and never silently wipes existing data.
+- **Supabase Defaults** (`data.md`, audited 2026-10-29 against `yucnxlimmrgzbqtdizle`,
+  Postgres 17.6):
+  1. *Default grants* — migration `0004_revoke_default_table_privileges` revokes
+     `TRUNCATE`, `REFERENCES`, `TRIGGER` and `MAINTAIN` from `anon`/`authenticated` on
+     every `public` table and in `postgres`'s default privileges (0003 had covered
+     `TRUNCATE` on `properties` only). **Accepted residual:** `supabase_admin`'s own
+     default privileges in `public` still grant all four to both roles, and `postgres`
+     is not a member of `supabase_admin`, so it cannot revoke them. They apply only to a
+     table the platform itself creates in `public`; every table here is owned by
+     `postgres`. Re-run both check queries after any new table.
+  2. *pg_net* — **N/A**: not installed (nor `pg_cron` or `pg_graphql`). If it is ever
+     enabled, record `net.http_request_queue`'s unrevocable `PUBLIC` grant here with
+     the three rules: never expose `net`, `extensions`, `cron` or `vault` through the
+     Data API; never enable `pg_graphql` without re-running this audit; never write a
+     function in an exposed schema that reads `net.*`.
+  3. *Leaked-password protection* — applies (Supabase Auth email + password). The
+     organization is on the **Pro** plan, so it is available and is NOT an accepted
+     risk: the owner turns on *Prevent use of leaked passwords* in the Email provider's
+     Auth settings and saves. Still off on 2026-10-29 (the advisor reports
+     `auth_leaked_password_protection`); it stays open until that lint is gone.
 
 ## Project-Specific Coding Standards
 - Only inputs are persisted; every metric is recomputed on render (never stored)
