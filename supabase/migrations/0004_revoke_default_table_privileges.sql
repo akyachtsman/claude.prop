@@ -9,8 +9,10 @@
 -- later starts without them. Data API grants (select/insert/update/delete) are
 -- untouched. Found by data.md -> Supabase Defaults, 2026-10-29.
 --
--- Contains TRUNCATE, so from a project thread it runs through the SQL Editor
--- (data.md -> MCP Configuration), not the connector.
+-- Contains TRUNCATE, which data.md -> MCP Configuration sends through the SQL
+-- Editor from a project thread. On the owner's ask it was applied through the
+-- connector instead (apply_migration, 2026-10-29, version 20261029231356) and
+-- did not time out; both check queries returned no rows for postgres afterwards.
 
 -- ── up ────────────────────────────────────────────────────────────────────
 revoke truncate, references, trigger, maintain

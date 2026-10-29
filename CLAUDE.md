@@ -131,7 +131,9 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   1. *Default grants* — migration `0004_revoke_default_table_privileges` revokes
      `TRUNCATE`, `REFERENCES`, `TRIGGER` and `MAINTAIN` from `anon`/`authenticated` on
      every `public` table and in `postgres`'s default privileges (0003 had covered
-     `TRUNCATE` on `properties` only). **Accepted residual:** `supabase_admin`'s own
+     `TRUNCATE` on `properties` only). Applied live 2026-10-29 through the connector
+     (version `20261029231356`); both check queries then returned no `postgres` rows,
+     and `authenticated` kept `SELECT`/`INSERT`/`UPDATE`/`DELETE`. **Accepted residual:** `supabase_admin`'s own
      default privileges in `public` still grant all four to both roles, and `postgres`
      is not a member of `supabase_admin`, so it cannot revoke them. They apply only to a
      table the platform itself creates in `public`; every table here is owned by
