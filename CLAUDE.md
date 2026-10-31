@@ -145,9 +145,9 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
      function in an exposed schema that reads `net.*`.
   3. *Leaked-password protection* — applies (Supabase Auth email + password). The
      organization is on the **Pro** plan, so it is available and is NOT an accepted
-     risk: the owner turns on *Prevent use of leaked passwords* in the Email provider's
-     Auth settings and saves. Still off on 2026-10-29 (the advisor reports
-     `auth_leaked_password_protection`); it stays open until that lint is gone.
+     risk. **On:** the owner turned on *Prevent use of leaked passwords* in the Email
+     provider's Auth settings, and on 2026-10-31 the security advisor returned no lints
+     (`auth_leaked_password_protection` gone). It was still off on 2026-10-29.
 
 ## Project-Specific Coding Standards
 - Only inputs are persisted; every metric is recomputed on render (never stored)
