@@ -93,3 +93,19 @@
 .lcard__kpi-val { font-weight: 700; font-variant-numeric: tabular-nums; }
 /* The first-run empty state carries three buttons; they keep 8px apart and wrap. */
 .list-first .empty-act { margin: var(--space-4) var(--space-1) 0; }
+
+/* ── Dialogs on the house shell (design.md §10) ───────────────────────────
+   Listing details, Import a listing and Move your local deals in? use the
+   house <dialog class="dialog">; these only widen the two with longer fields
+   and lay out their fields. */
+.desc-modal, .import-modal { width: min(620px, 94vw); }
+.dialog-body > * + * { margin-top: var(--space-3); }
+.dialog-body > p { margin-bottom: 0; }
+.dialog-body > :first-child { margin-top: 0; }
+.dialog-body .field .input { width: 100%; }
+.desc-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
+@media (max-width: 599px) { .desc-grid { grid-template-columns: minmax(0, 1fr); } }
+.import-ta, .desc-ta { resize: vertical; line-height: 1.5; }
+.desc-ta { min-height: 160px; }
+.link-open { font-weight: 600; text-decoration: none; margin-left: var(--space-1); }
+.link-open:hover, .link-open:focus-visible { text-decoration: underline; }

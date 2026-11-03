@@ -98,17 +98,17 @@ async function walkOverlays(page) {
 
   // ── Listing details
   await page.click('button[aria-label="Listing details"]');
-  await expectFits(page, '.modal__overlay');
-  await page.click('.desc-modal button:has-text("Done")');
+  await expectFits(page, 'dialog.desc-modal[open]');
+  await page.click('.desc-modal button:has-text("Cancel")');
   await expect(page.locator('.desc-modal')).toHaveCount(0);
 
   // ── Import a listing (list view)
   await page.goto('./', { waitUntil: 'load' });
   await page.waitForSelector('.lcard');
   await page.click('button:has-text("Import a listing")');
-  await expectFits(page, '.modal__overlay');
-  await page.locator('.modal__close').click();
-  await expect(page.locator('.modal__overlay')).toHaveCount(0);
+  await expectFits(page, 'dialog.import-modal[open]');
+  await page.locator('.import-modal button[aria-label="Close"]').click();
+  await expect(page.locator('.import-modal')).toHaveCount(0);
 
   // ── Delete permanently confirmation (the house dialog, Archive rows)
   await page.click('button[aria-label^="Archive 715 Plumas"]');
@@ -152,10 +152,10 @@ test('S41 overlays fit — the "Move your local deals in?" prompt fits the scree
   await seedLocalDealForReconcile(page);
   await installSignedIn(page, { seed: [], reconcile: true });
   await page.goto('./', { waitUntil: 'load' });
-  await expect(page.locator('.modal__title', { hasText: 'Move your local deals in?' })).toBeVisible();
-  await expectFits(page, '.modal__overlay');
+  await expect(page.locator('dialog.dialog[open] .dialog-title')).toHaveText('Move your local deals in?');
+  await expectFits(page, 'dialog.dialog[open]');
   await page.locator('button', { hasText: 'Not now' }).click();
-  await expect(page.locator('.modal__overlay')).toHaveCount(0);
+  await expect(page.locator('dialog.dialog')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 

@@ -222,10 +222,10 @@ const pairs = [
   // pointer touches the control.
   ['--color-on-accent', '--color-accent-hover', AA, 'on-accent / accent-hover (button hover)'],
   // PROJECT-SPECIFIC (see CLAUDE.md). Upstream checks accent/surface at the LARGE-text
-  // floor (3.0). Here --color-accent is a SMALL-text colour in eight places —
-  // .authgate__brand, .authgate__status--ok, .authgate__link, .modal__status--ok,
-  // .photos-btn:hover, .link-open, and the house .link-action and .row-open on
-  // Compare and Archive — at
+  // floor (3.0). Here --color-accent is a SMALL-text colour in seven places —
+  // .authgate__brand, .authgate__status--ok, .authgate__link, .photos-btn:hover,
+  // .link-open, and the house .link-action and .row-open on Compare and
+  // Archive — at
   // --font-sm 13px / --font-xs 12px, neither of which is WCAG large text. So the
   // normal-text floor applies, and the page background is checked too. At 3.0 a
   // palette scoring 3.54 passed while every one of those labels failed AA. (Codex, #109.)

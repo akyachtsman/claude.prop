@@ -27,7 +27,9 @@ Compare and the Archive table (2026-11-03), which take the house page base,
 `styles/project.css`; then the Properties page (2026-11-03): the house toolbar
 and search, `.grid` of `.card`s with the archive-box icon, the §7 confirmation
 and toast, Archived (N), `+ Add property`, `House.empty`, and "Load backup" in
-place of the JSON "Restore".
+place of the JSON "Restore"; then Listing details, Import a listing and Move
+your local deals in? on the house dialog (2026-11-03), with labelled fields,
+Cancel and the act in the footer, and errors under the field.
 
 | Screen | Group (design.md) | What breaks | File |
 |---|---|---|---|
@@ -37,8 +39,5 @@ place of the JSON "Restore".
 | Property dashboard | Forms §12 | grid inputs have no visible label | `js/views/dashboard.js` |
 | Photos gallery | Dialogs §10 | its own modal; "Done"; × removes a saved photo | `js/views/dashboard-media.js` |
 | Photos gallery | Upload §13 | URLs pasted in a textarea | `js/views/dashboard-media.js` |
-| Listing details | Dialogs §10 | its own modal with "Done"; on a short screen (390×340) Done scrolls out of view with the panel (Escape and the backdrop still close it) | `js/views/dashboard-media.js` |
-| Import a listing | Dialogs §10, Messages §18 | its own modal, a × text close, its own status line; on a short screen (390×340) the × scrolls out of view with the panel (Escape and the backdrop still close it) | `js/app.js` |
 | Sign-in | Forms §12 | the placeholder is the label | `js/account.js` |
-| Move local deals | Dialogs §10 | its own modal | `js/account.js` |
 | Toast | Messages §18 | shown at the top, by this project's own toast, not `House.toast` | `js/dom.js`, `js/app.js` |

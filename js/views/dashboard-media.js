@@ -14,7 +14,7 @@
 // stay one-screen (S11) and touch inputs are 44px tall; the gallery/lightbox
 // layering and every dismissal path are S30/S40's subject.
 
-import { el, clear, toast, mountOverlay } from '../dom.js';
+import { el, clear, toast, mountOverlay, houseDialog, field } from '../dom.js';
 import { safeImageUrl, parsePhotoUrls } from '../media.js';
 
 /** Build the Photos (▦ N) and Listing-details (🏷) buttons, each fully wired to
@@ -112,40 +112,45 @@ function openLightbox(start) {
   shut.addEventListener('click', (e) => { e.stopPropagation(); close(); });
 }
 
-// Listing-details modal — the extra descriptor fields + a description textarea.
-// Edits are committed once on close (one undo step), not per keystroke.
+// Listing details — the house dialog (design.md §10, §12): labelled fields for
+// the extra descriptors and a description. Nothing is stored until Save, which
+// commits once (one undo step); Cancel, ×, Esc and the backdrop leave the deal
+// as it was (Esc and the backdrop do nothing once something is typed).
 function openListing() {
-  let dirty = false;
-  const fieldEls = LISTING_FIELDS.map(([label, key]) => {
-    const inp = el('input', { class: 'legacy-input', type: 'text', value: prop.info[key] || '', 'aria-label': label });
-    inp.addEventListener('input', () => { prop.info[key] = inp.value; dirty = true; });
-    return el('label', { class: 'legacy-field' }, [el('span', { class: 'legacy-field__label', text: label }), inp]);
-  });
+  const input = (key, attrs = {}) => {
+    const inp = el('input', { class: 'input', type: 'text', ...attrs });
+    inp.value = prop.info[key] || '';
+    return inp;
+  };
+  const fields = LISTING_FIELDS.map(([label, key]) => [key, input(key, { 'aria-label': label })]);
   // Photos link — a URL to the source listing / photo gallery, with a live
-  // "Open ↗" anchor when the value is a valid http(s) link.
-  const linkInp = el('input', { class: 'legacy-input', type: 'url', value: prop.info.photosLink || '', 'aria-label': 'Photos link', placeholder: 'https://… listing / photo gallery' });
+  // "Open ↗" link when the value is a valid http(s) address.
+  const linkInp = input('photosLink', { type: 'url', 'aria-label': 'Photos link', placeholder: 'e.g. https://www.crexi.com/properties/…' });
   const linkOpen = el('a', { class: 'link-open', target: '_blank', rel: 'noopener noreferrer', text: 'Open ↗' });
   const syncLink = () => { const u = safeImageUrl(linkInp.value); if (u) { linkOpen.href = u; linkOpen.hidden = false; } else { linkOpen.removeAttribute('href'); linkOpen.hidden = true; } };
-  linkInp.addEventListener('input', () => { prop.info.photosLink = linkInp.value; dirty = true; syncLink(); });
+  linkInp.addEventListener('input', syncLink);
   syncLink();
-  const linkField = el('label', { class: 'legacy-field' }, [el('span', { class: 'legacy-field__label' }, ['Photos link ', linkOpen]), linkInp]);
-  const ta = el('textarea', { class: 'legacy-input desc-ta', rows: '6', 'aria-label': 'Property description', placeholder: 'Description, highlights, building/business extras…' });
+  const ta = el('textarea', { class: 'input desc-ta', rows: '6', 'aria-label': 'Property description', placeholder: 'e.g. highlights, building and business extras' });
   ta.value = prop.info.description || '';
-  ta.addEventListener('input', () => { prop.info.description = ta.value; dirty = true; });
-  const closeBtn = el('button', { class: 'legacy-btn legacy-btn--ghost', type: 'button', text: 'Done' });
-  const panel = el('div', { class: 'modal__panel desc-modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Listing details' }, [
-    el('div', { class: 'gallery__head' }, [el('h2', { class: 'modal__title', text: 'Listing details' }), closeBtn]),
-    el('div', { class: 'form-grid' }, fieldEls),
-    linkField,
-    el('span', { class: 'legacy-field__label', text: 'Description' }),
-    ta,
-  ]);
-  const overlay = el('div', { class: 'modal__overlay legacy-screen' }, [panel]);
-  const close = mountOverlay(overlay, {
-    onClose: () => { refreshListingBtn(); if (dirty) onEdit(); },   // commit + auto-save once
+  const save = el('button', { class: 'btn btn-primary', type: 'button', text: 'Save' });
+  const d = houseDialog({
+    title: 'Listing details', className: 'desc-modal', opener: listingBtn,
+    body: [
+      el('div', { class: 'desc-grid' }, LISTING_FIELDS.map(([label], i) => field(label, fields[i][1]))),
+      field('Photos link', linkInp, [' ', linkOpen]),
+      field('Description', ta),
+    ],
+    footer: [el('button', { class: 'btn', type: 'button', 'data-dialog-close': '', text: 'Cancel' }), save],
   });
-  closeBtn.addEventListener('click', close);
-  fieldEls[0].querySelector('input').focus();
+  save.addEventListener('click', () => {
+    const next = { photosLink: linkInp.value, description: ta.value };
+    fields.forEach(([key, inp]) => { next[key] = inp.value; });
+    const changed = Object.keys(next).some((k) => (prop.info[k] || '') !== next[k]);
+    Object.assign(prop.info, next);
+    d.close();
+    refreshListingBtn();
+    if (changed) { onEdit(); toast('Listing details saved.', 'success'); }
+  });
 }
 
   return { photosBtn, listingBtn };

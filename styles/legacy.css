@@ -703,7 +703,7 @@ body.is-readonly #view button:not(.topbar__link):not(.switcher__btn) {
   opacity: 0.55; pointer-events: none;
 }
 
-/* modal (sign-in, upload prompt) --------------------------------------------- */
+/* modal (the photo gallery, until it moves to the house dialog) ------------- */
 .modal__overlay {
   position: fixed; inset: 0; z-index: 50;
   display: flex; align-items: center; justify-content: center;
@@ -722,20 +722,7 @@ body.is-readonly #view button:not(.topbar__link):not(.switcher__btn) {
   max-height: 88vh; max-height: 88dvh;
   overflow-y: auto; overscroll-behavior: contain;
 }
-.modal__close {
-  position: absolute; top: 10px; right: 12px; z-index: 1;
-  width: 30px; height: 30px; line-height: 1; padding: 0;
-  display: flex; align-items: center; justify-content: center;
-  font: inherit; font-size: 22px; cursor: pointer;
-  background: none; border: 1px solid transparent; border-radius: var(--radius-sm);
-  color: var(--color-text-secondary);
-}
-.modal__close:hover, .modal__close:focus-visible { border-color: var(--color-border-hover); background: var(--color-bg); color: var(--color-text-primary); }
-.modal__title { font-size: var(--font-xl); font-weight: 700; margin: 0; padding-right: 28px; }
-.modal__body { font-size: var(--font-base); color: var(--color-text-secondary); margin: 0; line-height: 1.5; }
-.modal__status { min-height: 1.2em; font-size: var(--font-sm); }
-.modal__status--ok { color: var(--color-accent); font-weight: 600; }
-.modal__actions { display: flex; justify-content: flex-end; gap: var(--space-2); flex-wrap: wrap; }
+.modal__title { font-size: var(--font-xl); font-weight: 700; margin: 0; }
 @media (prefers-reduced-motion: no-preference) {
   .modal__panel { animation: modal-in 0.16s ease-out; }
   @keyframes modal-in { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
@@ -753,13 +740,6 @@ body.is-readonly #view button:not(.topbar__link):not(.switcher__btn) {
 }
 .photos-btn:hover, .photos-btn:focus-visible { border-color: var(--color-accent); color: var(--color-accent); }
 
-.modal__panel.import-modal { max-width: 560px; }
-.import-ta { width: 100%; resize: vertical; font-family: inherit; font-size: var(--font-sm); min-height: 72px; line-height: 1.4; }
-.modal__panel.desc-modal { max-width: 620px; gap: var(--space-3); }
-.desc-ta { width: 100%; resize: vertical; font-family: inherit; font-size: var(--font-sm); min-height: 180px; line-height: 1.5; }
-.link-open { font-size: var(--font-xs); color: var(--color-accent); font-weight: 600; text-decoration: none; margin-left: 6px; }
-.link-open:hover, .link-open:focus-visible { text-decoration: underline; }
-.link-open[hidden] { display: none; }
 
 .modal__panel.gallery { max-width: 720px; gap: var(--space-4); }
 .gallery__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }

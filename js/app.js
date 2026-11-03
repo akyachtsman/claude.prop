@@ -1,7 +1,7 @@
 // app.js — hash router + shared state. Wires views to store + model, owns the
 // topbar center slot (switcher/pills or view title), first-run, export/import.
 
-import { el, clear, toast, mountOverlay } from './dom.js';
+import { el, clear, toast, houseDialog, field } from './dom.js';
 import * as store from './store.js';
 import * as fmt from './format.js';
 import { capVerdict, dscrVerdict, BENCHMARK_CAP, BENCHMARK_DSCR } from './model.js';
@@ -363,67 +363,64 @@ function loadSample() {
 // source (parsed in the browser from its embedded JSON-LD). The app detects
 // which and routes it. "Start blank" falls back to createNew.
 function openImport() {
-  const input = el('textarea', { class: 'legacy-input import-ta', rows: '3', 'aria-label': 'Listing URL or page source',
-    placeholder: 'Paste a Crexi listing URL — or, for LoopNet, the page source (open the listing, Ctrl+U, select all, copy).' });
-  const status = el('p', { class: 'modal__status' });
-  const importBtn = el('button', { class: 'legacy-btn legacy-btn--primary', type: 'button', text: 'Import' });
-  const blankBtn = el('button', { class: 'legacy-btn legacy-btn--ghost', type: 'button', text: 'Start blank instead' });
-  const closeBtn = el('button', { class: 'modal__close', type: 'button', 'aria-label': 'Close', title: 'Close', text: '×' });
-  const panel = el('div', { class: 'modal__panel import-modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Add a property from a listing' }, [
-    closeBtn,
-    el('h2', { class: 'modal__title', text: 'Add a property from a listing' }),
-    el('p', { class: 'modal__body', text: 'Paste a Crexi URL, or LoopNet page source — the details, photos, and figures come in automatically.' }),
-    input, status,
-    el('div', { class: 'modal__actions' }, [blankBtn, importBtn]),
-  ]);
-  const overlay = el('div', { class: 'modal__overlay legacy-screen' }, [panel]);
-  const close = mountOverlay(overlay);
-  closeBtn.addEventListener('click', close);
-  const busy = (on) => { importBtn.disabled = on; importBtn.textContent = on ? 'Importing…' : 'Import'; };
+  const input = el('textarea', { class: 'input import-ta', rows: '4', 'aria-label': 'Listing URL or page source',
+    placeholder: 'e.g. https://www.crexi.com/properties/…' });
+  const importBtn = el('button', { class: 'btn btn-primary', type: 'button', text: 'Import' });
+  const blankBtn = el('button', { class: 'btn', type: 'button', text: 'Start blank instead' });
+  // design.md §10: one dialog shell; the error or the success line sits right
+  // under the box (§18, House.message), never only in a toast.
+  const d = houseDialog({
+    title: 'Add a property from a listing', className: 'import-modal',
+    body: [
+      el('p', { text: 'Paste a Crexi listing URL, or for LoopNet the page source (open the listing, press Ctrl+U, select all and copy). The details, photos and figures come in automatically.' }),
+      field('Listing URL or page source', input),
+    ],
+    footer: [el('button', { class: 'btn', type: 'button', 'data-dialog-close': '', text: 'Cancel' }), blankBtn, importBtn],
+  });
+  const say = (text, kind) => window.House.message(input, text, kind ? { kind } : undefined);
+  const busy = (on) => { d.setBusy(on); importBtn.disabled = on; blankBtn.disabled = on; importBtn.textContent = on ? 'Importing…' : 'Import'; };
   const finish = (property) => {
     const saved = store.save(property);
     if (!saved) { busy(false); return; }             // offline reject (store toasts)
-    // Confirm success in the still-open modal, then open the property after a
-    // brief beat so the "import successful" message registers before the switch.
-    importBtn.disabled = true;
+    // Confirm success in the still-open dialog, then open the property after a
+    // brief beat so the "import successful" line registers before the switch.
     importBtn.textContent = 'Imported';
-    status.className = 'modal__status modal__status--ok';
-    status.textContent = '✓ Import successful — opening the property…';
-    toast('Import successful.', 'success');
+    say('✓ Import successful. Opening the property…', 'ok');
+    toast('Listing imported.', 'success');
     justCreatedId = saved.id;                          // this one entry starts unlocked
     setTimeout(() => {
-      close();
+      d.setBusy(false);
+      d.close();
       navigate('#/p/' + encodeURIComponent(saved.id));
     }, 1000);
   };
   async function doImport() {
     const raw = input.value.trim();
     const kind = classifyImportInput(raw);
-    if (kind === 'empty') { status.textContent = 'Paste a listing URL or the page source first.'; return; }
-    status.textContent = ''; busy(true);
+    if (kind === 'empty') { say('Paste a listing URL or the page source first.'); return; }
+    say(''); busy(true);
     if (kind === 'url') {
       if (/loopnet\.com/i.test(raw)) {   // LoopNet blocks server fetch — needs the page source instead
-        status.textContent = 'For LoopNet, paste the page source (open the listing, Ctrl+U, select all, copy) — not the URL.';
+        say('For LoopNet, paste the page source instead of the URL: open the listing, press Ctrl+U, select all and copy.');
         busy(false); return;
       }
       let mod;
       try { mod = await import('./supabase.js'); }
-      catch { status.textContent = 'Import needs a connection. Try again in a moment.'; busy(false); return; }
+      catch { say('Import needs a connection. Try again in a moment.'); busy(false); return; }
       const res = await mod.importListing(raw);
-      if (!res.ok) { status.textContent = res.error; busy(false); return; }
+      if (!res.ok) { say(res.error); busy(false); return; }
       finish(res.property);
     } else if (kind === 'html') {
       const res = parseLoopNetHtml(raw);
-      if (!res.ok) { status.textContent = res.error; busy(false); return; }
+      if (!res.ok) { say(res.error); busy(false); return; }
       finish(res.property);
     } else {
-      status.textContent = "That doesn't look like a listing URL or page source.";
+      say("That doesn't look like a listing URL or page source. Paste a Crexi URL or the LoopNet page source.");
       busy(false);
     }
   }
   importBtn.addEventListener('click', doImport);
-  blankBtn.addEventListener('click', () => { close(); createNew(); });
-  input.focus();
+  blankBtn.addEventListener('click', () => { d.close(); createNew(); });
 }
 
 // ── export / import ──────────────────────────────────────────────────────
