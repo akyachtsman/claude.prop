@@ -130,11 +130,11 @@ test('S29 upload prompt — shows once with local deals and dismisses cleanly (n
   await installSignedIn(page, { seed: [], reconcile: true });
   await page.goto('./', { waitUntil: 'load' });
   // exactly one prompt — the re-entry guard prevents stacked duplicates
-  await expect(page.locator('.modal__overlay')).toHaveCount(1);
-  await expect(page.locator('.modal__title', { hasText: 'Move your local deals in?' })).toBeVisible();
+  await expect(page.locator('dialog.dialog')).toHaveCount(1);
+  await expect(page.locator('dialog.dialog[open] .dialog-title')).toHaveText('Move your local deals in?');
   // dismissing it removes it for good (it does not reappear from a second reconcile)
   await page.locator('button', { hasText: 'Move them in' }).click();
-  await expect(page.locator('.modal__overlay')).toHaveCount(0);
+  await expect(page.locator('dialog.dialog')).toHaveCount(0);
   await page.waitForSelector('.lcard');
   await expect(page.locator('.lcard__name', { hasText: 'My Local Deal' })).toBeVisible();
 });
@@ -143,10 +143,10 @@ test('S29 upload prompt — shows once with local deals and dismisses cleanly (n
 // reach: `installSignedIn` suppresses the reconcile there, so the prompt never
 // renders. It belongs here, where reconcile can be switched on.
 //
-// Its three dismissal paths are independent handlers (js/account.js:19-25) and
+// Its dismissal paths are the house dialog's (House.dialog, js/dom.js houseDialog) and
 // nothing else asserts them: S29 above clicks only "Move them in", and the generic
 // DISMISS scenario's CLOSE selector does not match "Not now" while its backdrop
-// selector does not match `.modal__overlay` at all (Codex, #116).
+// selector does not match a native <dialog>'s backdrop at all (Codex, #116).
 //
 // ⚠️ THE PROMPT IS DELIBERATELY ONCE-PER-ACCOUNT, so a three-path loop on one page
 // would see it once and then assert against nothing. `reconcile()` returns early on
@@ -154,7 +154,7 @@ test('S29 upload prompt — shows once with local deals and dismisses cleanly (n
 // the behaviour S29 proves. The init script below therefore re-seeds the local deal
 // AND clears that key on every navigation, so each reload earns a genuine prompt;
 // `reconciledUids` is module state and resets with the page anyway.
-test('DISMISS account modal — the local-deals prompt closes by control, Escape AND backdrop', async ({ page }) => {
+test('DISMISS account modal — the local-deals prompt closes by Not now, ×, Escape AND backdrop', async ({ page }) => {
   // BUDGET — derived, same convention. MEASURED on 7a5e3a9: mobile-chrome 1.4s ·
   // iphone 6.8s. Three full reloads (the prompt is once-per-account, so each path
   // needs a fresh one), and webkit on this runner is the slow case. 60s is ~9x.
@@ -162,16 +162,20 @@ test('DISMISS account modal — the local-deals prompt closes by control, Escape
   await seedLocalDealForReconcile(page);
   await installSignedIn(page, { seed: [], reconcile: true });
 
+  // The house dialog (design.md §10): Not now, ×, Escape, and a press on the
+  // backdrop, which for a native <dialog> is a press outside its box (the
+  // window's corner).
   for (const dismiss of [
     async () => page.locator('button', { hasText: 'Not now' }).click(),   // the control
+    async () => page.locator('dialog.dialog[open] button[aria-label="Close"]').click(),
     async () => page.keyboard.press('Escape'),
-    async () => page.locator('.modal__overlay').click({ position: { x: 5, y: 5 } }),
+    async () => page.mouse.click(5, 5),
   ]) {
     await page.goto('./', { waitUntil: 'load' });
-    await expect(page.locator('.modal__overlay')).toHaveCount(1);
-    await expect(page.locator('.modal__title', { hasText: 'Move your local deals in?' })).toBeVisible();
+    await expect(page.locator('dialog.dialog')).toHaveCount(1);
+    await expect(page.locator('dialog.dialog[open] .dialog-title')).toHaveText('Move your local deals in?');
     await dismiss();
-    await expect(page.locator('.modal__overlay')).toHaveCount(0);
+    await expect(page.locator('dialog.dialog')).toHaveCount(0);
   }
 });
 

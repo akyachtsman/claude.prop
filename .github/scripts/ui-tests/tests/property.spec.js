@@ -610,18 +610,19 @@ test('S31 import — one box takes a Crexi URL (server) or LoopNet page source (
   // (a) unsupported input surfaces an error, no navigation
   await openImport();
   await page.fill(box, 'just some words');
-  await page.click('.modal__actions button:has-text("Import")');
-  await expect(page.locator('.modal__status')).toContainText(/doesn.t look like/i);
+  await page.click('.import-modal .dialog-footer .btn-primary');
+  await expect(page.locator('.import-modal .inline-msg.err')).toContainText(/doesn.t look like/i);   // under the box (§18)
+  await expect(page.locator('.import-modal .inline-msg.err')).toHaveAttribute('role', 'alert');
 
   // (b) a LoopNet URL is refused with a hint to paste the source instead
   await page.fill(box, 'https://www.loopnet.com/Listing/x/41097591/');
-  await page.click('.modal__actions button:has-text("Import")');
-  await expect(page.locator('.modal__status')).toContainText(/page source/i);
+  await page.click('.import-modal .dialog-footer .btn-primary');
+  await expect(page.locator('.import-modal .inline-msg.err')).toContainText(/page source/i);
 
   // (c) a Crexi URL imports via the (stubbed) Edge Function and opens the property
   await page.fill(box, 'https://www.crexi.com/properties/2606773/california-3091-marysville-boulevard');
-  await page.click('.modal__actions button:has-text("Import")');
-  await expect(page.locator('.modal__status--ok')).toContainText(/import successful/i);   // confirmed before the detail screen
+  await page.click('.import-modal .dialog-footer .btn-primary');
+  await expect(page.locator('.import-modal .inline-msg.ok')).toContainText(/import successful/i);   // confirmed before the detail screen
   await page.waitForSelector('.kpi-strip');
   await expect(page.locator('button[aria-label^="Photos"]')).toContainText('2');
   await page.click('button[aria-label="Listing details"]');
@@ -634,11 +635,43 @@ test('S31 import — one box takes a Crexi URL (server) or LoopNet page source (
   const ld = JSON.stringify({ '@type': ['RealEstateListing', 'Product'], '@id': 'https://www.loopnet.com/Listing/1835-Fulton-Ave/41097591/#listing', name: '1835 Fulton Ave', url: 'https://www.loopnet.com/Listing/1835-Fulton-Ave/41097591/', offers: [{ price: 1050000, '@type': 'Offer' }], additionalProperty: [{ name: 'Property Type', value: ['Retail'] }, { name: 'Property Subtype', value: ['Storefront Retail/Office'] }, { name: 'Gross Leasable Area', value: ['4,697 SF'] }, { name: 'Year Built', value: ['1960'] }] });
   const source = `<!DOCTYPE html><html><body><img src="https://images1.loopnet.com/i2/H/110/1835-Fulton-Ave-Sacramento-CA-Building-Photo-1-Large.jpg"><script type="application/ld+json">${ld}</script></body></html>`;
   await page.fill(box, source);
-  await page.click('.modal__actions button:has-text("Import")');
+  await page.click('.import-modal .dialog-footer .btn-primary');
   await page.waitForSelector('.kpi-strip');
   await page.click('button[aria-label="Listing details"]');
   await expect(page.locator('input[aria-label="Subtype"]')).toHaveValue('Storefront Retail/Office');
   await expect(page.locator('input[aria-label="Source"]')).toHaveValue(/loopnet\.com/);
+});
+
+test('S43 Listing details — the house dialog: labelled fields, Save stores, Cancel discards, typing holds Escape', async ({ page }) => {
+  await loadSample(page);
+  const subtype = page.locator('.desc-modal input[aria-label="Subtype"]');
+  await page.click('button[aria-label="Listing details"]');
+  const dlg = page.locator('dialog.desc-modal[open]');
+  await expect(dlg.locator('.dialog-title')).toHaveText('Listing details');
+  // §12: every field's label sits above it and stays visible.
+  for (const name of ['Subtype', 'Broker', 'Source', 'Photos link', 'Description']) {
+    await expect(dlg.locator('.field .label', { hasText: name })).toBeVisible();
+  }
+  await expect(dlg.locator('.dialog-footer button')).toHaveText(['Cancel', 'Save']);
+  // Unsaved typing: Escape and the backdrop do nothing; Cancel discards it.
+  await subtype.fill('Strip center');
+  await page.keyboard.press('Escape');
+  await expect(dlg).toBeVisible();
+  await dlg.locator('button', { hasText: 'Cancel' }).click();
+  await expect(page.locator('.desc-modal')).toHaveCount(0);
+  await expect(page.locator('button[aria-label="Listing details"]')).toBeFocused();   // back on the opener
+  await page.click('button[aria-label="Listing details"]');
+  await expect(subtype).toHaveValue('');
+  // Save stores it, says so, and it survives a reload (auto-saved).
+  await subtype.fill('Strip center');
+  await page.locator('.desc-modal .btn-primary', { hasText: 'Save' }).click();
+  await expect(page.locator('.desc-modal')).toHaveCount(0);
+  await expect(page.locator('.legacy-toast', { hasText: 'Listing details saved.' })).toBeVisible();
+  await page.waitForTimeout(800);   // the debounced auto-save
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForSelector('.kpi-strip');
+  await page.click('button[aria-label="Listing details"]');
+  await expect(subtype).toHaveValue('Strip center');
 });
 
 test('Pills check the FIXED 8% / 1.25 benchmark — a Target goal-seek moves actual CAP but not the bar', async ({ page }) => {
@@ -1179,32 +1212,33 @@ test('DISMISS project overlays — gallery, lightbox, Listing details, Import an
   await expect(page.locator('.gallery')).toBeVisible();
   await page.keyboard.press('Escape');                       // tidy up the gallery
 
-  // ── Listing details (🏷 on the dashboard): control ("Done"), Escape, backdrop.
-  // Its close control is a `Done` button, which is exactly what the generic
-  // scenario's CLOSE selector misses.
+  // ── Listing details (🏷 on the dashboard), the house dialog: Cancel, ×,
+  // Escape, and a press on the backdrop (outside the native <dialog>'s box).
   for (const dismiss of [
-    async () => page.click('.desc-modal button:has-text("Done")'),
+    async () => page.click('.desc-modal button:has-text("Cancel")'),
+    async () => page.locator('.desc-modal button[aria-label="Close"]').click(),
     async () => page.keyboard.press('Escape'),
-    async () => page.locator('.modal__overlay').click({ position: { x: 5, y: 5 } }),
+    async () => page.mouse.click(5, 5),
   ]) {
     await page.click('button[aria-label="Listing details"]');
-    await expect(page.locator('.desc-modal')).toBeVisible();
+    await expect(page.locator('dialog.desc-modal[open]')).toBeVisible();
     await dismiss();
     await expect(page.locator('.desc-modal')).toHaveCount(0);
   }
 
-  // ── Import modal (list view): control, Escape, backdrop
+  // ── Import a listing (list view), the house dialog: Cancel, ×, Escape, backdrop
   await page.goto('./', { waitUntil: 'load' });
   await page.waitForSelector('.lcard');
   for (const dismiss of [
-    async () => page.locator('.modal__close').click(),
+    async () => page.click('.import-modal button:has-text("Cancel")'),
+    async () => page.locator('.import-modal button[aria-label="Close"]').click(),
     async () => page.keyboard.press('Escape'),
-    async () => page.locator('.modal__overlay').click({ position: { x: 5, y: 5 } }),
+    async () => page.mouse.click(5, 5),
   ]) {
     await page.click('button:has-text("Import a listing")');
-    await expect(page.locator('.modal__overlay')).toHaveCount(1);
+    await expect(page.locator('dialog.import-modal[open]')).toBeVisible();
     await dismiss();
-    await expect(page.locator('.modal__overlay')).toHaveCount(0);
+    await expect(page.locator('.import-modal')).toHaveCount(0);
   }
 
   // ── Delete permanently confirmation (the house dialog, Archive rows): ×,

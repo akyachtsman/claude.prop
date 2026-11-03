@@ -6,7 +6,7 @@
 import { signIn, signUp, resetPassword, updatePassword, signOut, getSession, onAuthChange } from './supabase.js';
 import { cloudOps } from './cloud.js';
 import * as store from './store.js';
-import { el, clear, toast, mountOverlay } from './dom.js';
+import { el, clear, toast, houseDialog } from './dom.js';
 import { sampleProperty, demoProperties } from './sample.js';
 import { missingFixtures } from './reconcile.js';
 
@@ -14,13 +14,6 @@ const slot = document.getElementById('topbar-account');
 const banner = document.getElementById('offline-banner');
 let rerender = () => {};      // set by init() — re-renders the current view
 let recovering = false;       // true while a password-reset link is being completed
-
-// ── modal helper (Banker Navy) ─────────────────────────────────────────────
-function modal(children) {
-  const panel = el('div', { class: 'modal__panel', role: 'dialog', 'aria-modal': 'true' }, children);
-  const overlay = el('div', { class: 'modal__overlay legacy-screen' }, [panel]);
-  return { close: mountOverlay(overlay), panel };
-}
 
 // ── first-sign-in reconcile (D6 fixed order: upload wins, then gap-seed) ────
 function fixtures() { return [sampleProperty(), ...demoProperties()]; }
@@ -51,20 +44,18 @@ async function reconcile(uid) {
   try { localStorage.setItem(RECON_KEY, new Date().toISOString()); } catch (e) { /* ignore */ }
 }
 
+// The house dialog (design.md §10): "Move them in" is the act; Not now, ×, Esc
+// and the backdrop all leave the local copy where it is.
 function confirmUpload(n) {
-  return new Promise((resolve) => {
-    let done = false;
-    const finish = (v) => { if (done) return; done = true; m.close(); resolve(v); };
-    const m = modal([
-      el('h2', { class: 'modal__title', text: 'Move your local deals in?' }),
-      el('p', { class: 'modal__body', text:
-        `You have ${n} propert${n === 1 ? 'y' : 'ies'} saved on this device. Copy ${n === 1 ? 'it' : 'them'} into your account so they sync everywhere? Your local copy is kept either way.` }),
-      el('div', { class: 'modal__actions' }, [
-        el('button', { class: 'legacy-btn legacy-btn--ghost', type: 'button', text: 'Not now', onclick: () => finish(false) }),
-        el('button', { class: 'legacy-btn legacy-btn--primary', type: 'button', text: `Move ${n === 1 ? 'it' : 'them'} in`, onclick: () => finish(true) }),
-      ]),
-    ]);
+  const move = el('button', { class: 'btn btn-primary', type: 'button', text: `Move ${n === 1 ? 'it' : 'them'} in` });
+  const d = houseDialog({
+    title: 'Move your local deals in?', className: 'upload-modal',
+    body: [el('p', { text:
+      `You have ${n} propert${n === 1 ? 'y' : 'ies'} saved on this device. Copy ${n === 1 ? 'it into your account so it syncs' : 'them into your account so they sync'} everywhere? Your local copy is kept either way.` })],
+    footer: [el('button', { class: 'btn', type: 'button', 'data-dialog-close': '', text: 'Not now' }), move],
   });
+  move.addEventListener('click', () => d.close(true));
+  return d.done.then((v) => v === true);
 }
 
 // ── apply a session to the store (initial fetch + reconcile) ────────────────

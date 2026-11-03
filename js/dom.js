@@ -109,3 +109,35 @@ export function mountOverlay(root, { onKey, escapeWhen, onClose } = {}) {
   document.body.appendChild(root);
   return close;
 }
+
+/** The house dialog (design.md §10): a native <dialog class="dialog"> with its
+ *  title and × in the header, a body and a right-aligned footer, opened through
+ *  House.dialog, which owns focus, Esc, the backdrop press, the busy and
+ *  unsaved-typing rules and the return to the opener. Any button marked
+ *  data-dialog-close (Cancel, Not now) closes it. The dialog takes itself out of
+ *  the page once closed; `done` resolves then, with the value close() was given. */
+export function houseDialog({ title, className = '', body = [], footer = [], opener, initialFocus }) {
+  const box = el('dialog', { class: 'dialog' + (className ? ' ' + className : '') }, [
+    el('div', { class: 'dialog-header' }, [
+      el('h2', { class: 'dialog-title', text: title }),
+      el('button', { class: 'btn btn-icon', type: 'button', 'aria-label': 'Close', title: 'Close', 'data-dialog-close': '' }, [window.House.icon('x')]),
+    ]),
+    el('div', { class: 'dialog-body' }, body),
+    el('div', { class: 'dialog-footer' }, footer),
+  ]);
+  document.body.appendChild(box);
+  const done = window.House.dialog.open(box, { opener, initialFocus }).then((value) => { box.remove(); return value; });
+  return {
+    box, done,
+    close: (value) => window.House.dialog.close(box, value),
+    setBusy: (on) => window.House.dialog.setBusy(box, on),
+  };
+}
+
+/** A labelled field (design.md §12): the label above its control, always shown. */
+export function field(label, control, extra) {
+  const id = control.id || ('f-' + Math.random().toString(36).slice(2, 9));
+  control.id = id;
+  const after = extra ? (Array.isArray(extra) ? extra : [extra]) : [];
+  return el('div', { class: 'field' }, [el('label', { class: 'label', for: id }, [label, ...after]), control]);
+}
