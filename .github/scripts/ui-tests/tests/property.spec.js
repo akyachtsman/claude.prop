@@ -341,6 +341,29 @@ test('S11 one-screen — dashboard fits 1440×900 with no vertical scroll', asyn
   }
 });
 
+test('S37 KPI values fit their tiles — a huge deal shrinks or wraps a value, never overlaps the next tile', async ({ page }) => {
+  const errors = watchErrors(page);
+  await loadSample(page);
+  await setField(page, 'input[aria-label="Offer price"]', '9999999999');   // multi-billion NPV / All-In
+  await expect.poll(async () => (await kpis(page))['5Y NPV']).toMatch(/\$\d{1,3}(,\d{3}){3}/);
+  const problems = await page.evaluate(() => [...document.querySelectorAll('.kpi')].flatMap((k) => {
+    const v = k.querySelector('.kpi__value');
+    const c = k.getBoundingClientRect();
+    const r = document.createRange(); r.selectNodeContents(v);
+    const t = r.getBoundingClientRect();
+    const label = k.querySelector('.kpi__label').textContent;
+    const out = [];
+    if (v.scrollWidth > v.clientWidth + 1) out.push(`${label}: value overflows its box`);
+    if (t.right > c.right + 1 || t.left < c.left - 1) out.push(`${label}: value paints outside its tile`);
+    return out;
+  }));
+  expect(problems).toEqual([]);
+  // Nothing cut: every value is still shown in full.
+  const values = await page.locator('.kpi__value').allTextContents();
+  for (const v of values) expect(v).not.toMatch(/…|NaN|Infinity|undefined/);
+  expect(errors).toEqual([]);
+});
+
 test('S12 deal summary — the band is the single editable source; All-In derives', async ({ page }) => {
   await loadSample(page);
   const summaryOffer = page.locator('.deal-strip input[aria-label="Offer price"]');

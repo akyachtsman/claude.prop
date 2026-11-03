@@ -269,6 +269,27 @@ export function renderDashboard(container, ctx) {
       return cell;
     }));
 
+  // A value too wide for its tile (a $10,000,000 NPV in a 1440px strip of 15)
+  // steps its font down to 11px instead of painting over the next tile; if it
+  // still does not fit it wraps. It is never cut (design.md §1.6).
+  function fitKPIValues() {
+    if (!kpiStrip.isConnected) return;
+    KPI_DEFS.forEach((def, i) => {
+      const { valNode } = out['kpi' + i];
+      valNode.style.fontSize = ''; valNode.style.whiteSpace = ''; valNode.style.overflowWrap = '';
+      let size = parseFloat(getComputedStyle(valNode).fontSize);
+      while (size > 11 && valNode.scrollWidth > valNode.clientWidth) valNode.style.fontSize = (--size) + 'px';
+      if (valNode.scrollWidth > valNode.clientWidth) { valNode.style.whiteSpace = 'normal'; valNode.style.overflowWrap = 'anywhere'; }
+    });
+  }
+  // Re-fit when the strip is mounted or its width changes (window resize, a
+  // breakpoint); stop observing once the dashboard is gone.
+  const kpiFit = new ResizeObserver(() => {
+    if (!kpiStrip.isConnected) { kpiFit.disconnect(); return; }
+    fitKPIValues();
+  });
+  kpiFit.observe(kpiStrip);
+
   function paintKPIs(m) {
     KPI_DEFS.forEach((def, i) => {
       const { valNode, noteNode, cell } = out['kpi' + i];
@@ -278,6 +299,7 @@ export function renderDashboard(container, ctx) {
       valNode.className = 'kpi__value ' + (def[2] ? def[2](m) : '');
       noteNode.textContent = def[3](m);
     });
+    fitKPIValues();
   }
 
   // Property info ---------------------------------------------------------
