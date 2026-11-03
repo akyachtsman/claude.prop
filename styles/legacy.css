@@ -602,15 +602,6 @@ body {
 @media (max-width: 760px) { .form-grid--3 { grid-template-columns: 1fr; } }
 
 
-/* toast */
-.legacy-toast {
-  position: fixed; top: var(--space-4); left: 50%; transform: translateX(-50%);
-  z-index: 50; padding: 10px var(--space-4); border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md); font-weight: 600; font-size: var(--font-sm);
-  background: var(--color-navy); color: var(--color-on-navy);
-}
-.legacy-toast--success { background: var(--color-pass); }
-
 /* top-bar actions (Save/Delete relocated from the dashboard body) */
 .topbar__actions { display: flex; gap: var(--space-1); margin-left: auto; }
 .topbar__action { background: var(--color-navy-soft); }
@@ -654,40 +645,10 @@ body {
 }
 .account__btn { white-space: nowrap; }
 
-/* auth gate (full-page sign-in wall) ----------------------------------------- */
+/* auth gate: the top bar hides its nav while the sign-in wall shows (the gate
+   itself is on the house style, styles/project.css) ----------------------- */
 body.is-gated .topbar__nav,
 body.is-gated .topbar__center { display: none; }
-.authgate {
-  min-height: calc(100vh - 56px);
-  display: flex; align-items: center; justify-content: center;
-  padding: var(--space-6);
-}
-.authgate__card {
-  background: var(--color-surface); border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg); box-shadow: var(--shadow-md);
-  padding: var(--space-8); width: 100%; max-width: 420px;
-  display: flex; flex-direction: column; gap: var(--space-3); text-align: left;
-}
-.authgate__brand {
-  font-weight: 700; font-size: var(--font-sm); letter-spacing: var(--tracking-wide);
-  text-transform: uppercase; color: var(--color-accent);
-}
-.authgate__title { font-size: var(--font-2xl); font-weight: 700; color: var(--color-text-primary); margin: 0; }
-.authgate__sub { font-size: var(--font-base); color: var(--color-text-secondary); margin: 0; line-height: 1.5; }
-.authgate__field { margin-top: var(--space-2); }
-.authgate__send { width: 100%; justify-content: center; }
-.authgate__status { min-height: 1.2em; font-size: var(--font-sm); color: var(--color-text-secondary); margin: 0; }
-.authgate__status--ok { color: var(--color-accent); font-weight: 600; }
-.authgate__field[hidden] { display: none; }
-.authgate__links {
-  display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2);
-  margin-top: var(--space-1);
-}
-.authgate__link {
-  background: none; border: none; padding: 0; cursor: pointer;
-  font: inherit; font-size: var(--font-sm); color: var(--color-accent); font-weight: 600;
-}
-.authgate__link:hover, .authgate__link:focus-visible { text-decoration: underline; }
 
 /* offline read-only banner --------------------------------------------------- */
 .offline-banner {

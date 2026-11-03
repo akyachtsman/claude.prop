@@ -104,7 +104,7 @@ function router() {
   // works rather than showing a dead gate.
   if (account && account.needsAuthScreen()) {
     document.body.classList.add('is-gated');
-    view.className = 'legacy-page legacy-screen';   // the gate has not moved yet
+    view.className = 'page';   // the sign-in wall is on the house style
     clear(center);
     return account.renderAuthScreen(view);
   }
@@ -151,7 +151,7 @@ function showList() {
       const now = store.get(p.id);
       if (!now || isArchived(now)) { showList(); return; }
       if (!store.save({ ...now, archived: true })) return;
-      toast(`${p.name || 'Property'} archived.`, 'info');
+      toast(`${p.name || 'Property'} archived.`);
       showList();
     },
   });
@@ -167,7 +167,7 @@ function showArchive() {
     // Restore: clear the flag and drop back to the list. Re-render in place.
     restore: (p) => {
       if (!store.save({ ...p, archived: false })) return;
-      toast(`${p.name || 'Property'} restored.`, 'success');
+      toast(`${p.name || 'Property'} restored.`);
       showArchive();
     },
     // Delete permanently: the house confirmation (design.md §8, §9). It disables
@@ -184,7 +184,7 @@ function showArchive() {
       const now = store.get(p.id);
       if (!now || !isArchived(now)) { showArchive(); return; }
       if (!store.remove(p.id)) return;   // offline reject (store toasts) — leave the row
-      toast(`${p.name || 'Property'} deleted.`, 'info');
+      toast(`${p.name || 'Property'} deleted.`);
       showArchive();
     },
   });
@@ -206,7 +206,7 @@ function showCompare(ids) {
 // fight an in-progress edit by force-relocking underneath the user.
 function showDashboard(id, opts = {}) {
   let saved = store.get(id);
-  if (!saved) { toast('That property no longer exists.', 'info'); navigate('#/'); return; }
+  if (!saved) { toast('That property no longer exists.', { error: true }); navigate('#/'); return; }
   // The switcher cycles active properties only; keep the current one addressable
   // even if it's archived (e.g. opened straight from the Archive view).
   const props = store.list().filter((p) => isActive(p) || p.id === id);
@@ -293,7 +293,7 @@ function showDashboard(id, opts = {}) {
       undoStack.push(committedState);
       committedState = deepCopy(working);
       redoStack = [];
-      if (!store.isStorageOK()) toast("Couldn't save — storage is full or private mode. Export to keep your data.", 'info');
+      if (!store.isStorageOK()) toast("Couldn't save: storage is full or the browser is in private mode. Make a backup to keep your data.", { error: true });
       refreshHistory();
     },
   });
@@ -353,7 +353,7 @@ function createNew() {
 function loadSample() {
   const p = store.save(sampleProperty());
   if (!p) return;                                  // offline reject (store toasts)
-  toast('Sample deal loaded.', 'success');
+  toast('Sample deal loaded.');
   justCreatedId = p.id;                             // this one entry starts unlocked
   navigate('#/p/' + encodeURIComponent(p.id));
 }
@@ -386,7 +386,7 @@ function openImport() {
     // brief beat so the "import successful" line registers before the switch.
     importBtn.textContent = 'Imported';
     say('✓ Import successful. Opening the property…', 'ok');
-    toast('Listing imported.', 'success');
+    toast('Listing imported.');
     justCreatedId = saved.id;                          // this one entry starts unlocked
     setTimeout(() => {
       d.setBusy(false);
@@ -436,8 +436,8 @@ function importData() {
     const reader = new FileReader();
     reader.onload = () => {
       const res = store.importAll(String(reader.result));
-      if (res.ok) { toast(`Imported ${res.count} propert${res.count === 1 ? 'y' : 'ies'}.`, 'success'); navigate('#/'); router(); }
-      else toast(res.error, 'info');
+      if (res.ok) { toast(`Backup loaded: ${res.count} propert${res.count === 1 ? 'y' : 'ies'}.`); navigate('#/'); router(); }
+      else toast(res.error, { error: true });
     };
     reader.readAsText(file);
   });
@@ -455,7 +455,7 @@ function refreshBuiltinSample() {
   // stored sample that is newer than what this build ships.
   if (stored && (stored.sampleRev || 0) < fresh.sampleRev) {
     store.save(fresh);
-    toast('Updated the built-in 715 Plumas sample to the latest figures.', 'info');
+    toast('715 Plumas sample updated to the latest figures.');
   }
 }
 
@@ -473,7 +473,7 @@ function seedDemos() {
 // ── boot ──────────────────────────────────────────────────────────────
 document.getElementById('btn-export').addEventListener('click', exportData);
 document.getElementById('btn-import').addEventListener('click', importData);
-if (!store.probe()) toast('Saving is off — private mode or storage full. Export to keep your data.', 'info');
+if (!store.probe()) toast("Saving is off: the browser is in private mode or storage is full. Make a backup to keep your data.", { error: true });
 
 // Resolve auth before the first render (boot ordering): exchange any magic-link
 // ?code, swap to the cloud backend, run the initial fetch + first-sign-in

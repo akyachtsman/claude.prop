@@ -43,13 +43,15 @@ the project's, token names are the house's. The stylesheets, loaded in this orde
   family). Its first block holds back the house page base (overflow-wrap,
   headings, links, the 3px link focus ring, images, the controls' font) under
   `.legacy-screen`, the class every old screen's root carries: `#view`, the top
-  bar, the offline banner, each overlay and the toast.
+  bar, the offline banner and the photo gallery and lightbox.
 - `styles/project.css` — this project's own layout and modifiers for the screens
-  already moved (Compare and Archive since 2026-11-03: the compact, pinned-column
-  metric tables, best/worst fills, the include picker), loaded last. It never
-  restyles a house component. `js/app.js` `router()` gives `#view` the house
-  `page` class on a moved route (`HOUSE_ROUTES`) and `legacy-page legacy-screen`
-  on the rest, so a moved screen takes the house page base.
+  already moved (all 2026-11-03: Compare and Archive's compact, pinned-column
+  metric tables, best/worst fills and include picker; the Properties toolbar and
+  cards; the dialogs' widths and field grid; the sign-in wall), loaded last. It
+  never restyles a house component. `js/app.js` `router()` gives `#view` the house
+  `page` class on a moved route (`HOUSE_ROUTES`) and on the sign-in wall, and
+  `legacy-page legacy-screen` on the rest (the dashboard), so a moved screen takes
+  the house page base.
 - **`DESIGN-GAPS.md`** — one line per screen and group that does not meet the
   standard yet. Step 2 moves the screens one or a few per PR, in the order the
   owner picks, each dropping its `legacy-` classes and `legacy-screen` and
@@ -187,14 +189,16 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   `// PROJECT-SPECIFIC` in the file — `/refresh-repo` must diff them, not revert them.
   Grep that marker rather than trusting this list; the file is authoritative.
   1. **`accent / surface` at the normal-text floor (4.5), not upstream's 3.0, plus
-     `accent / bg`** — `--color-accent` is a SMALL-text colour here in seven places
-     (`.authgate__brand`, `.authgate__status--ok`, `.authgate__link`,
-     `.photos-btn:hover`, `.link-open`, and the house `.link-action` (← Properties)
-     and `.row-open` (a row's name) on Compare and Archive; `.archive-restore:hover`
+     `accent / bg`** — `--color-accent` is a SMALL-text colour here in five places
+     (`.authgate__brand`, `.photos-btn:hover`, `.link-open`, and the house
+     `.link-action` (← Properties, and the sign-in mode links) and `.row-open` (a
+     row's name) on Compare and Archive; `.archive-restore:hover`
      left the list when the Archive rows took the house `.btn`, 2026-10-27,
      `.legacy-th-sort__caret` when Compare and Archive took the house `.th-sort`,
-     2026-11-03, and `.modal__status--ok` when Import a listing took the house
-     dialog and `.inline-msg.ok`, 2026-11-03) at 13px/12px, neither of which is WCAG large text.
+     2026-11-03, `.modal__status--ok` when Import a listing took the house
+     dialog and `.inline-msg.ok`, 2026-11-03, and `.authgate__status--ok` and
+     `.authgate__link` when Sign-in took `.inline-msg` and `.link-action`,
+     2026-11-03) at 13px/12px, neither of which is WCAG large text.
   2. **`on-navy / accent`** — `--color-on-accent` is not the only foreground over
      accent: `.switcher__btn` and `.topbar__action` keep `--color-on-navy` while
      their hover fill becomes `--color-accent`.
@@ -514,9 +518,9 @@ restricting these files to a single project.
 | S20 | Stale-sample refresh | A returning visitor's older built-in sample (lower `sampleRev`) auto-updates to the latest figures on boot (offer `$1,300,000`, CAP `5.13%`); user-created deals are never touched | Stale sample survives a reload, or a non-sample property is overwritten |
 | S21 | Undo/redo | Each committed edit is one undo step; the Undo topbar button reverts the last change and Redo replays it; both disarm when empty; typing without committing is not undoable | Undo/Redo missing/stuck-disabled, doesn't revert/replay, or a mid-type change is captured |
 | S22 | Demo seed | Three extra demo deals (`demoProperties()`) seed once on boot when the store is already non-empty (a brand-new visitor still meets the empty first-run), guarded by `store.hasSeeded()`; a seeded deal the user deletes never reappears | Seed fires on an empty first-run, doesn't seed on a non-empty store, or a deleted demo reappears after reload |
-| S23 | Auth gate (logged out) | Logged out shows **only** the full-page sign-in wall (`.authgate`); the topbar nav, KPI strip, and every deal are hidden — no app or data leaks | Gate missing, or any `.lcard`/`.kpi-strip`/nav visible while logged out |
+| S23 | Auth gate (logged out) | Logged out shows **only** the full-page sign-in wall (`.authgate`, a house `.card` on the house page); the topbar nav, KPI strip, and every deal are hidden — no app or data leaks. Each field has its house label above it (Email, Password; design.md §12) and an empty send puts the error under the field it is about (`.inline-msg.err`, `role=alert`, the field `aria-invalid`; §18) | Gate missing, any `.lcard`/`.kpi-strip`/nav visible while logged out, a field without its visible label, or the error not under its field |
 | S24 | Password sign-in | Valid email+password on the gate signs in and reveals the app (account email in the topbar, gate gone); stubbed `signInWithPassword` (`/auth/v1/token`) | Sign-in doesn't reveal the app, or a hard error on valid creds |
-| S25 | Forgot password | The **Forgot password?** link switches to reset mode (password field hidden); **Send reset link** shows the `.authgate__status--ok` "Check your email" state (stubbed `/auth/v1/recover`) | No reset mode, or no "check your email" state |
+| S25 | Forgot password | The **Forgot password?** link switches to reset mode (password field hidden); **Send reset link** shows the "Check your email" state under the button (house `.inline-msg.ok`) (stubbed `/auth/v1/recover`) | No reset mode, or no "check your email" state |
 | S26 | Signed-in chrome | With a session the gate is gone, the topbar shows the account email + **Sign out**, and `store.backendKind()` is `cloud` (reads/writes `propanalytics.cloud.<uid>`) | Gate still shown, email/Sign out missing, or backend stays local |
 | S27 | Offline read-only | Signed-in + offline shows the `#offline-banner` and `body.is-readonly`; the write choke-point (`store.save`/`remove`) rejects edits (no cache mutation); reconnect clears the banner | No banner/read-only state, or an edit persists while offline signed-in |
 | S28 | First-sign-in seed | A fresh account (reconcile enabled) gap-seeds the 715 Plumas sample + 3 demos on first sign-in; the test reloads (reading the persisted stateful mock) so the assertion is engine-independent across chromium/webkit. The gap-seed *logic* is also unit-tested in `tests/reconcile.test.mjs` | Fewer than 4 cards, or a fixture missing |
