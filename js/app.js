@@ -33,7 +33,7 @@ let committedState = null;   // the current committed state, in memory (drives u
 // it (see showDashboard()).
 let justCreatedId = null;
 
-// ── blank property factory (for "+ New") ────────────────────────────────
+// ── blank property factory (for "+ Add property") ────────────────────────────────
 function blankProperty() {
   return {
     id: store.newId(), schemaVersion: 1, name: 'New property', archived: false,
@@ -90,12 +90,12 @@ function parseHash() {
 function navigate(hash) { location.hash = hash; }
 
 function setActiveNav(route) {
-  // Compare/Archive now live in the header action bar (fillTopbarActions), which
-  // owns their active state. The only static nav link left is Properties (home).
+  // Compare and Archive are drill-downs from the Properties page; the only
+  // static nav link is Properties (home).
   navProps.classList.toggle('topbar__link--active', route !== 'compare' && route !== 'archive');
 }
 
-const HOUSE_ROUTES = new Set(['compare', 'archive']);
+const HOUSE_ROUTES = new Set(['list', 'compare', 'archive']);
 
 function router() {
   // Auth gate: without a cloud session, show only the sign-in screen — the app
@@ -122,31 +122,12 @@ function router() {
 }
 
 // ── views ────────────────────────────────────────────────────────────────
-// The header action bar — Compare / Archive / New / Import — lives in the topbar
-// on the Properties LIST view, where the center slot is otherwise empty — it is
-// the list's toolbar. It is NOT shown on the dashboard (its center already carries
-// the switcher + verdict pills + undo/redo — four more buttons overflow the mobile
-// topbar, the S4/S21 failure mode), nor on the compare/archive drill-downs (those
-// are reached FROM the list and return via their own "← Properties" — keeping
-// the bar off them preserves a strict, unwindable back-navigation model).
-function fillTopbarActions() {
-  clear(center);
-  const n = store.list().filter(isArchived).length;
-  const act = (label, onClick, id) => {
-    const b = el('button', { class: 'topbar__link topbar__act', type: 'button', onclick: onClick, text: label });
-    if (id) b.id = id;
-    return b;
-  };
-  center.appendChild(el('div', { class: 'topbar__actbar' }, [
-    act('Compare', () => navigate('#/compare'), 'nav-compare'),
-    act(n > 0 ? `Archive (${n})` : 'Archive', () => navigate('#/archive'), 'nav-archive'),
-    act('+ New property', createNew),
-    act('Import a listing', openImport),
-  ]));
-}
-
+// The Properties page carries its own toolbar (search, Compare, Archived (N),
+// Import a listing, + Add property: design.md §16), so the topbar's centre is
+// empty there. Compare and Archive are reached from that toolbar and return by
+// their own "← Properties", which keeps back-navigation strictly unwindable.
 function showList() {
-  fillTopbarActions();
+  clear(center);
   renderList(view, {
     list: () => store.list().filter(isActive),   // archived deals live in the Archive view only
     open: (id) => navigate('#/p/' + encodeURIComponent(id)),
@@ -156,11 +137,21 @@ function showList() {
     goCompare: () => navigate('#/compare'),
     goArchive: () => navigate('#/archive'),
     archivedCount: () => store.list().filter(isArchived).length,
-    // Archive: hide from the list without deleting. A no-op if the write is
-    // rejected (offline); otherwise re-render the list in place.
-    archive: (p) => {
-      if (!store.save({ ...p, archived: true })) return;
-      toast('Archived.', 'info');
+    // Archive (design.md §7): asked in the house confirmation, then hidden from
+    // the list without deleting. Once answered, re-check the deal is still here
+    // and still active; a rejected write (offline) leaves the card alone.
+    archive: async (p, opener) => {
+      const name = p.name || 'this property';
+      const yes = await window.House.confirm({
+        title: `Archive ${name}?`,
+        body: 'You can restore it from Archived on the Properties page.',
+        confirm: 'Archive', kind: 'danger', opener,
+      });
+      if (!yes) return;
+      const now = store.get(p.id);
+      if (!now || isArchived(now)) { showList(); return; }
+      if (!store.save({ ...now, archived: true })) return;
+      toast(`${p.name || 'Property'} archived.`, 'info');
       showList();
     },
   });

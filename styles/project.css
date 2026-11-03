@@ -78,3 +78,18 @@
 .compare-table--cols thead th:first-child { left: 0; z-index: 3; }
 /* A phone keeps room for the metrics to scroll beside the pinned name. */
 @media (max-width: 600px) { .compare-table .compare-name-col { min-width: 140px; } }
+
+/* ── Properties ───────────────────────────────────────────────────────────
+   The house toolbar and grid of house cards. Each card adds the six headline
+   numbers under its pill (the owner reads the list by them, §1.6). */
+.list-toolbar { margin: 0 0 var(--space-4); }
+.list-under { display: flex; justify-content: center; margin-top: var(--space-2); }
+.lcard .card-sub { margin-top: var(--space-1); }
+.lcard-grid--none { display: block; }
+.lcard__status { margin-top: var(--space-2); }
+.lcard__kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); margin-top: var(--space-3); }
+.lcard__kpi { display: flex; flex-direction: column; min-width: 0; }
+.lcard__kpi-label { font-size: var(--font-xs); font-weight: 600; color: var(--color-text-secondary); }
+.lcard__kpi-val { font-weight: 700; font-variant-numeric: tabular-nums; }
+/* The first-run empty state carries three buttons; they keep 8px apart and wrap. */
+.list-first .empty-act { margin: var(--space-4) var(--space-1) 0; }

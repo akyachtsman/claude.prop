@@ -7,7 +7,7 @@
 // /rest/v1/properties** (GET/POST-upsert/PATCH/DELETE over an in-Node Map), and
 // suppresses the first-sign-in reconcile so the account starts with exactly the
 // `seed` rows — making a signed-in empty account behave like the old local
-// first-run (same "Load sample deal" / "+ New property" affordances).
+// first-run (same "Load sample deal" / "+ Add property" affordances).
 
 export const PROJECT_REF = 'yucnxlimmrgzbqtdizle';           // must match js/config.js
 export const TEST_UID = '00000000-0000-0000-0000-000000000001';
