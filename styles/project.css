@@ -1,0 +1,80 @@
+/* ── project.css — Property Analytics' own layout on the house components ──
+   Loaded after components.css (and, during the house-style move, after
+   legacy.css). It holds only this project's modifiers and layout for the
+   screens already moved (DESIGN-GAPS.md): it never restyles a house
+   component, and components.css itself is never edited. Colours come from
+   tokens.css (Banker Navy values under the house token names). */
+
+/* ── A moved screen's top: ← Properties, the heading, then its controls ── */
+.view-controls { margin: 0 0 var(--space-3); }
+.view-note { max-width: 80ch; margin: 0 0 var(--space-3); font-size: var(--font-sm); color: var(--color-text-secondary); }
+
+/* ── Compare and Archive tables ───────────────────────────────────────────
+   One row per property and thirteen metric columns, so the cells are tighter
+   than the house default and the box scrolls both ways (.table-wrap). The
+   checkbox, the name and the Archive's actions stay pinned while the metrics
+   scroll. */
+.compare-wrap { margin-bottom: var(--space-4); }
+/* Click-and-drag panning (js/dom.js dragScroll), for a mouse whose scrollbar
+   hides at rest; a drag never selects cell text. */
+.compare-wrap { cursor: grab; }
+.compare-wrap.is-dragging { cursor: grabbing; user-select: none; }
+.compare-table th, .compare-table td { padding: var(--space-1) var(--space-2); font-size: var(--font-sm); }
+.compare-table td { min-width: 80px; }
+/* A metric's label wraps onto a second line rather than widen its column. */
+.compare-table--rows th.num .th-sort { max-width: 6.5em; text-align: right; justify-content: flex-end; }
+.compare-table .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.compare-table th.num { text-align: right; white-space: normal; }
+/* The house header is sticky to the top; a row header (Side by side) is not,
+   it pins to the left instead. Header cells sit over body cells, and a cell
+   pinned both ways sits over both. */
+.compare-table thead th { z-index: 2; }
+.compare-table tbody th { position: sticky; top: auto; left: 0; z-index: 1; background: var(--color-surface); color: var(--color-text-primary); }
+.compare-table .compare-check-col,
+.compare-table .compare-name-col,
+.compare-table .compare-actions-col { position: sticky; z-index: 1; background: var(--color-surface); }
+.compare-table thead .compare-check-col,
+.compare-table thead .compare-name-col,
+.compare-table thead .compare-actions-col { z-index: 3; }
+.compare-table .compare-check-col { left: 0; width: 48px; min-width: 48px; max-width: 48px; text-align: center; }
+.compare-table .compare-check-col .checkbox { margin: 0; vertical-align: middle; }
+.compare-table .compare-name-col { left: 0; min-width: 170px; }
+.compare-table--check .compare-name-col { left: 48px; }
+.compare-table .compare-actions-col { right: 0; min-width: 0; box-shadow: inset 1px 0 0 var(--color-border); }
+/* The name (a .row-open) and its verdict pill; a long name wraps, never cut. */
+.compare-prospect { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--space-2); }
+.compare-prospect .row-open { font-weight: 700; }
+
+/* Best and worst value per metric (direction-aware; no data stays plain). */
+.cell--best { color: var(--color-pass-text); font-weight: 800; background: var(--color-pass-bg); }
+.cell--worst { color: var(--color-fail-text); background: var(--color-fail-bg); }
+
+/* Table layout: the excluded rows sit below a full-width divider row, in the
+   secondary text colour, with no best/worst. */
+.compare-divider-row td {
+  padding: var(--space-2); background: var(--color-bg);
+  font-size: var(--font-xs); font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--color-text-secondary);
+}
+.compare-table-row--off td { color: var(--color-text-secondary); }
+
+/* Side by side: properties are columns, so the include checkboxes sit in a
+   picker grid above the table, the excluded ones below the same divider. */
+.compare-picker {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0 var(--space-4); margin: 0 0 var(--space-3);
+}
+.compare-row { display: flex; align-items: center; gap: var(--space-2); min-height: var(--size-target-min); min-width: 0; cursor: pointer; }
+.compare-row .checkbox { flex: none; margin: 0; }
+.compare-row__name { min-width: 0; font-weight: 600; }
+.compare-row--off .compare-row__name { font-weight: 400; color: var(--color-text-secondary); }
+.compare-divider {
+  grid-column: 1 / -1; display: flex; align-items: center; gap: var(--space-3);
+  margin: var(--space-1) 0; font-size: var(--font-xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: .05em; color: var(--color-text-secondary);
+}
+.compare-divider::before, .compare-divider::after { content: ''; flex: 1; border-top: 1px solid var(--color-border); }
+.compare-table--cols thead th { min-width: 140px; }
+.compare-table--cols thead th:first-child { left: 0; z-index: 3; }
+/* A phone keeps room for the metrics to scroll beside the pinned name. */
+@media (max-width: 600px) { .compare-table .compare-name-col { min-width: 140px; } }

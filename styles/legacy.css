@@ -362,7 +362,7 @@ body {
    default is thin/auto-hiding and hard to hit precisely, especially where the
    pro-forma table sits flush against the stats row beneath it) + a little
    bottom padding so the bar isn't flush against that next line. Shared by the
-   pro-forma, Compare, and Archive tables. */
+   pro-forma table (Compare and Archive moved to the house .table-wrap). */
 .legacy-table-wrap {
   overflow-x: auto; padding-bottom: 6px;
   scrollbar-width: auto; scrollbar-color: var(--color-border-hover) var(--color-bg);
@@ -659,93 +659,6 @@ body {
 .empty h2 { color: var(--color-navy); margin: 0 0 var(--space-2); }
 .empty p { color: var(--color-text-secondary); margin: 0 0 var(--space-4); }
 .empty__actions { display: flex; gap: var(--space-2); justify-content: center; flex-wrap: wrap; }
-
-/* compare view, Side by side layout only: a checkbox-per-property picker grid
-   above the table (properties are columns there, so there's no "row" to put
-   a checkbox in front of). Table layout embeds its checkbox in the table
-   itself instead — see .compare-check-col below. */
-.compare-picker {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: var(--space-1) var(--space-4); margin: var(--space-2) 0 var(--space-3);
-}
-.compare-picker:empty { margin: 0; }
-.compare-row {
-  display: flex; align-items: center; gap: var(--space-2);
-  min-height: 36px; padding: 4px 0; cursor: pointer; min-width: 0;
-}
-.compare-row input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--color-accent); flex: none; margin: 0; }
-.compare-row__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
-.compare-row--off { opacity: 0.6; }
-.compare-row--off .compare-row__name { color: var(--color-text-secondary); font-weight: 400; }
-/* divider: the "out of comparison range" line, spanning every column of the grid */
-.compare-divider {
-  grid-column: 1 / -1;
-  display: flex; align-items: center; gap: var(--space-3);
-  margin: var(--space-1) 0; font-size: var(--font-xs); font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary);
-}
-.compare-divider::before, .compare-divider::after { content: ''; flex: 1; border-top: 1px solid var(--color-border); }
-/* Table layout's in-row divider: a full-width row between the included and
-   excluded property rows, same "out of range" label as .compare-divider. */
-.compare-divider-row td {
-  padding: var(--space-1) var(--space-2); font-size: var(--font-xs); font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary);
-  text-align: center; background: var(--color-bg);
-  border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border);
-}
-/* Table layout's excluded rows: dimmed, values still visible but no best/worst highlight */
-.compare-table-row--off { opacity: 0.6; }
-.compare-table-row--off .compare-name { font-weight: 400; color: var(--color-text-secondary); }
-/* checkbox column leading every Table-layout row (included or excluded) */
-.compare-check-col { width: 40px; min-width: 40px !important; text-align: center; padding-left: 6px !important; padding-right: 6px !important; }
-.compare-check-col input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--color-accent); margin: 0; vertical-align: middle; }
-.compare-table th, .compare-table td { min-width: 120px; }
-.compare-table td:first-child, .compare-table th:first-child { position: sticky; left: 0; background: var(--color-surface); font-weight: 600; z-index: 1; }
-/* Table layout only: the checkbox is first-child now, so the Prospect name
-   (second column) needs its own sticky offset to stay pinned during scroll. */
-.compare-table--rows td:nth-child(2), .compare-table--rows th:nth-child(2) {
-  position: sticky; left: 40px; background: var(--color-surface); font-weight: 600; z-index: 1;
-}
-.cell--best { color: var(--color-pass-text); font-weight: 800; background: var(--color-pass-bg); }
-.cell--worst { color: var(--color-fail-text); background: var(--color-fail-bg); }
-.compare-verdict td { padding-top: var(--space-2); }
-/* layout toggle (Table / Side by side) */
-.compare-controls { margin: var(--space-2) 0; }
-.seg { display: inline-flex; border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; }
-.seg__btn { font: inherit; font-size: var(--font-sm); font-weight: 600; min-height: 40px; padding: 6px var(--space-3); background: var(--color-surface); border: none; cursor: pointer; color: var(--color-text-secondary); }
-.seg__btn + .seg__btn { border-left: 1px solid var(--color-border); }
-.seg__btn--on { background: var(--color-navy); color: var(--color-on-navy); }
-/* rows table: one property per row, many metric columns — narrow, tight cells
-   (more columns are expected, so keep them compact and let .legacy-table-wrap scroll) */
-.compare-table--rows th, .compare-table--rows td { min-width: 76px; padding-left: 6px; padding-right: 6px; }
-.compare-table--rows th:nth-child(2), .compare-table--rows td:nth-child(2) { min-width: 176px; }
-.compare-name { display: block; font-weight: 700; color: var(--color-navy); }
-.compare-table--rows .compare-verdict { display: inline-block; margin-top: 3px; }
-/* Archive table: the compare rows layout + a per-row action column. The name is
-   a button (reopens the deal) that reads like the compare name. */
-.archive-name { display: block; background: none; border: none; padding: 0; cursor: pointer; text-align: left; text-decoration: underline; text-decoration-color: transparent; }
-.archive-name:hover, .archive-name:focus-visible { text-decoration-color: currentColor; }
-/* Prospect cell on ONE line: Restore + delete actions · name · verdict, never stacked */
-.archive-prospect { display: flex; align-items: center; gap: var(--space-2); flex-wrap: nowrap; }
-.archive-prospect .archive-name { white-space: nowrap; }
-.archive-prospect .compare-verdict { margin-top: 0; }
-.archive-table .archive-actions { display: flex; gap: 6px; margin-top: 0; flex-wrap: nowrap; flex: none; }
-/* sortable column headers: the whole header is a button; a caret shows the
-   active sort (a faint ↕ appears on hover for the rest, signalling it's sortable) */
-.compare-table th.legacy-th-sort { padding: 0; }
-.legacy-th-sort__btn {
-  display: flex; align-items: center; gap: 3px; width: 100%;
-  font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit;
-  background: none; border: none; cursor: pointer;
-  padding: var(--space-1) var(--space-2);
-}
-.compare-table th.num .legacy-th-sort__btn { justify-content: flex-end; }
-.legacy-th-sort__btn:hover { color: var(--color-navy); }
-.legacy-th-sort__btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
-.legacy-th-sort__caret { font-size: 9px; opacity: 0; transition: opacity .12s; }
-.legacy-th-sort__btn:hover .legacy-th-sort__caret { opacity: .5; }
-.legacy-th-sort--on .legacy-th-sort__caret { opacity: 1; color: var(--color-accent); }
-.legacy-th-sort--on .legacy-th-sort__label { color: var(--color-navy); }
 
 /* toast */
 .legacy-toast {

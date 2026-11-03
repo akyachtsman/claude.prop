@@ -95,6 +95,8 @@ function setActiveNav(route) {
   navProps.classList.toggle('topbar__link--active', route !== 'compare' && route !== 'archive');
 }
 
+const HOUSE_ROUTES = new Set(['compare', 'archive']);
+
 function router() {
   // Auth gate: without a cloud session, show only the sign-in screen — the app
   // and all data stay hidden until sign-in. If the account layer failed to load
@@ -102,12 +104,17 @@ function router() {
   // works rather than showing a dead gate.
   if (account && account.needsAuthScreen()) {
     document.body.classList.add('is-gated');
+    view.className = 'legacy-page legacy-screen';   // the gate has not moved yet
     clear(center);
     return account.renderAuthScreen(view);
   }
   document.body.classList.remove('is-gated');
   const r = parseHash();
   setActiveNav(r.route);
+  // Screens already on the house style (DESIGN-GAPS.md) take the house page box
+  // and base; the rest keep the legacy ones until they move. Resetting the class
+  // also drops a dashboard's .is-locked, which the dashboard re-applies itself.
+  view.className = HOUSE_ROUTES.has(r.route) ? 'page' : 'legacy-page legacy-screen';
   if (r.route === 'dashboard') return showDashboard(r.id);
   if (r.route === 'compare') return showCompare(r.ids);
   if (r.route === 'archive') return showArchive();
@@ -120,7 +127,7 @@ function router() {
 // the list's toolbar. It is NOT shown on the dashboard (its center already carries
 // the switcher + verdict pills + undo/redo — four more buttons overflow the mobile
 // topbar, the S4/S21 failure mode), nor on the compare/archive drill-downs (those
-// are reached FROM the list and return via their own "Back to properties" — keeping
+// are reached FROM the list and return via their own "← Properties" — keeping
 // the bar off them preserves a strict, unwindable back-navigation model).
 function fillTopbarActions() {
   clear(center);
@@ -197,6 +204,8 @@ function showCompare(ids) {
   center.appendChild(el('span', { class: 'topbar__viewtitle', text: 'Compare' }));
   renderCompare(view, {
     list: () => store.list().filter(isActive), compareIds: ids,   // archived deals excluded from Compare
+    open: (id) => navigate('#/p/' + encodeURIComponent(id)),
+    newProperty: createNew,
     goList: () => navigate('#/'),
   });
 }

@@ -136,20 +136,33 @@ test('S8 compare — best/worst highlight and per-column verdict', async ({ page
   await expect(page.locator('.compare-table--rows')).toBeVisible();
   await expect(page.locator('.cell--best').first()).toBeVisible();
   await expect(page.locator('.cell--worst').first()).toBeVisible();
-  await expect(page.locator('.compare-verdict .legacy-pill').first()).toBeVisible();
-  // sorting: click the CAP header (3rd column) → ascending first, then toggle
-  const capTh = page.locator('.compare-table--rows thead th:nth-child(3)');
-  await capTh.locator('.legacy-th-sort__btn').click();
+  await expect(page.locator('.compare-verdict .pill').first()).toBeVisible();
+  // sorting: press the CAP header (the house .th-sort, METRICS[1]) → ascending
+  // first, then toggle; the house mark " ▲" / " ▼" follows the label, and focus
+  // stays on the header across the re-render.
+  const capTh = page.locator('.compare-table--rows thead th[data-key="1"]');
+  await capTh.locator('.th-sort').click();
   await expect(capTh).toHaveAttribute('aria-sort', 'ascending');
-  await expect(page.locator('.compare-table--rows tbody tr').first().locator('.compare-name')).toContainText('New property'); // 0% lowest first
-  await capTh.locator('.legacy-th-sort__btn').click();
+  await expect(capTh.locator('.th-sort')).toHaveText('CAP ▲');
+  await expect(capTh.locator('.th-sort')).toBeFocused();
+  await expect(page.locator('.compare-table--rows tbody tr').first().locator('.row-open')).toContainText('New property'); // 0% lowest first
+  await capTh.locator('.th-sort').click();
   await expect(capTh).toHaveAttribute('aria-sort', 'descending');
-  await expect(page.locator('.compare-table--rows tbody tr').first().locator('.compare-name')).toContainText('715 Plumas');   // 5.13% highest
-  // toggle to the side-by-side layout (metrics as rows, properties as columns)
-  await page.click('.seg__btn:has-text("Side by side")');
-  await expect(page.locator('.compare-table:not(.compare-table--rows)')).toBeVisible();
+  await expect(capTh.locator('.th-sort')).toHaveText('CAP ▼');
+  await expect(page.locator('.compare-table--rows tbody tr').first().locator('.row-open')).toContainText('715 Plumas');   // 5.13% highest
+  // the layout switch is the house segmented control (§11): two tabs, two panels
+  const tabs = page.locator('.segmented[role="tablist"][aria-label="Comparison layout"]');
+  await expect(tabs.locator('[role="tab"][aria-selected="true"]')).toHaveText('Table');
+  await tabs.locator('[role="tab"]', { hasText: 'Side by side' }).click();
+  await expect(tabs.locator('[role="tab"][aria-selected="true"]')).toHaveText('Side by side');
+  await expect(page.locator('#compare-panel-cols .compare-table--cols')).toBeVisible();
+  await expect(page.locator('#compare-panel-table')).toBeHidden();
   await expect(page.locator('.compare-table--rows')).toHaveCount(0);
   await expect(page.locator('.cell--best').first()).toBeVisible();
+  // back to the table: a row's name is its opening control (§6) → the dashboard
+  await tabs.locator('[role="tab"]', { hasText: 'Table' }).click();
+  await page.locator('.compare-table--rows .row-open', { hasText: '715 Plumas' }).click();
+  await page.waitForSelector('.kpi-strip');
 });
 
 test('S36 compare picker — the checkbox leads every table row; unchecking excludes it and sinks its row below a divider', async ({ page }) => {
@@ -831,7 +844,7 @@ test('DELETE — deleting happens from the Archive rows (archive first), confirm
   // Delete permanently destroys it, and the toast names it.
   await del.click();
   await page.locator('dialog.dialog[open] .btn-delete').click();
-  await expect(page.locator('.empty')).toContainText('No archived properties');   // deleted → archive empty
+  await expect(page.locator('.empty-state')).toContainText('No archived properties yet.');   // deleted → archive empty
   await expect(page.locator('.legacy-toast')).toContainText(/715 Plumas.* deleted\./);
   await page.goto('./', { waitUntil: 'load' });                 // a fresh load of the list
   await page.waitForSelector('.lcard, .empty');
@@ -863,24 +876,29 @@ test('S32 archive — archived deals leave Properties/Compare and show as compar
 
   // Archived deals are excluded from Compare (1 active left → the needs-2+ state).
   await page.click('#nav-compare');
-  await expect(page.locator('.empty')).toContainText('Compare needs 2+');
+  await expect(page.locator('.empty-state')).toContainText('Nothing to compare yet.');
+  await expect(page.locator('.empty-state .btn-primary')).toHaveText('+ Add property');
 
   // Archive view: the action bar lives on the list, so return there, then open
   // Archive. The archived deal is a row in a compare-style rows table.
-  await page.click('button:has-text("Back to properties")');
+  await page.click('.link-action:has-text("← Properties")');
   await page.waitForSelector('.lcard');
   await page.click('#nav-archive');
   await page.waitForSelector('.archive-table');
   await expect(page.locator('.archive-table.compare-table--rows')).toBeVisible();
   await expect(page.locator('.archive-table tbody tr')).toHaveCount(1);
-  await expect(page.locator('.archive-name')).toContainText('New property');
+  await expect(page.locator('.archive-name.row-open')).toContainText('New property');
+  // §6: the row's actions sit in its last cell, Restore then Delete permanently.
+  const actions = page.locator('.archive-table tbody tr td:last-child .row-actions');
+  await expect(actions.locator('.archive-restore')).toBeVisible();
+  await expect(actions.locator('.archive-del')).toBeVisible();
 
   // Restore (a house text button, never confirmed) → the row leaves the archive
   // (now empty), the toast names the deal, and it's active again on Properties.
   await expect(page.locator('.archive-table .archive-restore')).toHaveText('Restore');
   await page.click('.archive-table .archive-restore');
   await expect(page.locator('dialog.dialog')).toHaveCount(0);
-  await expect(page.locator('.empty')).toContainText('No archived properties');
+  await expect(page.locator('.empty-state')).toContainText('No archived properties yet.');
   await expect(page.locator('.legacy-toast')).toContainText('New property restored.');
   await page.click('#nav-properties');
   await page.waitForSelector('.lcard');
@@ -912,15 +930,15 @@ test('S32b archive persists across reload — an archived deal stays out of the 
 // CLAUDE.md citing the NAV invariant as what keeps back-navigation unwindable was
 // citing a test that never ran.
 //
-// ⚠️ FOUR "Back to properties" BUTTONS, NOT TWO — Compare and Archive each render
+// ⚠️ FOUR "← Properties" BACK LINKS, NOT TWO — Compare and Archive each render
 // their own from TWO independent branches, chosen by how much data exists
 // (Codex, #116):
-//   compare.js:62  — the `all.length < 2` "needs 2+" empty state
+//   compare.js:103 — the `all.length < 2` "Nothing to compare yet." empty state
 //   compare.js:251 — the populated comparison table
-//   archive.js:19  — the `all.length === 0` empty state
-//   archive.js:112 — the populated archive table
+//   archive.js:18  — the `all.length === 0` empty state
+//   archive.js:76  — the populated archive table
 // An earlier version of this test opened Compare with two deals and Archive with
-// none, so it only ever clicked compare.js:251 and archive.js:19 while claiming to
+// none, so it only ever clicked the populated Compare and the empty Archive while claiming to
 // cover every affordance — either other branch could regress green. The property
 // counts below are therefore load-bearing: each step sets up the data state that
 // selects the branch it means to click.
@@ -933,7 +951,7 @@ test('NAV back-flow — every drill-down returns to Properties and never revisit
   test.setTimeout(90_000);
   const errors = watchErrors(page);
   const backToList = async (gone) => {
-    await page.click('button:has-text("Back to properties")');
+    await page.click('.link-action:has-text("← Properties")');
     await page.waitForSelector('.lcard');
     await expect(page.locator(gone)).toHaveCount(0);   // strictly unwound
   };
@@ -943,16 +961,16 @@ test('NAV back-flow — every drill-down returns to Properties and never revisit
   await page.waitForSelector('.lcard');
 
   // (1) Compare with ONE deal → the "needs 2+" empty state's back button
-  //     (compare.js:62).
+  //     (compare.js:103).
   await page.click('#nav-compare');
-  await expect(page.locator('.empty')).toContainText('Compare needs 2+');
-  await backToList('.empty');
+  await expect(page.locator('.empty-state')).toContainText('Nothing to compare yet.');
+  await backToList('.empty-state');
 
   // (2) Archive with NOTHING archived → the empty state's back button
-  //     (archive.js:19).
+  //     (archive.js:18).
   await page.click('#nav-archive');
-  await expect(page.locator('.empty')).toContainText('No archived properties');
-  await backToList('.empty');
+  await expect(page.locator('.empty-state')).toContainText('No archived properties yet.');
+  await backToList('.empty-state');
 
   // A second deal, so Compare draws its table and Archive can hold a row.
   await page.click('button:has-text("+ New property")');
@@ -967,7 +985,7 @@ test('NAV back-flow — every drill-down returns to Properties and never revisit
   await backToList('.compare-table');
 
   // (4) Archive holding a row → the populated table's back button
-  //     (archive.js:112).
+  //     (archive.js:76).
   await page.click('button[aria-label="Archive New property"]');
   await expect(page.locator('.lcard')).toHaveCount(1);
   await page.click('#nav-archive');
@@ -975,7 +993,7 @@ test('NAV back-flow — every drill-down returns to Properties and never revisit
   await backToList('.archive-table');
 
   // (5) A property dashboard → the static Properties nav. This branch returns via
-  // the topbar link rather than a "Back to properties" button, because the action
+  // the topbar link rather than a "← Properties" link, because the action
   // bar is deliberately absent from the dashboard.
   await page.click('.lcard__open >> nth=0');
   await page.waitForSelector('.kpi-strip');

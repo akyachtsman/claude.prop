@@ -200,3 +200,63 @@ test('S41 top bar fits — every dashboard top-bar control is on screen and tapp
   }
   expect(errors).toEqual([]);
 });
+
+// Compare and Archive: thirteen metric columns are wider than a phone, so the
+// table scrolls inside its own box (.table-wrap) and the page itself never
+// scrolls sideways. The controls pinned to the table's edges (the include
+// checkbox and the name; the Archive row's Restore and Delete permanently) are
+// on screen and are what a tap at their centre lands on.
+async function pinnedProblems(page, selectors) {
+  return page.evaluate((sels) => {
+    const problems = [];
+    for (const sel of sels) {
+      const c = document.querySelector(sel);
+      if (!c) { problems.push(`MISSING: ${sel}`); continue; }
+      const b = c.getBoundingClientRect();
+      if (b.left < 0 || b.right > innerWidth + 1) { problems.push(`OFF SCREEN: ${sel}`); continue; }
+      const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+      if (!hit || !(c === hit || c.contains(hit))) problems.push(`COVERED: ${sel} (a tap lands on ${hit ? hit.className || hit.tagName : 'nothing'})`);
+    }
+    return problems;
+  }, selectors);
+}
+
+async function expectNoSideways(page, what) {
+  const width = await page.evaluate(() => document.documentElement.scrollWidth);
+  expect(width, `${what} must not scroll sideways`).toBeLessThanOrEqual(page.viewportSize().width + 1);
+}
+
+test('S41 Compare and Archive fit — the tables scroll in their own box and the pinned controls stay tappable', async ({ page, renderWitness }) => {
+  renderWitness();
+  test.setTimeout(60_000);
+  const errors = watchErrors(page);
+  await installSignedIn(page);
+  await page.goto('./', { waitUntil: 'load' });
+  await page.click('button:has-text("Load sample deal")');
+  await page.waitForSelector('.kpi-strip');
+  await page.goto('./', { waitUntil: 'load' });
+  await page.click('button:has-text("+ New property")');
+  await page.waitForSelector('.kpi-strip');
+  await page.goto('./', { waitUntil: 'load' });
+  await page.waitForSelector('.lcard');
+
+  await page.click('#nav-compare');
+  await page.waitForSelector('.compare-table--rows');
+  await expectNoSideways(page, 'Compare (Table)');
+  // Scroll the table to its far right: the pinned columns must still be there.
+  await page.locator('.compare-wrap').evaluate((w) => { w.scrollLeft = w.scrollWidth; });
+  expect(await pinnedProblems(page, ['.compare-table--rows tbody .checkbox', '.compare-table--rows tbody .row-open'])).toEqual([]);
+  await page.locator('[role="tab"]', { hasText: 'Side by side' }).click();
+  await page.waitForSelector('.compare-table--cols');
+  await expectNoSideways(page, 'Compare (Side by side)');
+  expect(await pinnedProblems(page, ['.compare-picker .checkbox'])).toEqual([]);
+
+  await page.click('.link-action:has-text("← Properties")');
+  await page.waitForSelector('.lcard');
+  await page.click('button[aria-label="Archive New property"]');
+  await page.click('#nav-archive');
+  await page.waitForSelector('.archive-table');
+  await expectNoSideways(page, 'Archive');
+  expect(await pinnedProblems(page, ['.archive-table .row-open', '.archive-table .archive-restore', '.archive-table .archive-del'])).toEqual([]);
+  expect(errors).toEqual([]);
+});
