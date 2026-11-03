@@ -51,7 +51,7 @@ function confirmUpload(n) {
   const d = houseDialog({
     title: 'Move your local deals in?', className: 'upload-modal',
     body: [el('p', { text:
-      `You have ${n} propert${n === 1 ? 'y' : 'ies'} saved on this device. Copy ${n === 1 ? 'it' : 'them'} into your account so they sync everywhere? Your local copy is kept either way.` })],
+      `You have ${n} propert${n === 1 ? 'y' : 'ies'} saved on this device. Copy ${n === 1 ? 'it into your account so it syncs' : 'them into your account so they sync'} everywhere? Your local copy is kept either way.` })],
     footer: [el('button', { class: 'btn', type: 'button', 'data-dialog-close': '', text: 'Not now' }), move],
   });
   move.addEventListener('click', () => d.close(true));
