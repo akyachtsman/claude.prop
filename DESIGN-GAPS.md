@@ -24,15 +24,13 @@ Moved so far: the Archive rows' Delete permanently (#140, 2026-10-27), then
 Compare and the Archive table (2026-11-03), which take the house page base,
 `.link-action` Back, segmented control, `.table`/`.th-sort`/`.row-open`/
 `.row-actions`, `.checkbox`, `.pill` and `House.empty`, with their layout in
-`styles/project.css`.
+`styles/project.css`; then the Properties page (2026-11-03): the house toolbar
+and search, `.grid` of `.card`s with the archive-box icon, the §7 confirmation
+and toast, Archived (N), `+ Add property`, `House.empty`, and "Load backup" in
+place of the JSON "Restore".
 
 | Screen | Group (design.md) | What breaks | File |
 |---|---|---|---|
-| Properties list | Cards §5 | Archive is a text button in the card footer; the name is cut with an ellipsis | `js/views/list.js` |
-| Properties list | Archive §7 | the card's Archive asks no confirmation ("Archive *name*?"); the toast says "Archived." and does not name the property | `js/app.js` |
-| Properties list | Words §2 | "+ New property"; "Restore" means JSON import | `js/app.js`, `index.html` |
-| Properties list | Empty state §15 | its own `.empty` block | `js/views/list.js` |
-| Properties list | Search §16 | actions sit in the top bar; no search box | `js/app.js` |
 | Property dashboard | Icons §3 | 🔒/🔓, ↶/↷ and 🏷 used as action icons | `js/views/dashboard.js`, `js/app.js` |
 | Property dashboard | Principles §1 | labels and names truncated with an ellipsis in 13 rules | `styles/legacy.css` |
 | Property dashboard | Cards §5, Buttons §4 | its own card and button classes; KPI tiles are `div tabindex=0` | `js/views/dashboard.js` |

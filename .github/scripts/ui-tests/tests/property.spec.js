@@ -27,7 +27,7 @@ test.beforeEach(() => {
 // The app is gated behind login: every scenario boots SIGNED IN against a stubbed
 // Supabase (no backend). The account starts empty (reconcile suppressed), so a
 // signed-in fresh account behaves like the old local first-run — same "Load
-// sample deal" / "+ New property" affordances, backed by the stateful mock.
+// sample deal" / "+ Add property" affordances, backed by the stateful mock.
 test.beforeEach(async ({ page }) => { await installSignedIn(page); });
 
 // Console-error gate (test.md): fail if any pageerror or console.error fires.
@@ -49,6 +49,16 @@ async function kpis(page) {
     });
     return out;
   });
+}
+
+// Archive a card (design.md §7): its archive-box icon asks in the house
+// confirmation, "Archive <name>?", and the act's own button archives it.
+async function archiveCard(page, selector) {
+  await page.click(selector);
+  const dlg = page.locator('dialog.dialog[open]');
+  await expect(dlg.locator('.dialog-title')).toHaveText(/^Archive .+\?$/);
+  await dlg.locator('.btn-danger', { hasText: 'Archive' }).click();
+  await expect(page.locator('dialog.dialog')).toHaveCount(0);
 }
 
 async function loadSample(page) {
@@ -123,7 +133,7 @@ test('S8 compare — best/worst highlight and per-column verdict', async ({ page
   await loadSample(page);
   // add a second, weaker property
   await page.click('#nav-properties');
-  await page.click('button:has-text("+ New property")');
+  await page.click('.toolbar-add');
   await page.waitForSelector('.kpi-strip');
   await setField(page, 'input[aria-label="Offer price"]', '250000');   // auto-saved on commit
   // Compare lives in the header action bar (list-type views only), so return to
@@ -168,7 +178,7 @@ test('S8 compare — best/worst highlight and per-column verdict', async ({ page
 test('S36 compare picker — the checkbox leads every table row; unchecking excludes it and sinks its row below a divider', async ({ page }) => {
   await loadSample(page);
   await page.click('#nav-properties');
-  await page.click('button:has-text("+ New property")');
+  await page.click('.toolbar-add');
   await page.waitForSelector('.kpi-strip');
   await page.click('#nav-properties');
   await page.waitForSelector('.lcard');
@@ -200,7 +210,7 @@ test('S36 compare picker — the checkbox leads every table row; unchecking excl
 
 test('New property defaults — Target CAP / DSCR start empty', async ({ page }) => {
   await page.goto('./', { waitUntil: 'load' });
-  await page.click('button:has-text("Add your first property")');
+  await page.click('.empty-state button:has-text("+ Add property")');
   await page.waitForSelector('.kpi-strip');
   // Target CAP/DSCR are live readouts of the deal's own actual CAP/DSCR — a
   // brand-new property has $0 offer and no debt service, so neither is
@@ -211,7 +221,7 @@ test('New property defaults — Target CAP / DSCR start empty', async ({ page })
 
 test('Property name/address — editable in the header, renames the deal and persists', async ({ page }) => {
   await page.goto('./', { waitUntil: 'load' });
-  await page.click('button:has-text("Add your first property")');
+  await page.click('.empty-state button:has-text("+ Add property")');
   await page.waitForSelector('.kpi-strip');
   const nameInput = page.locator('.switcher__name');
   await expect(nameInput).toHaveValue('New property');     // editable name field is present in the header
@@ -228,7 +238,7 @@ test('Property list cards — a fixed six KPIs always shown, no source line', as
   await page.click('button:has-text("Load sample deal")');
   await page.waitForSelector('.kpi-strip');
   await page.click('#nav-properties');
-  await page.click('button:has-text("+ New property")');
+  await page.click('.toolbar-add');
   await page.waitForSelector('.kpi-strip');
   await page.click('#nav-properties');
   await page.waitForSelector('.lcard');
@@ -242,9 +252,61 @@ test('Property list cards — a fixed six KPIs always shown, no source line', as
   await expect(page.locator('.lcard__source')).toHaveCount(0);
 });
 
+test('S42 Properties page — the house empty state, toolbar and search', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  // First run: the empty state carries the Add button itself (§15).
+  await page.goto('./', { waitUntil: 'load' });
+  const empty = page.locator('.empty-state');
+  await expect(empty.locator('.empty-title')).toHaveText('No properties yet.');
+  await expect(empty.locator('.btn-primary')).toHaveText('+ Add property');
+  await expect(empty.locator('button')).toHaveText(['+ Add property', 'Import a listing', 'Load sample deal']);
+  await expect(page.locator('.toolbar')).toHaveCount(0);
+
+  await page.click('button:has-text("Load sample deal")');
+  await page.waitForSelector('.kpi-strip');
+  await page.click('#nav-properties');
+  await page.click('.toolbar-add');
+  await page.waitForSelector('.kpi-strip');
+  await page.click('#nav-properties');
+  await expect(page.locator('.lcard')).toHaveCount(2);
+
+  // §16: search first, the list's tools, then + Add property at the right end.
+  const tools = page.locator('.toolbar > *');
+  await expect(tools.first()).toHaveClass(/search/);
+  await expect(tools.last()).toHaveText('+ Add property');
+  await expect(page.locator('#nav-archive')).toHaveCount(0);   // Archived (N) hides at 0
+  const search = page.locator('input[type="search"][aria-label="Search properties"]');
+  await expect(search).toHaveAttribute('placeholder', 'Search properties…');
+
+  // Filters as you type, by name or type.
+  await search.fill('plumas');
+  await expect(page.locator('.lcard')).toHaveCount(1);
+  await expect(page.locator('.lcard__name')).toHaveText(/715 Plumas/);
+  await expect(search).toBeFocused();
+  await search.fill('retail');
+  await expect(page.locator('.lcard')).toHaveCount(1);
+  // Nothing matches → its own empty state with Clear search.
+  await search.fill('zzz');
+  await expect(page.locator('.lcard')).toHaveCount(0);
+  await expect(page.locator('.empty-state .empty-title')).toHaveText('No properties match your search.');
+  // The search survives a trip to Compare and back (§11).
+  await search.fill('plumas');
+  await page.click('#nav-compare');
+  await page.click('.link-action:has-text("← Properties")');
+  await expect(page.locator('input[aria-label="Search properties"]')).toHaveValue('plumas');
+  await expect(page.locator('.lcard')).toHaveCount(1);
+  await page.locator('input[aria-label="Search properties"]').fill('zzz');
+  await page.click('.empty-state button:has-text("Clear search")');
+  await expect(page.locator('.lcard')).toHaveCount(2);
+  await expect(page.locator('input[aria-label="Search properties"]')).toHaveValue('');
+  await expect(page.locator('input[aria-label="Search properties"]')).toBeFocused();
+  expect(errors).toEqual([]);
+});
+
 test('S9 empty/zero — a zeroed property renders "—", never NaN', async ({ page }) => {
   await page.goto('./', { waitUntil: 'load' });
-  await page.click('button:has-text("Add your first property")');
+  await page.click('.empty-state button:has-text("+ Add property")');
   await page.waitForSelector('.kpi-strip');
   const bodyText = await page.textContent('.kpi-strip');
   expect(bodyText).not.toMatch(/NaN|Infinity|undefined/);
@@ -452,7 +514,7 @@ test('Asking price seeds the offer — editing Asking Price sets Offer Price to 
 
 test('Use-default toggle — tax = offer×0.012, insurance = SF × property-type rate; checked fills the formula, cleared zeroes, typed value locks', async ({ page }) => {
   await page.goto('./', { waitUntil: 'load' });
-  await page.click('button:has-text("Add your first property")');
+  await page.click('.empty-state button:has-text("+ Add property")');
   await page.waitForSelector('.kpi-strip');
   const ins = page.locator('input[aria-label="Insurance amount"]');
   const tax = page.locator('input[aria-label="Property taxes amount"]');
@@ -747,7 +809,7 @@ test('S35 Lock on entry — every fresh entry into an existing deal locks it; th
   const offer = page.locator('input[aria-label="Offer price"]');
   // creating a new property (the "initial creation window") starts unlocked
   await page.goto('./', { waitUntil: 'load' });
-  await page.click('button:has-text("Add your first property")');
+  await page.click('.empty-state button:has-text("+ Add property")');
   await page.waitForSelector('.kpi-strip');
   await expect(offer).toBeEditable();
   // leave for the Properties list, then re-enter the SAME property — now locked,
@@ -814,7 +876,7 @@ test('DELETE — deleting happens from the Archive rows (archive first), confirm
   // Cards no longer carry Delete — only Archive.
   await expect(page.locator('.lcard .lcard__del')).toHaveCount(0);
   // Archive the sample, then delete it from the Archive view (confirmed).
-  await page.click('button[aria-label^="Archive 715 Plumas"]');
+  await archiveCard(page, 'button[aria-label^="Archive 715 Plumas"]');
   await expect(page.locator('.lcard')).toHaveCount(0);
   await page.click('#nav-archive');
   await page.waitForSelector('.archive-table');
@@ -845,10 +907,10 @@ test('DELETE — deleting happens from the Archive rows (archive first), confirm
   await del.click();
   await page.locator('dialog.dialog[open] .btn-delete').click();
   await expect(page.locator('.empty-state')).toContainText('No archived properties yet.');   // deleted → archive empty
-  await expect(page.locator('.legacy-toast')).toContainText(/715 Plumas.* deleted\./);
+  await expect(page.locator('.legacy-toast', { hasText: /715 Plumas.* deleted\./ })).toBeVisible();
   await page.goto('./', { waitUntil: 'load' });                 // a fresh load of the list
-  await page.waitForSelector('.lcard, .empty');
-  await expect(page.locator('#nav-archive')).toHaveText('Archive');   // gone for good, not re-archived
+  await page.waitForSelector('.lcard, .empty-state');
+  await expect(page.locator('#nav-archive')).toHaveCount(0);   // gone for good, not re-archived (Archived (N) hides at 0)
   expect(nativeAsked).toBe(false);
   expect(errors).toEqual([]);
 });
@@ -862,17 +924,31 @@ test('S32 archive — archived deals leave Properties/Compare and show as compar
   const errors = watchErrors(page);
   await loadSample(page);                                   // 715 Plumas (active)
   await page.goto('./', { waitUntil: 'load' });
-  await page.click('button:has-text("+ New property")');    // a 2nd active deal
+  await page.click('.toolbar-add');    // a 2nd active deal
   await page.waitForSelector('.kpi-strip');
   await page.goto('./', { waitUntil: 'load' });
   await page.waitForSelector('.lcard');
   await expect(page.locator('.lcard')).toHaveCount(2);
 
-  // Archive the "New property" card via its footer Archive button → it leaves the list.
-  await page.click('button[aria-label="Archive New property"]');
+  // Archive the "New property" card via its archive-box icon (top-right, §5):
+  // the house confirmation asks "Archive New property?" with Cancel and Archive.
+  // Cancel keeps it; Archive takes it out of the list, and the toast names it.
+  const archiveBtn = page.locator('button[aria-label="Archive New property"]');
+  await expect(archiveBtn).toHaveAttribute('title', 'Archive New property');
+  await expect(page.locator('.lcard .card-actions button[aria-label="Archive New property"]')).toHaveCount(1);
+  await archiveBtn.click();
+  const ask = page.locator('dialog.dialog[open]');
+  await expect(ask.locator('.dialog-title')).toHaveText('Archive New property?');
+  await expect(ask).toContainText('You can restore it from Archived on the Properties page.');
+  await ask.locator('button', { hasText: 'Cancel' }).click();
+  await expect(page.locator('dialog.dialog')).toHaveCount(0);
+  await expect(page.locator('.lcard')).toHaveCount(2);
+  await expect(archiveBtn).toBeFocused();
+  await archiveCard(page, 'button[aria-label="Archive New property"]');
+  await expect(page.locator('.legacy-toast', { hasText: 'New property archived.' })).toBeVisible();
   await expect(page.locator('.lcard')).toHaveCount(1);
   await expect(page.locator('.lcard__name')).toContainText('715 Plumas');
-  await expect(page.locator('#nav-archive')).toContainText('Archive (1)');   // header count updates
+  await expect(page.locator('#nav-archive')).toHaveText('Archived (1)');   // header count updates
 
   // Archived deals are excluded from Compare (1 active left → the needs-2+ state).
   await page.click('#nav-compare');
@@ -899,11 +975,11 @@ test('S32 archive — archived deals leave Properties/Compare and show as compar
   await page.click('.archive-table .archive-restore');
   await expect(page.locator('dialog.dialog')).toHaveCount(0);
   await expect(page.locator('.empty-state')).toContainText('No archived properties yet.');
-  await expect(page.locator('.legacy-toast')).toContainText('New property restored.');
+  await expect(page.locator('.legacy-toast', { hasText: 'New property restored.' })).toBeVisible();
   await page.click('#nav-properties');
   await page.waitForSelector('.lcard');
   await expect(page.locator('.lcard')).toHaveCount(2);
-  await expect(page.locator('#nav-archive')).toHaveText('Archive');   // count gone (0 archived)
+  await expect(page.locator('#nav-archive')).toHaveCount(0);   // Archived (N) hides at 0 (§7)
   expect(errors).toEqual([]);
 });
 
@@ -911,13 +987,13 @@ test('S32b archive persists across reload — an archived deal stays out of the 
   await loadSample(page);
   await page.goto('./', { waitUntil: 'load' });
   await page.waitForSelector('.lcard');
-  await page.click('button[aria-label^="Archive 715 Plumas"]');
+  await archiveCard(page, 'button[aria-label^="Archive 715 Plumas"]');
   await expect(page.locator('.lcard')).toHaveCount(0);       // only deal archived → empty list
   await page.reload({ waitUntil: 'load' });
   // Still archived after reload (auto-saved): the list is empty, the header Archive
   // entry keeps its count.
   await expect(page.locator('.lcard')).toHaveCount(0);
-  await expect(page.locator('#nav-archive')).toContainText('Archive (1)');
+  await expect(page.locator('#nav-archive')).toHaveText('Archived (1)');
 });
 
 // NAV back-flow — the PROPERTY the kit's generic NAV scenario would prove, proved
@@ -967,13 +1043,15 @@ test('NAV back-flow — every drill-down returns to Properties and never revisit
   await backToList('.empty-state');
 
   // (2) Archive with NOTHING archived → the empty state's back button
-  //     (archive.js:18).
-  await page.click('#nav-archive');
+  //     (archive.js:18). Archived (N) hides at 0 (design.md §7), so the empty
+  //     page is reached by its address.
+  await expect(page.locator('#nav-archive')).toHaveCount(0);
+  await page.goto('./#/archive', { waitUntil: 'load' });
   await expect(page.locator('.empty-state')).toContainText('No archived properties yet.');
   await backToList('.empty-state');
 
   // A second deal, so Compare draws its table and Archive can hold a row.
-  await page.click('button:has-text("+ New property")');
+  await page.click('.toolbar-add');
   await page.waitForSelector('.kpi-strip');
   await page.goto('./', { waitUntil: 'load' });
   await expect(page.locator('.lcard')).toHaveCount(2);
@@ -986,7 +1064,7 @@ test('NAV back-flow — every drill-down returns to Properties and never revisit
 
   // (4) Archive holding a row → the populated table's back button
   //     (archive.js:76).
-  await page.click('button[aria-label="Archive New property"]');
+  await archiveCard(page, 'button[aria-label="Archive New property"]');
   await expect(page.locator('.lcard')).toHaveCount(1);
   await page.click('#nav-archive');
   await page.waitForSelector('.archive-table');
@@ -1133,7 +1211,7 @@ test('DISMISS project overlays — gallery, lightbox, Listing details, Import an
   // Cancel, Escape, backdrop. A native <dialog>'s backdrop press lands on the
   // dialog element outside its box, so the press is at the window's corner.
   // Every path must leave the deal where it was.
-  await page.click('button[aria-label^="Archive 715 Plumas"]');
+  await archiveCard(page, 'button[aria-label^="Archive 715 Plumas"]');
   await page.click('#nav-archive');
   await page.waitForSelector('.archive-table');
   for (const dismiss of [

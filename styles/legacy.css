@@ -522,12 +522,6 @@ body {
 /* app views (dashboard editable, list, compare) ------------------------- */
 .topbar__center { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-2); }
 .topbar__viewtitle { font-weight: 800; font-size: var(--font-lg); color: var(--color-on-navy); }
-/* Header action bar (Compare / Archive / New / Import) — shown on the list-type
-   views, right-aligned in the otherwise-empty center slot so it reads as part of
-   the header nav. Not rendered on the dashboard (its center is already full). */
-/* The action bar's buttons are plain topbar links (same as the static nav on the
-   right), so it reads as one continuous header — not a row of boxed buttons. */
-.topbar__actbar { display: flex; gap: var(--space-1); margin-left: auto; flex-wrap: wrap; align-items: center; }
 .topbar__link { background: transparent; border: none; font: inherit; cursor: pointer; }
 
 /* editable field grids inside cards — dense for one-screen fit */
@@ -607,58 +601,6 @@ body {
 @media (max-width: 1100px) { .form-grid--3 { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 760px) { .form-grid--3 { grid-template-columns: 1fr; } }
 
-/* list view */
-.list-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-3); }
-.list-head h1 { margin: 0; font-size: var(--font-2xl); font-weight: 800; color: var(--color-navy); }
-.list-head__actions { display: flex; gap: var(--space-2); }
-/* Cards sized ~15% smaller than the token defaults (explicit px, not the
-   shared --space and --font tokens, so this shrink stays scoped to the list
-   grid) so more fit across a row before wrapping. */
-.lcard-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 10px; }
-.lcard {
-  position: relative;
-  background: var(--color-surface); border: 1px solid var(--color-border);
-  border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-.lcard:hover, .lcard:focus-within { border-color: var(--color-accent); box-shadow: var(--shadow-md); }
-.lcard__open {
-  text-align: left; font: inherit; cursor: pointer; background: none; border: none;
-  width: 100%; padding: 10px 14px;
-  display: flex; flex-direction: column; gap: 10px;
-}
-/* Card footer: explicit, labelled Archive + Delete actions (siblings of the
-   full-area open button). */
-.lcard__foot { display: flex; gap: 7px; padding: 7px 10px 10px; border-top: 1px solid var(--color-border); }
-.lcard__act {
-  flex: 1; min-height: 29px; padding: 5px 7px;
-  font: inherit; font-size: var(--font-sm); font-weight: 600; cursor: pointer;
-  background: var(--color-surface); color: var(--color-text-secondary);
-  border: 1px solid var(--color-border); border-radius: var(--radius-sm);
-}
-.lcard__act:hover, .lcard__act:focus-visible { border-color: var(--color-border-hover); background: var(--color-bg); color: var(--color-text-primary); }
-.lcard__head { display: flex; align-items: center; gap: 10px; }
-.lcard__mono {
-  flex: none; width: 34px; height: 34px; border-radius: var(--radius-sm);
-  background: var(--color-navy); color: var(--color-on-navy);
-  display: inline-flex; align-items: center; justify-content: center;
-  font-weight: 800; font-size: var(--font-sm);
-}
-.lcard__title { min-width: 0; flex: 1; display: flex; flex-direction: column; }
-.lcard__name { font-weight: 700; color: var(--color-navy); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lcard__sub { font-size: var(--font-xs); color: var(--color-text-secondary); }
-/* Fixed 6-slot grid (3x2) — always the same six metrics, never fewer/more, so
-   the card's shape never shifts based on what a deal has data for. */
-.lcard__kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
-.lcard__kpi { display: flex; flex-direction: column; }
-.lcard__kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary); font-weight: 700; }
-.lcard__kpi-val { font-weight: 800; color: var(--color-navy); }
-
-/* empty state */
-.empty { max-width: 480px; margin: 10vh auto; text-align: center; }
-.empty h2 { color: var(--color-navy); margin: 0 0 var(--space-2); }
-.empty p { color: var(--color-text-secondary); margin: 0 0 var(--space-4); }
-.empty__actions { display: flex; gap: var(--space-2); justify-content: center; flex-wrap: wrap; }
 
 /* toast */
 .legacy-toast {

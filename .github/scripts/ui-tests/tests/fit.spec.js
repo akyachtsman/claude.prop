@@ -112,6 +112,9 @@ async function walkOverlays(page) {
 
   // ── Delete permanently confirmation (the house dialog, Archive rows)
   await page.click('button[aria-label^="Archive 715 Plumas"]');
+  await expectFits(page, 'dialog.dialog[open]');                 // the archive confirmation
+  await page.locator('dialog.dialog[open] .btn-danger').click();
+  await expect(page.locator('dialog.dialog')).toHaveCount(0);
   await page.click('#nav-archive');
   await page.waitForSelector('.archive-table');
   await page.locator('.archive-del').first().click();
@@ -226,7 +229,7 @@ async function expectNoSideways(page, what) {
   expect(width, `${what} must not scroll sideways`).toBeLessThanOrEqual(page.viewportSize().width + 1);
 }
 
-test('S41 Compare and Archive fit — the tables scroll in their own box and the pinned controls stay tappable', async ({ page, renderWitness }) => {
+test('S41 Properties, Compare and Archive fit — the page never scrolls sideways and the pinned controls stay tappable', async ({ page, renderWitness }) => {
   renderWitness();
   test.setTimeout(60_000);
   const errors = watchErrors(page);
@@ -235,10 +238,14 @@ test('S41 Compare and Archive fit — the tables scroll in their own box and the
   await page.click('button:has-text("Load sample deal")');
   await page.waitForSelector('.kpi-strip');
   await page.goto('./', { waitUntil: 'load' });
-  await page.click('button:has-text("+ New property")');
+  await page.click('.toolbar-add');
   await page.waitForSelector('.kpi-strip');
   await page.goto('./', { waitUntil: 'load' });
   await page.waitForSelector('.lcard');
+  // The Properties page: the toolbar wraps rather than widen the page, and each
+  // card's Archive icon is on screen and takes its own tap.
+  await expectNoSideways(page, 'Properties');
+  expect(await pinnedProblems(page, ['.toolbar .search input', '#nav-compare', '.toolbar-add', '.lcard .lcard__archive', '.lcard .card-open'])).toEqual([]);
 
   await page.click('#nav-compare');
   await page.waitForSelector('.compare-table--rows');
@@ -254,6 +261,7 @@ test('S41 Compare and Archive fit — the tables scroll in their own box and the
   await page.click('.link-action:has-text("← Properties")');
   await page.waitForSelector('.lcard');
   await page.click('button[aria-label="Archive New property"]');
+  await page.locator('dialog.dialog[open] .btn-danger').click();
   await page.click('#nav-archive');
   await page.waitForSelector('.archive-table');
   await expectNoSideways(page, 'Archive');
