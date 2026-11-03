@@ -147,10 +147,10 @@ function makeCloudBackend(uid, ops, hooks) {
     }
     // Online, but the write didn't land. Don't falsely promise a re-sync that no
     // code performs — roll the cache back to the account's truth instead.
-    hooks.notify("Couldn't save that change — reloaded from your account.", 'info');
+    hooks.notify("Couldn't save that change, so it was reloaded from your account.", { error: true });
     resyncFromCloud();
   }
-  function rejectOffline() { hooks.notify("You're offline — reconnect to edit.", 'info'); }
+  function rejectOffline() { hooks.notify("You're offline. Reconnect to edit.", { error: true }); }
 
   return {
     kind: 'cloud',
@@ -227,7 +227,7 @@ export function newId() {
 /**
  * Swap the active backend. `session` null → local (`propanalytics.v1`, untouched
  * by the cloud path). A session → cloud backend on `propanalytics.cloud.<uid>`,
- * using `cloudOps` (js/cloud.js) for write-through and `hooks` = { notify(msg,kind),
+ * using `cloudOps` (js/cloud.js) for write-through and `hooks` = { notify(msg, { error }),
  * onAuthLost() } for offline/expired-session feedback. Idempotent per uid.
  */
 export function setSession(session, cloudOps, hooks) {
