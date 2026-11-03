@@ -20,10 +20,16 @@ Nor is the Archive page itself: by owner ruling (2026-10-27) archived deals keep
 their own compare-style page instead of the §7 Archived (N) pop-over
 (`CLAUDE.md` → Design).
 
+Moved so far: the Archive rows' Delete permanently (#140, 2026-10-27), then
+Compare and the Archive table (2026-11-03), which take the house page base,
+`.link-action` Back, segmented control, `.table`/`.th-sort`/`.row-open`/
+`.row-actions`, `.checkbox`, `.pill` and `House.empty`, with their layout in
+`styles/project.css`.
+
 | Screen | Group (design.md) | What breaks | File |
 |---|---|---|---|
 | Properties list | Cards §5 | Archive is a text button in the card footer; the name is cut with an ellipsis | `js/views/list.js` |
-| Properties list | Archive §7 | Archived items live on a separate page, not an Archived (N) pop-over; no confirmation; the toast does not name the property | `js/app.js` |
+| Properties list | Archive §7 | the card's Archive asks no confirmation ("Archive *name*?"); the toast says "Archived." and does not name the property | `js/app.js` |
 | Properties list | Words §2 | "+ New property"; "Restore" means JSON import | `js/app.js`, `index.html` |
 | Properties list | Empty state §15 | its own `.empty` block | `js/views/list.js` |
 | Properties list | Search §16 | actions sit in the top bar; no search box | `js/app.js` |
@@ -31,8 +37,6 @@ their own compare-style page instead of the §7 Archived (N) pop-over
 | Property dashboard | Principles §1 | labels and names truncated with an ellipsis in 13 rules | `styles/legacy.css` |
 | Property dashboard | Cards §5, Buttons §4 | its own card and button classes; KPI tiles are `div tabindex=0` | `js/views/dashboard.js` |
 | Property dashboard | Forms §12 | grid inputs have no visible label | `js/views/dashboard.js` |
-| Compare | Segmented §11, Back §11 | `.seg` with `role=group`; Back is a ghost button; ↕ sort glyph | `js/views/compare.js` |
-| Archive | Lists §6 | Restore and Delete permanently sit in the sticky first column, not the row's last cell; the table is Compare's legacy one and moves with it | `js/views/archive.js` |
 | Photos gallery | Dialogs §10 | its own modal; "Done"; × removes a saved photo | `js/views/dashboard-media.js` |
 | Photos gallery | Upload §13 | URLs pasted in a textarea | `js/views/dashboard-media.js` |
 | Listing details | Dialogs §10 | its own modal with "Done"; on a short screen (390×340) Done scrolls out of view with the panel (Escape and the backdrop still close it) | `js/views/dashboard-media.js` |

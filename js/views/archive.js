@@ -1,79 +1,42 @@
 // views/archive.js — archived properties, shown as rows in a table exactly like
 // the Compare "Table" layout (one row per property, every metric across the top,
-// best value per column highlighted). Each row adds Restore + Delete permanently and
-// a clickable name that reopens the deal. Archiving hides a property from the
-// Properties list and Compare without deleting it; this is where it lives until
-// restored.
+// best value per column highlighted). The name opens the deal, and the last cell
+// holds the row's actions, Restore and Delete permanently (design.md §6).
+// Archiving hides a property from the Properties list and Compare without
+// deleting it; this is where it lives until restored (an owner exception to
+// design.md §7's Archived (N) pop-over, recorded in CLAUDE.md).
 
 import { el, render, dragScroll } from '../dom.js';
 import { compute } from '../model.js';
-import { METRICS, fnum, extremes, verdictPill } from './compare.js';
+import { METRICS, fnum, extremes, verdictPill, sortHeader, bindSort, sortRows, backLink } from './compare.js';
 
 export function renderArchive(container, ctx) {
   const all = ctx.archived();
 
   if (all.length === 0) {
-    render(container, [
-      el('div', { class: 'list-head' }, [
-        el('h1', { text: 'Archive' }),
-        el('button', { class: 'legacy-btn legacy-btn--ghost', type: 'button', onclick: () => ctx.goList(), text: 'Back to properties' }),
-      ]),
-      el('div', { class: 'empty' }, [
-        el('h2', { text: 'No archived properties' }),
-        el('p', { text: 'Archive a property from its card on the Properties list to tuck it away here without deleting it.' }),
-      ]),
-    ]);
+    const host = el('div');
+    render(container, [backLink(ctx), el('h1', { text: 'Archive' }), host]);
+    window.House.empty(host, {
+      title: 'No archived properties yet.',
+      text: 'Archive a property from its card on the Properties list to keep it here without deleting it.',
+    });
     return;
   }
 
   // Row-table sorting: 'name' or a METRICS index; null = as-listed order.
   let sortKey = null, sortDir = 'asc';
-  const tableHost = el('div', { class: 'legacy-table-wrap' });
+  const tableHost = el('div', { class: 'table-wrap compare-wrap' });
   dragScroll(tableHost);
 
-  // A clickable, keyboard-operable sort header — identical behaviour to Compare:
-  // ascending first, re-click flips; aria-sort keeps it accessible.
-  function sortHeader(key, label, isNum) {
-    const active = sortKey === key;
-    const th = el('th', {
-      scope: 'col', class: (isNum ? 'num ' : '') + 'legacy-th-sort' + (active ? ' legacy-th-sort--on' : ''),
-      'aria-sort': active ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none',
-    });
-    const btn = el('button', { class: 'legacy-th-sort__btn', type: 'button', title: `Sort by ${label}` }, [
-      el('span', { class: 'legacy-th-sort__label', text: label }),
-      el('span', { class: 'legacy-th-sort__caret', 'aria-hidden': 'true', text: active ? (sortDir === 'asc' ? '▲' : '▼') : '↕' }),
+  // The house buttons (design.md §3, §4, §8): a secondary text Restore, then the
+  // trash-can Delete permanently, confirmed by app.js.
+  function actions(p) {
+    const name = p.name || 'property';
+    const del = `Delete ${name} permanently`;
+    return el('div', { class: 'row-actions' }, [
+      el('button', { class: 'btn archive-restore', type: 'button', 'aria-label': `Restore ${name}`, title: 'Restore to Properties', onclick: () => ctx.restore(p), text: 'Restore' }),
+      el('button', { class: 'btn btn-icon archive-del', type: 'button', 'aria-label': del, title: del, onclick: (e) => ctx.remove(p, e.currentTarget) }, [window.House.icon('trash')]),
     ]);
-    btn.addEventListener('click', () => {
-      if (sortKey === key) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
-      else { sortKey = key; sortDir = 'asc'; }
-      draw();
-    });
-    th.appendChild(btn);
-    return th;
-  }
-
-  // Non-finite values ("—") always sink to the bottom regardless of direction.
-  function sortRows(rows) {
-    if (sortKey === null) return rows;
-    const dir = sortDir === 'asc' ? 1 : -1;
-    const numeric = sortKey !== 'name';
-    const keyOf = numeric ? ({ p, m }) => METRICS[sortKey][1](m, p) : ({ p }) => (p.name || '').toLowerCase();
-    return rows.slice().sort((a, b) => {
-      const va = keyOf(a), vb = keyOf(b);
-      if (numeric) {
-        const na = fnum(va), nb = fnum(vb);
-        if (na && nb) return 0;
-        if (na) return 1;
-        if (nb) return -1;
-        return (va - vb) * dir;
-      }
-      return String(va).localeCompare(String(vb)) * dir;
-    });
-  }
-
-  function deleteButton(p) {
-    const label = `Delete ${p.name || 'property'} permanently`;
-    return el('button', { class: 'btn btn-icon archive-del', type: 'button', 'aria-label': label, title: label, onclick: (e) => ctx.remove(p, e.currentTarget) }, [window.House.icon('trash')]);
   }
 
   function draw() {
@@ -81,21 +44,15 @@ export function renderArchive(container, ctx) {
     // best/worst over the full set — independent of row order.
     const bw = METRICS.map(([label, sel, f, dir]) => extremes(cols.map(({ m, p }) => sel(m, p)), dir));
     const head = el('tr', {}, [
-      sortHeader('name', 'Prospect', false),
-      ...METRICS.map(([label], i) => sortHeader(i, label, true)),
+      sortHeader('name', 'Prospect', false, sortKey, sortDir),
+      ...METRICS.map(([label], i) => sortHeader(i, label, true, sortKey, sortDir)),
+      el('th', { scope: 'col', class: 'compare-actions-col', text: 'Actions' }),
     ]);
-    const body = sortRows(cols).map(({ p, m }) => el('tr', {}, [
-      // Name + verdict + the row's actions, all on ONE line in the sticky-left
-      // first column, so Restore stays visible however far the metrics scroll.
-      el('td', {}, [
-        el('div', { class: 'archive-prospect' }, [
-          // The house buttons (design.md §3, §4, §8): a secondary text Restore,
-          // then the trash-can Delete permanently, confirmed by app.js.
-          el('div', { class: 'archive-actions' }, [
-            el('button', { class: 'btn archive-restore', type: 'button', 'aria-label': `Restore ${p.name || 'property'}`, title: 'Restore to Properties', onclick: () => ctx.restore(p), text: 'Restore' }),
-            deleteButton(p),
-          ]),
-          el('button', { class: 'compare-name archive-name', type: 'button', title: 'Open', onclick: () => ctx.open(p.id), text: p.name || 'Untitled' }),
+    head.firstChild.classList.add('compare-name-col');
+    const body = sortRows(cols, sortKey, sortDir).map(({ p, m }) => el('tr', {}, [
+      el('td', { class: 'compare-name-col' }, [
+        el('div', { class: 'compare-prospect' }, [
+          el('button', { class: 'row-open archive-name', type: 'button', onclick: () => ctx.open(p.id), text: p.name || 'Untitled' }),
           verdictPill(p, m),
         ]),
       ]),
@@ -105,18 +62,20 @@ export function renderArchive(container, ctx) {
         const cls = 'num' + (fnum(v) ? '' : v === best ? ' cell--best' : v === worst ? ' cell--worst' : '');
         return el('td', { class: cls, text: fnum(v) ? '—' : f(v) });
       }),
+      el('td', { class: 'compare-actions-col' }, [actions(p)]),
     ]));
-    render(tableHost, [el('table', { class: 'data-table compare-table compare-table--rows archive-table' }, [
+    const table = el('table', { class: 'table compare-table compare-table--rows archive-table' }, [
       el('thead', {}, head), el('tbody', {}, body),
-    ])]);
+    ]);
+    render(tableHost, [table]);
+    bindSort(table, (k, d) => { sortKey = k; sortDir = d; return draw(); });
+    return table;
   }
 
   render(container, [
-    el('div', { class: 'list-head' }, [
-      el('h1', { text: 'Archive' }),
-      el('button', { class: 'legacy-btn legacy-btn--ghost', type: 'button', onclick: () => ctx.goList(), text: 'Back to properties' }),
-    ]),
-    el('p', { class: 'fineprint', text: 'Archived properties, laid out like Compare. Click a column header to sort; best value per metric is green, worst is red. Restore returns a deal to Properties; Delete permanently removes it for good.' }),
+    backLink(ctx),
+    el('h1', { text: 'Archive' }),
+    el('p', { class: 'view-note', text: 'Archived properties, laid out like Compare. Press a column header to sort; the best value for each metric is green and the worst is red. Restore returns a deal to Properties; Delete permanently removes it for good.' }),
     tableHost,
   ]);
   draw();
