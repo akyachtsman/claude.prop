@@ -77,26 +77,27 @@ body {
   transition: background 0.15s ease;
 }
 .switcher__btn:hover, .switcher__btn:focus-visible { background: var(--color-accent); }
-/* Cap + truncate the title so the switcher yields width to the verdict pills
-   instead of pushing them into the nav (full name is in the deal card + list). */
-.switcher__title { flex: 0 1 auto; min-width: 0; max-width: 130px; transition: max-width 0.15s ease; }
+/* Cap the title's width so the switcher yields room to the verdict pills
+   instead of pushing them into the nav. The name is an input (it scrolls while
+   you edit it); the line under it wraps rather than being cut (design.md §1.6). */
+.switcher__title { flex: 0 1 auto; min-width: 0; max-width: 170px; transition: max-width 0.15s ease; }
 .switcher__title:focus-within { max-width: 260px; }   /* room to type an address when editing */
 .switcher__title h1 {
   margin: 0; font-size: var(--font-lg); font-weight: 800; line-height: 1.2;
-  color: var(--color-on-navy); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: var(--color-on-navy); overflow-wrap: break-word;
 }
 /* Editable property name/address — looks like the title, hints edit on hover/focus */
 .switcher__name {
   width: 100%; margin: 0; padding: 0; font: inherit; font-size: var(--font-lg); font-weight: 800; line-height: 1.2;
   color: var(--color-on-navy); background: transparent; border: none;
-  border-bottom: 1px solid transparent; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  border-bottom: 1px solid transparent;
 }
 .switcher__name::placeholder { color: var(--color-on-navy-muted); font-weight: 600; }
 .switcher__name:hover { border-bottom-color: var(--color-on-navy-muted); }
 .switcher__name:focus { outline: none; border-bottom-color: var(--color-accent); }
 .switcher__title .sub {
-  display: block; font-size: var(--font-xs); color: var(--color-on-navy-muted);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: block; font-size: var(--font-xs); line-height: 1.25; color: var(--color-on-navy-muted);
+  overflow-wrap: break-word;
 }
 /* The switcher title/subtitle truncate (min-width:0 lives on the title, not the
    whole switcher) so the prev/next buttons keep their size and a third verdict
@@ -174,8 +175,8 @@ body {
   /* minmax(0, 1fr), not bare 1fr: a bare 1fr track won't shrink below its
      content's min-content width (nowrap labels), so 15 narrow columns of
      nowrap text overflow the strip past the viewport instead of dividing
-     evenly. minmax(0, ...) lets tracks actually shrink; overflow is then
-     handled per-cell via .kpi__label's ellipsis below. */
+     evenly. minmax(0, ...) lets tracks actually shrink; a label or note
+     that is still too long then wraps onto a second line (never cut, §1.6). */
   grid-template-columns: repeat(15, minmax(0, 1fr));
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -189,7 +190,7 @@ body {
   border-top: 1px solid var(--color-border);
   border-left: 1px solid var(--color-border);
   min-height: 52px;
-  min-width: 0;                            /* let the cell shrink; label truncates instead of overflowing */
+  min-width: 0;                            /* let the cell shrink; its label wraps instead of overflowing */
   background: var(--gen-shade);            /* generated fields share a consistent shade */
 }
 .kpi:nth-child(-n+15) { border-top: none; }
@@ -197,21 +198,27 @@ body {
 .kpi__label {
   font-size: 9px; font-weight: 700; text-transform: uppercase;
   letter-spacing: 0.02em; color: var(--color-text-secondary); line-height: 1.2;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  overflow-wrap: break-word;
 }
 .kpi__value {
   font-size: 15px; font-weight: 800; color: var(--color-navy);
   margin-top: 2px; line-height: 1.15;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .kpi__value--pass { color: var(--color-pass); }
 .kpi__value--fail { color: var(--color-fail); }
 .kpi__note {
-  font-size: 10px; color: var(--color-text-secondary); margin-top: 1px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-size: 10px; line-height: 1.2; color: var(--color-text-secondary); margin-top: 1px;
+  overflow-wrap: break-word;
 }
 /* formula popup: focusable KPI cells reveal their calculation on hover/focus */
 .kpi--info { cursor: help; }
+/* The label that carries the formula is a native button dressed as the label. */
+.kpi__info {
+  display: block; width: 100%; padding: 0; margin: 0; border: 0; background: none;
+  text-align: left; cursor: help; font-family: inherit;
+}
+.kpi__info:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 1px; border-radius: 2px; }
 .kpi-tip {
   position: fixed; z-index: 100; width: max-content; max-width: 300px;
   background: var(--color-surface); color: var(--color-text-primary);
@@ -309,7 +316,10 @@ body {
   border: 1px solid var(--color-border); border-radius: var(--radius-sm);
 }
 .dash-lock-btn:hover, .dash-lock-btn:focus-visible { border-color: var(--color-border-hover); background: var(--color-bg); }
-.dash-lock-btn--locked { background: var(--color-bg); border-color: var(--color-border-hover); color: var(--color-navy); }
+.dash-lock-btn svg { width: 14px; height: 14px; }
+/* Pressed (locked): the navy fill says the toggle is on. */
+.dash-lock-btn--locked,
+.dash-lock-btn--locked:hover, .dash-lock-btn--locked:focus-visible { background: var(--color-navy); border-color: var(--color-navy); color: var(--color-on-navy); }
 
 /* Target CAP + Target DSCR share one wider deal-cell, stacked one above the
    other. Each row is a slider PLUS a directly-editable readout field (right
@@ -330,6 +340,8 @@ body {
 
 /* checkbox rows (expense include toggles), two-up grid for density ------------ */
 .check-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--space-4); }
+/* A phone gives each expense the full width, so its name fits on its line. */
+@media (max-width: 599px) { .check-grid { grid-template-columns: minmax(0, 1fr); } }
 .check-grid .check-row { min-width: 0; }
 .check-row {
   display: flex; align-items: center; gap: var(--space-2);
@@ -339,7 +351,7 @@ body {
   width: 24px; height: 24px; accent-color: var(--color-accent); flex: none;
   margin: 0;
 }
-.check-row label { flex: 1; cursor: pointer; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.check-row label { flex: 1; cursor: pointer; min-width: 0; line-height: 1.2; overflow-wrap: break-word; }
 .check-row--off label, .check-row--off .amount-input {
   color: var(--color-text-secondary); text-decoration: line-through;
 }
@@ -350,12 +362,12 @@ body {
 .exp-default {
   display: flex; align-items: center; gap: 4px;
   margin-left: 32px; font-size: 9px; color: var(--color-text-secondary);
-  line-height: 1.3; cursor: pointer; white-space: nowrap; min-width: 0;
+  line-height: 1.3; cursor: pointer; min-width: 0;
 }
 .exp-default input[type="checkbox"] {
   width: 13px; height: 13px; accent-color: var(--color-accent); flex: none; margin: 0;
 }
-.exp-default__formula { font-style: italic; overflow: hidden; text-overflow: ellipsis; }
+.exp-default__formula { font-style: italic; overflow-wrap: break-word; }
 
 /* data tables ------------------------------------------------------------------ */
 /* A comfortably grabbable, always-visible horizontal scrollbar (the browser
@@ -434,8 +446,8 @@ body {
 }
 .facts dt {
   font-size: 10px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.05em; color: var(--color-text-secondary); white-space: nowrap;
-  overflow: hidden; text-overflow: ellipsis;
+  letter-spacing: 0.05em; color: var(--color-text-secondary); min-width: 0;
+  overflow-wrap: break-word;
 }
 .facts dd { margin: 0; font-weight: 700; text-align: right; white-space: nowrap; flex: none;
   background: var(--gen-shade); border-radius: 4px; padding: 0 6px; }
@@ -538,17 +550,16 @@ body {
    what makes a normalized second loan slot fit the one-screen budget (S11).
    Each .loan-cols__row is `display:contents` so its label + N field cells
    become direct items of the parent grid, flowing into its row/columns. */
-.loan-cols { display: grid; grid-template-columns: 56px repeat(2, 1fr); gap: 1px 5px; align-items: center; margin-top: 2px; }
+.loan-cols { display: grid; grid-template-columns: 66px repeat(2, 1fr); gap: 1px 5px; align-items: center; margin-top: 2px; }
 .loan-cols__row { display: contents; }
-/* ellipsis truncates the rendered label only — textContent (what S19 asserts
-   against) stays the full "Balloon due" regardless of visual width */
-.loan-cols__label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* A label too long for its column wraps onto a second line (never cut, §1.6). */
+.loan-cols__label { font-size: 10px; line-height: 1.15; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; color: var(--color-text-secondary); overflow-wrap: break-word; min-width: 0; }
 .loan-cols__head { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-navy); text-align: center; }
 .loan-cols--facts { margin-top: 3px; }
 .loan-cols__val {
   display: block; text-align: center; font-weight: 700; font-size: var(--font-xs);
   background: var(--gen-shade); border-radius: 4px; padding: 2px 4px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+  overflow-wrap: break-word; min-width: 0;
 }
 .amount-input { max-width: 84px; text-align: right; }
 .check-row { min-height: 30px; }
@@ -622,7 +633,6 @@ body {
   /* The three verdict pills wrap at phone width instead of widening the page
      past the screen (measured 7px over at 390-393px on the dashboard). */
   .topbar__pills { flex-wrap: wrap; }
-  .switcher__title .sub { display: block; overflow: hidden; text-overflow: ellipsis; }
 }
 /* Above the phone reflow, the dashboard's centre group (switcher, pills,
    undo/redo) needs about 1290px on one line. Below that it used to shrink past
@@ -640,8 +650,8 @@ body {
 /* account control (topbar) --------------------------------------------------- */
 .account { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
 .account__email {
-  font-size: var(--font-sm); color: var(--color-on-navy-muted);
-  max-width: 7ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: var(--font-sm); line-height: 1.2; color: var(--color-on-navy-muted);
+  max-width: 16ch; overflow-wrap: break-word;
 }
 .account__btn { white-space: nowrap; }
 
@@ -698,7 +708,9 @@ body.is-readonly #view button:not(.topbar__link):not(.switcher__btn) {
   border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-secondary);
   border-radius: var(--radius-pill); font: inherit; font-size: var(--font-xs); font-weight: 700;
   padding: 1px 10px; cursor: pointer; line-height: 1.7; white-space: nowrap; flex: none;
+  display: inline-flex; align-items: center; gap: 4px;
 }
+.photos-btn svg { width: 13px; height: 13px; }
 .photos-btn:hover, .photos-btn:focus-visible { border-color: var(--color-accent); color: var(--color-accent); }
 
 

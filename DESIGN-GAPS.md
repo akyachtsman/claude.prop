@@ -33,12 +33,16 @@ Cancel and the act in the footer, and errors under the field; then Sign-in
 (2026-11-03), with labels above the fields, errors under them and the house
 link and button; and every toast, now `House.toast` at the bottom of the
 screen, red for an error, worded past tense ("*Name* archived.").
+Then the dashboard's icons and cut-off labels (2026-11-03): the lock is the house
+padlock, Undo and Redo are words, Listing details is "Details" and Photos the
+camera with the word; no label or name is cut with an ellipsis any more (they
+wrap, and four KPI notes are shorter); a KPI's formula is reached through its
+label, a native button, instead of a focusable tile.
 
 | Screen | Group (design.md) | What breaks | File |
 |---|---|---|---|
-| Property dashboard | Icons §3 | 🔒/🔓, ↶/↷ and 🏷 used as action icons | `js/views/dashboard.js`, `js/app.js` |
-| Property dashboard | Principles §1 | labels and names truncated with an ellipsis in 13 rules | `styles/legacy.css` |
-| Property dashboard | Cards §5, Buttons §4 | its own card and button classes; KPI tiles are `div tabindex=0` | `js/views/dashboard.js` |
-| Property dashboard | Forms §12 | grid inputs have no visible label | `js/views/dashboard.js` |
+| Property dashboard | Principles §1 | the deal's name in the top bar is an editable field 170px wide, so a long name scrolls inside it instead of wrapping | `styles/legacy.css`, `js/app.js` |
+| Property dashboard | Cards §5, Buttons §4 | its own compact card, button and field classes (`legacy-card`, `.photos-btn`, `.dash-lock-btn`, `.topbar__action`, 26px fields) instead of the house `.card`, `.btn` and 44px targets | `js/views/dashboard.js`, `styles/legacy.css` |
+| Property dashboard | Forms §12 | the grids (tenants, loans) are labelled by their headers and save on commit like a spreadsheet, but show no brief "Saved" beside the cell | `js/views/dashboard.js` |
 | Photos gallery | Dialogs §10 | its own modal; "Done"; × removes a saved photo | `js/views/dashboard-media.js` |
 | Photos gallery | Upload §13 | URLs pasted in a textarea | `js/views/dashboard-media.js` |

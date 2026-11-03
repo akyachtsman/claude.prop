@@ -235,8 +235,8 @@ function showDashboard(id, opts = {}) {
   if (historyId !== id) { undoStack = []; redoStack = []; historyId = id; }
   committedState = deepCopy(saved);
   normalizeLoans(committedState);
-  const undoBtn = el('button', { class: 'topbar__link topbar__action', type: 'button', 'aria-label': 'Undo last change', title: 'Undo', text: '↶', onclick: () => undo(id) });
-  const redoBtn = el('button', { class: 'topbar__link topbar__action', type: 'button', 'aria-label': 'Redo change', title: 'Redo', text: '↷', onclick: () => redo(id) });
+  const undoBtn = el('button', { class: 'topbar__link topbar__action', type: 'button', 'aria-label': 'Undo last change', title: 'Undo', text: 'Undo', onclick: () => undo(id) });
+  const redoBtn = el('button', { class: 'topbar__link topbar__action', type: 'button', 'aria-label': 'Redo change', title: 'Redo', text: 'Redo', onclick: () => redo(id) });
   const refreshHistory = () => { undoBtn.disabled = undoStack.length === 0; redoBtn.disabled = redoStack.length === 0; };
   refreshHistory();
 
@@ -265,7 +265,7 @@ function showDashboard(id, opts = {}) {
   nameInput.addEventListener('change', commitName);       // Enter / blur
   const title = el('div', { class: 'switcher__title' }, [
     nameInput,
-    el('span', { class: 'sub', text: `${fmtSub(working)} · property ${idx + 1} of ${props.length}` }),
+    el('span', { class: 'sub', text: `Property ${idx + 1} of ${props.length}` }),
   ]);
   const pills = el('div', { class: 'topbar__pills' });
   const actionsHost = el('div', { class: 'topbar__actions' });
@@ -299,13 +299,6 @@ function showDashboard(id, opts = {}) {
   });
 }
 
-function fmtSub(p) {
-  const parts = [];
-  if (p.info.askingPrice) parts.push('Asking ' + fmt.money(p.info.askingPrice));
-  if (p.offer.offerPrice) parts.push('Offer ' + fmt.money(p.offer.offerPrice));
-  if (p.info.rentableSF) parts.push(fmt.integer(p.info.rentableSF) + ' SF');
-  return parts.join(' · ');
-}
 
 function paintPills(host, m, p) {
   clear(host);

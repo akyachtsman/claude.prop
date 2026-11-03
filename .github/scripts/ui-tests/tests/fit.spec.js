@@ -67,9 +67,9 @@ async function walkOverlays(page) {
   expect(pageWidth, 'the dashboard must not scroll sideways').toBeLessThanOrEqual(page.viewportSize().width + 1);
 
   // ── KPI formula popup (focus, so it opens on a touch screen too)
-  await page.locator('.kpi').first().focus();
+  await page.locator('.kpi__info').first().focus();
   await expectFits(page, '.kpi-tip--on');
-  await page.locator('.kpi').first().blur();
+  await page.locator('.kpi__info').first().blur();
 
   // ── Photos gallery, with more photos than its grid shows, so the fit check
   // exercises the scroll and not only the placement.
