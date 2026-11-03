@@ -123,10 +123,12 @@ test('offline notify + auth-lost hooks fire', () => {
   reset();
   const ops = mockOps();
   const seen = [];
-  store.setSession(session('u1'), ops, { notify: (m) => seen.push(m), onAuthLost: () => seen.push('AUTHLOST') });
+  const kinds = [];
+  store.setSession(session('u1'), ops, { notify: (m, o) => { seen.push(m); kinds.push(o); }, onAuthLost: () => seen.push('AUTHLOST') });
   online = false;
   store.save(deal('z'));
   assert.ok(seen.some((m) => /offline/i.test(m)), 'offline toast fired');
+  assert.deepEqual(kinds, [{ error: true }], 'a rejected edit is the red error toast (design.md §18)');
 });
 
 test('remove returns true online, false when offline (signed in)', () => {
@@ -143,7 +145,8 @@ test('transient (non-auth) write failure rolls cache back to cloud truth + fires
   reset();
   const ops = mockOps();
   const seen = [];
-  store.setSession(session('u1'), ops, { notify: (m) => seen.push(m), onResync: () => seen.push('RESYNC') });
+  const kinds = [];
+  store.setSession(session('u1'), ops, { notify: (m, o) => { seen.push(m); kinds.push(o); }, onResync: () => seen.push('RESYNC') });
   ops.rows = [{ id: 'server', name: 'server truth' }];   // what fetchAll returns on rollback
   ops.failNext = { isAuth: false };
   store.save(deal('local-optimistic'));                  // cache shows it briefly, then upsert fails
@@ -151,6 +154,7 @@ test('transient (non-auth) write failure rolls cache back to cloud truth + fires
   assert.deepEqual(store.list().map((p) => p.id), ['server'], 'cache rolled back to the account truth');
   assert.ok(seen.includes('RESYNC'), 'onResync fired to re-render');
   assert.ok(seen.some((m) => /couldn.t save/i.test(m)), 'honest toast (no false re-sync promise)');
+  assert.deepEqual(kinds, [{ error: true }], 'a failed save is the red error toast (design.md §18)');
 });
 
 test('auth (401) write failure fires onAuthLost exactly once', async () => {

@@ -666,7 +666,7 @@ test('S43 Listing details — the house dialog: labelled fields, Save stores, Ca
   await subtype.fill('Strip center');
   await page.locator('.desc-modal .btn-primary', { hasText: 'Save' }).click();
   await expect(page.locator('.desc-modal')).toHaveCount(0);
-  await expect(page.locator('.legacy-toast', { hasText: 'Listing details saved.' })).toBeVisible();
+  await expect(page.locator('.toast', { hasText: 'Listing details saved.' })).toBeVisible();
   await page.waitForTimeout(800);   // the debounced auto-save
   await page.reload({ waitUntil: 'load' });
   await page.waitForSelector('.kpi-strip');
@@ -940,7 +940,7 @@ test('DELETE — deleting happens from the Archive rows (archive first), confirm
   await del.click();
   await page.locator('dialog.dialog[open] .btn-delete').click();
   await expect(page.locator('.empty-state')).toContainText('No archived properties yet.');   // deleted → archive empty
-  await expect(page.locator('.legacy-toast', { hasText: /715 Plumas.* deleted\./ })).toBeVisible();
+  await expect(page.locator('.toast', { hasText: /715 Plumas.* deleted\./ })).toBeVisible();
   await page.goto('./', { waitUntil: 'load' });                 // a fresh load of the list
   await page.waitForSelector('.lcard, .empty-state');
   await expect(page.locator('#nav-archive')).toHaveCount(0);   // gone for good, not re-archived (Archived (N) hides at 0)
@@ -978,7 +978,7 @@ test('S32 archive — archived deals leave Properties/Compare and show as compar
   await expect(page.locator('.lcard')).toHaveCount(2);
   await expect(archiveBtn).toBeFocused();
   await archiveCard(page, 'button[aria-label="Archive New property"]');
-  await expect(page.locator('.legacy-toast', { hasText: 'New property archived.' })).toBeVisible();
+  await expect(page.locator('.toast', { hasText: 'New property archived.' })).toBeVisible();
   await expect(page.locator('.lcard')).toHaveCount(1);
   await expect(page.locator('.lcard__name')).toContainText('715 Plumas');
   await expect(page.locator('#nav-archive')).toHaveText('Archived (1)');   // header count updates
@@ -1008,7 +1008,7 @@ test('S32 archive — archived deals leave Properties/Compare and show as compar
   await page.click('.archive-table .archive-restore');
   await expect(page.locator('dialog.dialog')).toHaveCount(0);
   await expect(page.locator('.empty-state')).toContainText('No archived properties yet.');
-  await expect(page.locator('.legacy-toast', { hasText: 'New property restored.' })).toBeVisible();
+  await expect(page.locator('.toast', { hasText: 'New property restored.' })).toBeVisible();
   await page.click('#nav-properties');
   await page.waitForSelector('.lcard');
   await expect(page.locator('.lcard')).toHaveCount(2);

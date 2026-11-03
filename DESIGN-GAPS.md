@@ -29,7 +29,10 @@ and search, `.grid` of `.card`s with the archive-box icon, the §7 confirmation
 and toast, Archived (N), `+ Add property`, `House.empty`, and "Load backup" in
 place of the JSON "Restore"; then Listing details, Import a listing and Move
 your local deals in? on the house dialog (2026-11-03), with labelled fields,
-Cancel and the act in the footer, and errors under the field.
+Cancel and the act in the footer, and errors under the field; then Sign-in
+(2026-11-03), with labels above the fields, errors under them and the house
+link and button; and every toast, now `House.toast` at the bottom of the
+screen, red for an error, worded past tense ("*Name* archived.").
 
 | Screen | Group (design.md) | What breaks | File |
 |---|---|---|---|
@@ -39,5 +42,3 @@ Cancel and the act in the footer, and errors under the field.
 | Property dashboard | Forms §12 | grid inputs have no visible label | `js/views/dashboard.js` |
 | Photos gallery | Dialogs §10 | its own modal; "Done"; × removes a saved photo | `js/views/dashboard-media.js` |
 | Photos gallery | Upload §13 | URLs pasted in a textarea | `js/views/dashboard-media.js` |
-| Sign-in | Forms §12 | the placeholder is the label | `js/account.js` |
-| Toast | Messages §18 | shown at the top, by this project's own toast, not `House.toast` | `js/dom.js`, `js/app.js` |

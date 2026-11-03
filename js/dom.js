@@ -34,11 +34,10 @@ export function render(node, children) {
   for (const c of kids) if (c) node.appendChild(c);
 }
 
-/** Transient toast/notice at the top of the viewport. */
-export function toast(message, kind = 'info') {
-  const t = el('div', { class: `legacy-toast legacy-toast--${kind} legacy-screen`, role: 'status', text: message });
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 3200);
+/** A toast (design.md §18), the house one: shown at the bottom, one at a time;
+ *  success fades by itself, an error is red, announced, and stays longer. */
+export function toast(message, { error = false } = {}) {
+  return window.House.toast(message, { error });
 }
 
 /** Click-and-drag horizontal panning for an overflow-x:auto container — a

@@ -6,7 +6,7 @@
 import { signIn, signUp, resetPassword, updatePassword, signOut, getSession, onAuthChange } from './supabase.js';
 import { cloudOps } from './cloud.js';
 import * as store from './store.js';
-import { el, clear, toast, houseDialog } from './dom.js';
+import { el, clear, toast, houseDialog, field } from './dom.js';
 import { sampleProperty, demoProperties } from './sample.js';
 import { missingFixtures } from './reconcile.js';
 
@@ -66,14 +66,14 @@ async function applySession(session) {
     await store.fetchAll();                 // initial cloud pull → cache
   } catch (e) {
     if (e && e.isAuth) { onAuthLost(); return; }   // expired session → sign out, don't reconcile
-    toast("Couldn't load your account — showing cached deals.", 'info');
+    toast("Couldn't load your account, so these are the deals saved on this device.", { error: true });
   }
   await reconcile(session.user.id);
 }
 
 // store calls this when a write-through hits a 401 (session expired mid-edit).
 function onAuthLost() {
-  toast('Signed out — sign in again to keep saving.', 'info');
+  toast('Signed out. Sign in again to keep saving.', { error: true });
   signOut();                                // clears tokens → fires SIGNED_OUT → switch to local
 }
 
@@ -101,23 +101,28 @@ export function renderAuthScreen(host) {
 }
 
 // Email + password gate with three modes: sign in / create account / forgot.
+// House form (design.md §12): each field's label sits above it; an error sits
+// under the field it is about, and the result of a send under the button (§18);
+// the button says what it is doing while it works (§4).
 function renderGate(host) {
+  const H = window.House;
   let mode = 'signin';
-  const email = el('input', { class: 'legacy-input', type: 'email', 'aria-label': 'Email', placeholder: 'you@example.com', autocomplete: 'email' });
-  const password = el('input', { class: 'legacy-input', type: 'password', 'aria-label': 'Password', placeholder: 'Password', autocomplete: 'current-password' });
-  const pwField = el('div', { class: 'legacy-field authgate__field' }, [password]);
+  const email = el('input', { class: 'input', type: 'email', placeholder: 'you@example.com', autocomplete: 'email' });
+  const password = el('input', { class: 'input', type: 'password', autocomplete: 'current-password' });
+  const pwField = field('Password', password);
+  pwField.classList.add('authgate__pw');
   const title = el('h1', { class: 'authgate__title' });
   const sub = el('p', { class: 'authgate__sub' });
-  const submitBtn = el('button', { class: 'legacy-btn legacy-btn--primary authgate__send', type: 'button' });
-  const status = el('p', { class: 'authgate__status', role: 'status' });
+  const submitBtn = el('button', { class: 'btn btn-primary authgate__send', type: 'button' });
   const links = el('div', { class: 'authgate__links' });
 
-  const setStatus = (msg, ok = false) => { status.textContent = msg || ''; status.classList.toggle('authgate__status--ok', !!ok); };
-  const linkTo = (label, to) => el('button', { class: 'authgate__link', type: 'button', text: label,
+  const say = (target, text, kind = 'err') => H.message(target, text, { kind });
+  const hush = () => { say(email, ''); say(password, ''); say(submitBtn, ''); };
+  const linkTo = (label, to) => el('button', { class: 'link-action authgate__link', type: 'button', text: label,
     onclick: () => { mode = to; paint(); email.focus(); } });
 
   function paint() {
-    setStatus(''); submitBtn.disabled = false;
+    hush(); submitBtn.disabled = false;
     clear(links);
     if (mode === 'signin') {
       title.textContent = 'Sign in to your portfolio';
@@ -142,23 +147,28 @@ function renderGate(host) {
   }
 
   async function submit() {
+    if (submitBtn.disabled) return;
+    hush();
     const addr = email.value.trim();
-    if (!addr) return setStatus('Enter your email first.');
-    if (mode !== 'forgot' && !password.value) return setStatus('Enter your password.');
-    submitBtn.disabled = true; setStatus('Working…');
+    if (!addr) { say(email, 'Enter your email.'); email.focus(); return; }
+    if (mode !== 'forgot' && !password.value) { say(password, 'Enter your password.'); password.focus(); return; }
     if (mode === 'signin') {
+      const done = H.busy(submitBtn, 'Signing in…');
       const r = await signIn(addr, password.value);
-      if (!r.ok) { submitBtn.disabled = false; setStatus(r.error || 'Could not sign in.'); }
+      if (!r.ok) { done(); say(submitBtn, r.error || 'Could not sign in.'); }
       // success → onAuthChange(SIGNED_IN) renders the app
     } else if (mode === 'signup') {
+      const done = H.busy(submitBtn, 'Creating account…');
       const r = await signUp(addr, password.value);
-      if (!r.ok) { submitBtn.disabled = false; setStatus(r.error || 'Could not create the account.'); }
-      else if (r.needsConfirm) setStatus(`Almost there — confirm your email (${addr}), then sign in.`, true);
+      if (!r.ok) { done(); say(submitBtn, r.error || 'Could not create the account.'); }
+      else if (r.needsConfirm) { done(); say(submitBtn, `Almost there: confirm your email (${addr}), then sign in.`, 'ok'); }
       // else success → onAuthChange(SIGNED_IN) renders the app
     } else {
+      const done = H.busy(submitBtn, 'Sending…');
       const r = await resetPassword(addr);
-      if (r.ok) setStatus('Check your email for a link to set a new password.', true);
-      else { submitBtn.disabled = false; setStatus(r.error || 'Could not send the reset link.'); }
+      done();
+      if (r.ok) { submitBtn.disabled = true; say(submitBtn, 'Check your email for a link to set a new password.', 'ok'); }
+      else say(submitBtn, r.error || 'Could not send the reset link.');
     }
   }
   submitBtn.addEventListener('click', submit);
@@ -166,11 +176,11 @@ function renderGate(host) {
 
   clear(host);
   host.appendChild(el('div', { class: 'authgate' }, [
-    el('div', { class: 'authgate__card' }, [
+    el('div', { class: 'card authgate__card' }, [
       el('div', { class: 'authgate__brand', text: 'Property Analytics' }),
       title, sub,
-      el('div', { class: 'legacy-field authgate__field' }, [email]),
-      pwField, submitBtn, status, links,
+      field('Email', email),
+      pwField, submitBtn, links,
     ]),
   ]));
   paint();
@@ -179,14 +189,17 @@ function renderGate(host) {
 
 // Set-new-password form, shown after the user follows a reset link (recovery).
 function renderRecover(host) {
-  const password = el('input', { class: 'legacy-input', type: 'password', 'aria-label': 'New password', placeholder: 'New password', autocomplete: 'new-password' });
-  const status = el('p', { class: 'authgate__status', role: 'status' });
-  const btn = el('button', { class: 'legacy-btn legacy-btn--primary authgate__send', type: 'button', text: 'Set new password' });
+  const H = window.House;
+  const password = el('input', { class: 'input', type: 'password', autocomplete: 'new-password' });
+  const btn = el('button', { class: 'btn btn-primary authgate__send', type: 'button', text: 'Set new password' });
   const submit = async () => {
-    if (!password.value || password.value.length < 6) { status.textContent = 'Use at least 6 characters.'; return; }
-    btn.disabled = true; status.textContent = 'Saving…';
+    if (btn.disabled) return;
+    H.message(btn, '');
+    if (!password.value || password.value.length < 6) { H.message(password, 'Use at least 6 characters.'); password.focus(); return; }
+    H.message(password, '');
+    const done = H.busy(btn, 'Saving…');
     const r = await updatePassword(password.value);
-    if (!r.ok) { btn.disabled = false; status.textContent = r.error || 'Could not set the password.'; return; }
+    if (!r.ok) { done(); H.message(btn, r.error || 'Could not set the password.'); return; }
     recovering = false;                         // now a full session → load the account + show the app
     const session = await getSession();
     await applySession(session);
@@ -198,12 +211,12 @@ function renderRecover(host) {
   password.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
   clear(host);
   host.appendChild(el('div', { class: 'authgate' }, [
-    el('div', { class: 'authgate__card' }, [
+    el('div', { class: 'card authgate__card' }, [
       el('div', { class: 'authgate__brand', text: 'Property Analytics' }),
       el('h1', { class: 'authgate__title', text: 'Set a new password' }),
       el('p', { class: 'authgate__sub', text: 'Choose a new password for your account (at least 6 characters).' }),
-      el('div', { class: 'legacy-field authgate__field' }, [password]),
-      btn, status,
+      field('New password', password),
+      btn,
     ]),
   ]));
   password.focus();

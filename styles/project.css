@@ -109,3 +109,20 @@
 .desc-ta { min-height: 160px; }
 .link-open { font-weight: 600; text-decoration: none; margin-left: var(--space-1); }
 .link-open:hover, .link-open:focus-visible { text-decoration: underline; }
+
+/* ── Sign-in ──────────────────────────────────────────────────────────────
+   The full-page wall a signed-out visitor sees: one house card in the middle
+   of the screen, the house fields and button, the mode links under it. */
+.authgate {
+  min-height: calc(100vh - 56px - 2 * var(--space-6));
+  display: flex; align-items: center; justify-content: center;
+}
+.authgate__card { max-width: 420px; display: flex; flex-direction: column; gap: var(--space-3); }
+.authgate__brand {
+  font-weight: 700; font-size: var(--font-sm); letter-spacing: var(--tracking-wide);
+  text-transform: uppercase; color: var(--color-accent);
+}
+.authgate__title { font-size: var(--font-2xl); margin: 0; }
+.authgate__sub { color: var(--color-text-secondary); margin: 0; line-height: 1.5; }
+.authgate__send { width: 100%; justify-content: center; }
+.authgate__links { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 var(--space-2); }

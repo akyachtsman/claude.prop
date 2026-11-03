@@ -67,11 +67,11 @@ function openGallery() {
   addBtn.addEventListener('click', () => {
     const seen = new Set(prop.media.photos);
     const fresh = parsePhotoUrls(ta.value).filter((u) => !seen.has(u));
-    if (!fresh.length) { toast('No new valid image URLs found', 'info'); return; }
+    if (!fresh.length) { toast('No new photo links found. Paste http(s) image links.', { error: true }); return; }
     prop.media.photos.push(...fresh);
     ta.value = '';
     renderThumbs(); refreshPhotosBtn(); onEdit();
-    toast(`Added ${fresh.length} photo${fresh.length > 1 ? 's' : ''}`, 'success');
+    toast(`${fresh.length} photo${fresh.length > 1 ? 's' : ''} added.`);
   });
   const closeBtn = el('button', { class: 'legacy-btn legacy-btn--ghost', type: 'button', text: 'Done' });
   const panel = el('div', { class: 'modal__panel gallery', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Property photos' }, [
@@ -149,7 +149,7 @@ function openListing() {
     Object.assign(prop.info, next);
     d.close();
     refreshListingBtn();
-    if (changed) { onEdit(); toast('Listing details saved.', 'success'); }
+    if (changed) { onEdit(); toast('Listing details saved.'); }
   });
 }
 
