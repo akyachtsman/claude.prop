@@ -17,17 +17,18 @@
 import { el, clear, toast, mountOverlay, houseDialog, field } from '../dom.js';
 import { safeImageUrl, parsePhotoUrls } from '../media.js';
 
-/** Build the Photos (▦ N) and Listing-details (🏷) buttons, each fully wired to
+/** Build the Photos (N) and Listing-details buttons, each fully wired to
  *  its overlay. `onEdit` is the dashboard's commit + auto-save hook, called only
  *  when an overlay actually changed something. */
 export function mediaButtons({ prop, onEdit }) {
 // Photos button — lives in the Property Info card header (not the top bar, so
 // the mobile top bar can't overflow; and in an existing header row, so it adds
 // no dashboard height). Opens the gallery modal (hoisted below).
+// design.md §3: a photo act is the camera with the word.
 const photosBtn = el('button', { class: 'photos-btn', type: 'button', title: 'Photos' });
 function refreshPhotosBtn() {
   const n = prop.media.photos.length;
-  photosBtn.textContent = '▦ ' + n;
+  photosBtn.replaceChildren(window.House.icon('camera'), el('span', { text: `Photos (${n})` }));
   photosBtn.setAttribute('aria-label', `Photos (${n})`);
 }
 refreshPhotosBtn();
@@ -37,11 +38,13 @@ photosBtn.addEventListener('click', openGallery);
 // rather than inline fields so the one-screen layout holds on every context
 // (touch inputs are 44px tall, so extra inline rows would overflow on mobile).
 const LISTING_FIELDS = [['Subtype', 'subtype'], ['Broker', 'broker'], ['Source', 'source']];
+// A word, not an emoji (§3: emoji are never an action's icon); the ✓ says the
+// deal already carries some details.
 const listingBtn = el('button', { class: 'photos-btn', type: 'button', title: 'Listing details', 'aria-label': 'Listing details' });
 function refreshListingBtn() {
   const filled = LISTING_FIELDS.some(([, k]) => (prop.info[k] || '').trim())
     || (prop.info.photosLink || '').trim() || (prop.info.description || '').trim();
-  listingBtn.textContent = filled ? '🏷 ✓' : '🏷';
+  listingBtn.textContent = filled ? 'Details ✓' : 'Details';
 }
 refreshListingBtn();
 listingBtn.addEventListener('click', openListing);

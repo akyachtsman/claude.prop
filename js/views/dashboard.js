@@ -200,9 +200,9 @@ export function renderDashboard(container, ctx) {
   // KPI strip — def = [label, valueFn, valueClassFn, noteFn, formula].
   // `formula` drives the hover/focus popup (mirrors workbook-model.md / model.js).
   const KPI_DEFS = [
-    ['CAP', (m) => fmt.percent2(m.cap), (m) => verdictClass(capVerdict(m.cap)), () => `benchmark ${fmt.percent2(BENCHMARK_CAP)}`,
+    ['CAP', (m) => fmt.percent2(m.cap), (m) => verdictClass(capVerdict(m.cap)), () => `min ${fmt.percent2(BENCHMARK_CAP)}`,
       'NOI ÷ Offer Price'],
-    ['DSCR', (m) => fmt.ratio(m.dscr), (m) => verdictClass(dscrVerdict(m.dscr)), () => `benchmark ${fmt.ratio(BENCHMARK_DSCR)}`,
+    ['DSCR', (m) => fmt.ratio(m.dscr), (m) => verdictClass(dscrVerdict(m.dscr)), () => `min ${fmt.ratio(BENCHMARK_DSCR)}`,
       '(Rent − collection loss − included expenses) ÷ annual debt service'],
     ['NOI', (m) => fmt.money(m.noi), null, () => 'per year',
       'Total rent − included expenses'],
@@ -216,7 +216,7 @@ export function renderDashboard(container, ctx) {
       'Rate where NPV of [−all-in cost, yr 1…5 cashflows] = 0'],
     ['5Y NPV', (m) => fmt.money(m.npv), (m) => m.npv > 0 ? 'kpi__value--pass' : (m.npv < 0 ? 'kpi__value--fail' : ''), () => 'at WACC',
       '−All-in cost + Σ (yearₜ cashflow ÷ (1 + WACC)ᵗ), t = 1…5'],
-    ['5Y Total Return', (m) => fmt.money(m.totalReturn), null, () => 'CF + appreciation',
+    ['5Y Total Return', (m) => fmt.money(m.totalReturn), null, () => 'CF + appr.',
       'Sum of the 5-year cashflow + appreciation series (incl. −all-in)'],
     ['WACC', (m) => fmt.percent2(m.wacc), null, () => 'hurdle rate',
       'Σ(LTV × rate × (1 − tax)) + (1 − ΣLTV) × min. opportunity cost of equity'],
@@ -228,7 +228,7 @@ export function renderDashboard(container, ctx) {
       '(Included expenses + annual debt service) ÷ gross annual income'],
     ['Expense Ratio', (m) => fmt.percent2(m.expenseRatio), null, () => 'of gross income',
       'Included expenses ÷ gross annual income'],
-    ['Price/SF', (m) => fmt.moneyCents(m.priceSF), null, () => 'offer ÷ rentable SF',
+    ['Price/SF', (m) => fmt.moneyCents(m.priceSF), null, () => 'offer ÷ SF',
       'Offer Price ÷ Rentable SF'],
   ];
   // Shared formula popup — position:fixed so it escapes the strip's overflow:hidden
@@ -251,18 +251,44 @@ export function renderDashboard(container, ctx) {
       const noteNode = el('div', { class: 'kpi__note' });
       const formula = def[4];
       const srDesc = formula ? el('span', { class: 'sr-only', id: 'kpi-f' + i, text: 'Formula: ' + formula }) : null;
-      const cell = el('div', formula ? { class: 'kpi kpi--info', tabindex: '0', 'aria-describedby': 'kpi-f' + i } : { class: 'kpi' }, [
-        el('span', { class: 'kpi__label', text: def[0] }), valNode, noteNode, srDesc,
-      ]);
+      // The tile itself is not a control (§4, §5): the keyboard reaches the
+      // formula through the label, a native button that shows it on focus; a
+      // pointer shows it anywhere over the tile.
+      const label = formula
+        ? el('button', { class: 'kpi__label kpi__info', type: 'button', 'aria-describedby': 'kpi-f' + i, text: def[0] })
+        : el('span', { class: 'kpi__label', text: def[0] });
+      const cell = el('div', { class: formula ? 'kpi kpi--info' : 'kpi' }, [label, valNode, noteNode, srDesc]);
       out['kpi' + i] = { valNode, noteNode, def, cell };
       if (formula) {
         cell.addEventListener('mouseenter', () => showTip(cell, formula));
         cell.addEventListener('mouseleave', hideTip);
-        cell.addEventListener('focus', () => showTip(cell, formula));
-        cell.addEventListener('blur', hideTip);
+        label.addEventListener('focus', () => showTip(cell, formula));
+        label.addEventListener('blur', hideTip);
+        label.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideTip(); });
       }
       return cell;
     }));
+
+  // A value too wide for its tile (a $10,000,000 NPV in a 1440px strip of 15)
+  // steps its font down to 11px instead of painting over the next tile; if it
+  // still does not fit it wraps. It is never cut (design.md §1.6).
+  function fitKPIValues() {
+    if (!kpiStrip.isConnected) return;
+    KPI_DEFS.forEach((def, i) => {
+      const { valNode } = out['kpi' + i];
+      valNode.style.fontSize = ''; valNode.style.whiteSpace = ''; valNode.style.overflowWrap = '';
+      let size = parseFloat(getComputedStyle(valNode).fontSize);
+      while (size > 11 && valNode.scrollWidth > valNode.clientWidth) valNode.style.fontSize = (--size) + 'px';
+      if (valNode.scrollWidth > valNode.clientWidth) { valNode.style.whiteSpace = 'normal'; valNode.style.overflowWrap = 'anywhere'; }
+    });
+  }
+  // Re-fit when the strip is mounted or its width changes (window resize, a
+  // breakpoint); stop observing once the dashboard is gone.
+  const kpiFit = new ResizeObserver(() => {
+    if (!kpiStrip.isConnected) { kpiFit.disconnect(); return; }
+    fitKPIValues();
+  });
+  kpiFit.observe(kpiStrip);
 
   function paintKPIs(m) {
     KPI_DEFS.forEach((def, i) => {
@@ -273,6 +299,7 @@ export function renderDashboard(container, ctx) {
       valNode.className = 'kpi__value ' + (def[2] ? def[2](m) : '');
       noteNode.textContent = def[3](m);
     });
+    fitKPIValues();
   }
 
   // Property info ---------------------------------------------------------
@@ -310,7 +337,11 @@ export function renderDashboard(container, ctx) {
       if (node.tagName === 'SELECT' || node.type === 'checkbox' || node.type === 'range') node.disabled = locked;
       else node.readOnly = locked;
     });
-    dashLockBtn.textContent = locked ? '🔒' : '🔓';
+    // The padlock (§3: "you cannot change this"), pressed while the deal is
+    // locked; there is no open-padlock in the house set, so unlocked is the
+    // same icon, not pressed.
+    dashLockBtn.replaceChildren(window.House.icon('lock'));
+    dashLockBtn.setAttribute('aria-pressed', String(locked));
     dashLockBtn.classList.toggle('dash-lock-btn--locked', locked);
     dashLockBtn.title = locked ? 'Unlock every field in this deal' : 'Lock every field to prevent accidental edits';
     dashLockBtn.setAttribute('aria-label', locked ? 'Unlock all fields' : 'Lock all fields');

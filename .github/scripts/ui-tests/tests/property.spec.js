@@ -341,6 +341,29 @@ test('S11 one-screen — dashboard fits 1440×900 with no vertical scroll', asyn
   }
 });
 
+test('S37 KPI values fit their tiles — a huge deal shrinks or wraps a value, never overlaps the next tile', async ({ page }) => {
+  const errors = watchErrors(page);
+  await loadSample(page);
+  await setField(page, 'input[aria-label="Offer price"]', '9999999999');   // multi-billion NPV / All-In
+  await expect.poll(async () => (await kpis(page))['5Y NPV']).toMatch(/\$\d{1,3}(,\d{3}){3}/);
+  const problems = await page.evaluate(() => [...document.querySelectorAll('.kpi')].flatMap((k) => {
+    const v = k.querySelector('.kpi__value');
+    const c = k.getBoundingClientRect();
+    const r = document.createRange(); r.selectNodeContents(v);
+    const t = r.getBoundingClientRect();
+    const label = k.querySelector('.kpi__label').textContent;
+    const out = [];
+    if (v.scrollWidth > v.clientWidth + 1) out.push(`${label}: value overflows its box`);
+    if (t.right > c.right + 1 || t.left < c.left - 1) out.push(`${label}: value paints outside its tile`);
+    return out;
+  }));
+  expect(problems).toEqual([]);
+  // Nothing cut: every value is still shown in full.
+  const values = await page.locator('.kpi__value').allTextContents();
+  for (const v of values) expect(v).not.toMatch(/…|NaN|Infinity|undefined/);
+  expect(errors).toEqual([]);
+});
+
 test('S12 deal summary — the band is the single editable source; All-In derives', async ({ page }) => {
   await loadSample(page);
   const summaryOffer = page.locator('.deal-strip input[aria-label="Offer price"]');
@@ -370,6 +393,17 @@ test('S13 KPI formula popup — hovering a metric reveals its formula, clamped t
   const vw = page.viewportSize().width;
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(vw + 1);
+  // The keyboard reaches it through the label, a native button (the tile is
+  // not itself focusable, design.md §4/§5); Escape hides it again.
+  await page.mouse.move(0, 0);
+  await expect(page.locator('.kpi[tabindex]')).toHaveCount(0);
+  const capLabel = page.locator('.kpi__info', { hasText: /^CAP$/ });
+  await expect(capLabel).toHaveJSProperty('tagName', 'BUTTON');
+  await capLabel.focus();
+  await expect(tip).toHaveText('NOI ÷ Offer Price');
+  await expect(tip).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(tip).toBeHidden();
 });
 
 test('S14 pro-forma horizon — slider extends to 10 years with a boundary and 10-yr stats', async ({ page }) => {
@@ -1131,8 +1165,8 @@ test('NAV back-flow — every drill-down returns to Properties and never revisit
 //                                generic backdrop leg has never found a backdrop in
 //                                this project at all.
 // It is also limited to overlays reachable from the default state: the photo gallery
-// needs the ▦ button, the lightbox needs a photo to exist, and Listing details needs
-// the 🏷 button. So every path below is one nothing else asserts.
+// needs the Photos button, the lightbox needs a photo to exist, and Listing details needs
+// the Details button. So every path below is one nothing else asserts.
 // The Delete permanently confirmation on the Archive rows is the house dialog
 // (styles/components.js, House.confirm): its × is aria-label="Close" and its
 // backdrop is the native <dialog>'s own, so it is walked here by name too.
@@ -1212,7 +1246,7 @@ test('DISMISS project overlays — gallery, lightbox, Listing details, Import an
   await expect(page.locator('.gallery')).toBeVisible();
   await page.keyboard.press('Escape');                       // tidy up the gallery
 
-  // ── Listing details (🏷 on the dashboard), the house dialog: Cancel, ×,
+  // ── Listing details (Details on the dashboard), the house dialog: Cancel, ×,
   // Escape, and a press on the backdrop (outside the native <dialog>'s box).
   for (const dismiss of [
     async () => page.click('.desc-modal button:has-text("Cancel")'),
