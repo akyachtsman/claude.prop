@@ -276,6 +276,7 @@ function showDashboard(id, opts = {}) {
       redoStack = [];
       refreshHistory();
       paintName();
+      if (!store.isStorageOK()) { warnStorage(); return; }   // kept in memory only: say so, never "Renamed"
       toast(v ? `Renamed to ${v}.` : 'Name cleared.');
     };
     save.addEventListener('click', commitName);
@@ -313,12 +314,17 @@ function showDashboard(id, opts = {}) {
       committedState = deepCopy(working);
       redoStack = [];
       refreshHistory();
-      if (!store.isStorageOK()) { toast("Couldn't save: storage is full or the browser is in private mode. Make a backup to keep your data.", { error: true }); return false; }
+      if (!store.isStorageOK()) { warnStorage(); return false; }
       return true;   // saved: the dashboard says so beside the edited cell
     },
   });
 }
 
+
+// A save the store kept only in memory (storage full, or a private window).
+function warnStorage() {
+  toast("Couldn't save: storage is full or the browser is in private mode. Make a backup to keep your data.", { error: true });
+}
 
 function paintPills(host, m, p) {
   clear(host);

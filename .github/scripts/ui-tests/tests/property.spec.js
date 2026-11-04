@@ -292,6 +292,31 @@ test('Property name/address — shown in full in the header; Rename opens a smal
   expect(errors).toEqual([]);
 });
 
+test('Storage full — Rename and a committed cell say the save failed, never "Renamed" or "Saved"', async ({ page }) => {
+  const errors = watchErrors(page);
+  await loadSample(page);
+  // From here on the browser refuses every write, as when storage is full.
+  await page.evaluate(() => {
+    Storage.prototype.setItem = function () { throw new DOMException('full', 'QuotaExceededError'); };
+  });
+  const warning = "Couldn't save: storage is full or the browser is in private mode. Make a backup to keep your data.";
+  const nameBtn = page.locator('.switcher__name');
+  await nameBtn.click();
+  const input = page.locator('dialog.rename-modal[open] input');
+  await input.fill('Kept only in memory');
+  await input.press('Enter');
+  await expect(page.locator('.toast')).toHaveText(warning);
+  await expect(page.locator('.toast')).not.toHaveText(/Renamed/);
+  // A committed cell: the same warning, and no "Saved" beside it
+  const offer = page.locator('.deal-strip input[aria-label="Offer price"]');
+  await offer.fill('1250000');
+  await offer.press('Enter');
+  await expect(page.locator('.toast')).toHaveText(warning);
+  await page.waitForTimeout(300);
+  await expect(page.locator('.cell-saved')).not.toHaveClass(/cell-saved--on/);
+  expect(errors).toEqual([]);
+});
+
 test('Property list cards — a fixed six KPIs always shown, no source line', async ({ page }) => {
   await page.goto('./', { waitUntil: 'load' });
   await page.click('button:has-text("Load sample deal")');
