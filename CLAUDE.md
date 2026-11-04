@@ -18,8 +18,10 @@ https://raw.githubusercontent.com/akyachtsman/claude.directives/main/directives/
 ## Design
 **There is one house style, and it binds every project** (owner rulings,
 2026-10-19, `directives/design.md`): the house components, words, icons and
-patterns apply here. This project is moving onto it with `/design-intake` step 1c
-(claude.directives #470); `.claude/directive-sync.json` → `"house_style": true`.
+patterns apply here. This project moved onto it with `/design-intake` step 1c
+(claude.directives #470), finished 2026-11-04 (step 1 #132; step 2 from #140;
+step 3 deleted `styles/legacy.css` and `DESIGN-GAPS.md`);
+`.claude/directive-sync.json` → `"house_style": true`.
 **Owner palette ruling (2026-10-25):** this project keeps its own colours and
 fonts, "Banker Navy" (established & owner-approved 2026-07-14 — see
 `specs/property-dashboard/design.md`). Only the components, words, icons and
@@ -35,29 +37,23 @@ the project's, token names are the house's. The stylesheets, loaded in this orde
   (`<script src="styles/components.js" defer>`, before `js/app.js`) since step 2's
   first PR (2026-10-27), which moved the Archive rows' Delete permanently onto
   `House.confirm`; a screen's code reads it as `window.House`.
-- `styles/legacy.css` — this project's own components (the old
-  `styles/components.css`), with the ten classes it shared with the house file
-  renamed `legacy-<name>` (`legacy-btn`, `legacy-card`, `legacy-field`,
-  `legacy-grid`, `legacy-input`, `legacy-page`, `legacy-pill`,
-  `legacy-table-wrap`, `legacy-th-sort`, `legacy-toast`, each with its `--`/`__`
-  family). Its first block holds back the house page base (overflow-wrap,
-  headings, links, the 3px link focus ring, images, the controls' font) under
-  `.legacy-screen`, the class every old screen's root carries: `#view` (on the
-  dashboard), the top bar and the offline banner.
-- `styles/project.css` — this project's own layout and modifiers for the screens
-  already moved (all 2026-11-03: Compare and Archive's compact, pinned-column
-  metric tables, best/worst fills and include picker; the Properties toolbar and
-  cards; the dialogs' widths and field grid; the sign-in wall; and, 2026-11-04,
-  the Photos dialog's thumbnail grid and the photo viewer's size), loaded last. It
-  never restyles a house component. `js/app.js` `router()` gives `#view` the house
-  `page` class on a moved route (`HOUSE_ROUTES`) and on the sign-in wall, and
-  `legacy-page legacy-screen` on the rest (the dashboard), so a moved screen takes
-  the house page base.
-- **`DESIGN-GAPS.md`** — one line per screen and group that does not meet the
-  standard yet. Step 2 moves the screens one or a few per PR, in the order the
-  owner picks, each dropping its `legacy-` classes and `legacy-screen` and
-  deleting its lines; **step 2 needs its own owner go-ahead.** Step 3 deletes
-  `styles/legacy.css` and the emptied `DESIGN-GAPS.md`.
+- `styles/project.css` — this project's own styles, loaded last; it never
+  restyles a house component. Part 1 is the page base, the top bar, the offline
+  banner and the dashboard, with the dashboard's own compact components
+  (`.dash-page`, `.dash-grid`, `.dash-card`, `.dash-field`, `.dash-input`,
+  `.dash-table-wrap`; until step 3 they were `styles/legacy.css`'s `legacy-`
+  classes). It keeps one piece of the old hold-back: `.dash-page, .topbar
+  { overflow-wrap: normal }`, because the house base's `anywhere` lets the
+  dashboard's grid tracks shrink below their longest word and wrap every label
+  (measured at step 3: without it the 1440×900 dashboard grew to 906px tall and
+  failed S11; with it every screen matched pixel for pixel, the methodology
+  notes' headings aside, which now take the house `h3`). Part 2 is the layout of
+  the screens on the house components: Compare and Archive's compact,
+  pinned-column metric tables, best/worst fills and include picker; the
+  Properties toolbar and cards; the dialogs' widths, field grid, Photos grid and
+  photo viewer; the sign-in wall. `js/app.js` `router()` gives `#view` the house
+  `page` class on those routes (`HOUSE_ROUTES`) and on the sign-in wall, and
+  `dash-page` on the dashboard.
 - **The dashboard stays on one screen (2026-11-04).** On a laptop (a fine
   pointer) the dashboard keeps its compact cards, 26px fields and small buttons
   (Details, Photos, the lock, Undo and Redo) instead of the house `.card`
@@ -83,8 +79,7 @@ the project's, token names are the house's. The stylesheets, loaded in this orde
   and would hide the metrics the owner relies on (§1.6). It is an owner exception to §7,
   not a gap; everything else on the page (Restore, Delete permanently, the shared
   confirmation, the toasts) follows the house pattern.
-- **Reference page:** `index.html` (the Banker Navy look; the house reference page
-  comes with step 2).
+- **Reference page:** `index.html` (the Banker Navy look on the house components).
 
 ## Application Architecture
 - [main source file/folder] — [brief description]
@@ -214,7 +209,7 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
      `.link-action` (← Properties, and the sign-in mode links) and `.row-open` (a
      row's name) on Compare and Archive; `.archive-restore:hover`
      left the list when the Archive rows took the house `.btn`, 2026-10-27,
-     `.legacy-th-sort__caret` when Compare and Archive took the house `.th-sort`,
+     the old `.legacy-th-sort__caret` when Compare and Archive took the house `.th-sort`,
      2026-11-03, `.modal__status--ok` when Import a listing took the house
      dialog and `.inline-msg.ok`, 2026-11-03, and `.authgate__status--ok` and
      `.authgate__link` when Sign-in took `.inline-msg` and `.link-action`,
@@ -224,7 +219,7 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
      their hover fill becomes `--color-accent`.
   3. **`accent-hover / accent-light`** — the NOI chip (`.rt-chip--noi`, rendered at
      `dashboard.js:463`). Found by DERIVING pairs from the old `components.css`, now
-     `styles/legacy.css` (every rule
+     `styles/project.css` part 1 (every rule
      declaring both a `color:` and a `background:` from tokens), not by enumerating:
      it was shipping 4.32:1 at 11px bold and no hand-written pair described it.
   4. **`on-danger / danger`** — first the gallery delete glyph on its hover fill;
@@ -237,8 +232,8 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   `FF`/`F`), and a pair naming the `#FFFFFF` literal — the old `.gallery__del` came
   to use `var(--color-on-danger)`, so the pair scores by name at 6.01 with no exception.
 
-  **Re-run the derivation in (3) whenever `styles/legacy.css` or `styles/project.css`
-  gains a new fg/bg pairing.** The house `styles/components.css` is not derived here: its text pairs
+  **Re-run the derivation in (3) whenever `styles/project.css` gains a new fg/bg
+  pairing.** The house `styles/components.css` is not derived here: its text pairs
   are the hand-check list in `design.md` → *Accessibility*, measured at the
   house-style move (2026-10-25) and all AA with Banker Navy values (status pairs
   5.03–7.39, `on-danger` on `danger-hover` 7.74, `text-primary` on `accent-light`

@@ -111,10 +111,11 @@ function router() {
   document.body.classList.remove('is-gated');
   const r = parseHash();
   setActiveNav(r.route);
-  // Screens already on the house style (DESIGN-GAPS.md) take the house page box
-  // and base; the rest keep the legacy ones until they move. Resetting the class
-  // also drops a dashboard's .is-locked, which the dashboard re-applies itself.
-  view.className = HOUSE_ROUTES.has(r.route) ? 'page' : 'legacy-page legacy-screen';
+  // The Properties page, Compare and Archive take the house page box; the
+  // dashboard its own wider, tighter one (.dash-page, the one-screen layout).
+  // Resetting the class also drops a dashboard's .is-locked, which the
+  // dashboard re-applies itself.
+  view.className = HOUSE_ROUTES.has(r.route) ? 'page' : 'dash-page';
   if (r.route === 'dashboard') return showDashboard(r.id);
   if (r.route === 'compare') return showCompare(r.ids);
   if (r.route === 'archive') return showArchive();
