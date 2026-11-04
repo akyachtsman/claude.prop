@@ -110,6 +110,33 @@
 .link-open { font-weight: 600; text-decoration: none; margin-left: var(--space-1); }
 .link-open:hover, .link-open:focus-visible { text-decoration: underline; }
 
+/* ── Photos and the photo viewer (house dialogs, design.md §10) ───────────
+   The gallery's thumbnails are buttons that open the viewer; each carries its
+   × (Remove) in the top-right corner. The viewer is as wide as the screen
+   allows and the photo keeps its shape inside it. */
+.gallery-modal { width: min(720px, 94vw); }
+.gallery__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--space-3); }
+.gallery__empty { color: var(--color-text-secondary); font-size: var(--font-sm); margin: 0; padding: var(--space-6) 0; text-align: center; }
+.gallery__cell { position: relative; margin: 0; }
+.gallery__open {
+  display: block; width: 100%; padding: 0; border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--gen-shade); cursor: zoom-in; overflow: hidden;
+}
+.gallery__open:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; }
+.gallery__img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+.gallery__del { position: absolute; top: var(--space-1); right: var(--space-1); }
+.gallery__ta { resize: vertical; line-height: 1.5; }
+.gallery__add { display: flex; justify-content: flex-end; }
+.lightbox-modal { width: min(1200px, 94vw); }
+.dialog-actions { display: flex; align-items: center; gap: var(--space-2); flex: none; }
+.lightbox-modal .dialog-body { display: flex; justify-content: center; }
+/* The header (title, Previous, Next, ×) and the body's padding take about
+   110px of the dialog's 88% of the screen; the photo gets the rest. */
+.lightbox__img {
+  max-width: 100%; max-height: calc(88vh - 110px); max-height: calc(88dvh - 110px);
+  object-fit: contain; border-radius: var(--radius-md);
+}
+
 /* ── Sign-in ──────────────────────────────────────────────────────────────
    The full-page wall a signed-out visitor sees: one house card in the middle
    of the screen, the house fields and button, the mode links under it. */

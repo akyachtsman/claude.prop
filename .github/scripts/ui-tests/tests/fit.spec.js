@@ -71,30 +71,30 @@ async function walkOverlays(page) {
   await expectFits(page, '.kpi-tip--on');
   await page.locator('.kpi__info').first().blur();
 
-  // ── Photos gallery, with more photos than its grid shows, so the fit check
+  // ── Photos gallery, with more photos than it shows, so the fit check
   // exercises the scroll and not only the placement.
   await page.click('button[aria-label^="Photos"]');
   const urls = Array.from({ length: 24 }, (_, i) => `https://ex.com/${i}.jpg`).join('\n');
-  await page.fill('textarea[aria-label="Add photo URLs"]', urls);
+  await page.fill('textarea[aria-label="Add photo links"]', urls);
   await page.click('button:has-text("Add photos")');
   await expect(page.locator('.gallery__cell')).toHaveCount(24);
-  const grid = page.locator('.gallery__grid');
-  expect(await grid.evaluate((g) => g.scrollHeight > g.clientHeight), 'the grid must hold more than it shows').toBe(true);
-  await expectFits(page, '.modal__overlay');
+  const body = page.locator('.gallery-modal .dialog-body');
+  expect(await body.evaluate((b) => b.scrollHeight > b.clientHeight), 'the gallery must hold more than it shows').toBe(true);
+  await expectFits(page, 'dialog.gallery-modal[open]');
 
-  // ── Lightbox, over the gallery. The photo must still be shown at a useful
-  // size: shrinking it to nothing would also keep the arrows on screen.
-  await page.locator('.gallery__img').first().click();
-  await expectFits(page, '.lightbox');
+  // ── Photo viewer, over the gallery. The photo must still be shown at a useful
+  // size: shrinking it to nothing would also keep the buttons on screen.
+  await page.locator('button[aria-label="View photo 1"]').click();
+  await expectFits(page, 'dialog.lightbox-modal[open]');
   const vp = page.viewportSize();
   const shown = await page.locator('.lightbox__img').evaluate((img) => {
     const b = img.getBoundingClientRect();
     return { w: b.width, h: b.height };
   });
   expect(Math.max(shown.w / vp.width, shown.h / vp.height), 'the photo fills over half the screen one way').toBeGreaterThan(0.5);
-  await page.locator('.lightbox__close').click();
-  await page.click('.gallery button:has-text("Done")');
-  await expect(page.locator('.gallery')).toHaveCount(0);
+  await page.locator('.lightbox-modal button[aria-label="Close"]').click();
+  await page.locator('.gallery-modal .dialog-header button[aria-label="Close"]').click();
+  await expect(page.locator('.gallery-modal')).toHaveCount(0);
 
   // ── Listing details
   await page.click('button[aria-label="Listing details"]');
