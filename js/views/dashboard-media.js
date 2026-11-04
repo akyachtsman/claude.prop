@@ -10,11 +10,11 @@
 // LISTING_FIELDS) and now makes a single call and places two buttons. Everything
 // else is module-private.
 //
-// Both surfaces are modals rather than inline fields because the dashboard must
-// stay one-screen (S11) and touch inputs are 44px tall; the gallery/lightbox
+// All three are house dialogs rather than inline fields because the dashboard
+// must stay one-screen (S11) and touch inputs are 44px tall; the gallery/viewer
 // layering and every dismissal path are S30/S40's subject.
 
-import { el, clear, toast, mountOverlay, houseDialog, field } from '../dom.js';
+import { el, clear, toast, houseDialog, field } from '../dom.js';
 import { safeImageUrl, parsePhotoUrls } from '../media.js';
 
 /** Build the Photos (N) and Listing-details buttons, each fully wired to
@@ -49,70 +49,97 @@ function refreshListingBtn() {
 refreshListingBtn();
 listingBtn.addEventListener('click', openListing);
 
+// The photo gallery — the house dialog (design.md §10, §12). It works on a copy:
+// Add photos and each photo's × change only the copy, and Save stores it in one
+// commit (one undo step); Cancel, × and (with nothing changed) Esc and the
+// backdrop leave the deal's photos as they were. Photos are links pasted into
+// the box, not uploaded files (CLAUDE.md -> Design, the Photos ruling).
 function openGallery() {
+  const photos = [...prop.media.photos];
   const grid = el('div', { class: 'gallery__grid' });
+  let d;
   function renderThumbs() {
     clear(grid);
-    if (!prop.media.photos.length) {
-      grid.appendChild(el('p', { class: 'gallery__empty', text: 'No photos yet — paste image URLs below to add them.' }));
+    if (!photos.length) {
+      grid.appendChild(el('p', { class: 'gallery__empty', text: 'No photos yet. Paste photo links below to add them.' }));
       return;
     }
-    prop.media.photos.forEach((url, i) => {
-      const img = el('img', { class: 'gallery__img', loading: 'lazy', alt: `Photo ${i + 1}`, src: url });
-      img.addEventListener('click', () => openLightbox(i));
-      const del = el('button', { class: 'gallery__del', type: 'button', 'aria-label': `Remove photo ${i + 1}`, text: '×' });
-      del.addEventListener('click', () => { prop.media.photos.splice(i, 1); renderThumbs(); refreshPhotosBtn(); onEdit(); });
-      grid.appendChild(el('figure', { class: 'gallery__cell' }, [img, del]));
+    photos.forEach((url, i) => {
+      const view = el('button', { class: 'gallery__open', type: 'button', 'aria-label': `View photo ${i + 1}`, title: `View photo ${i + 1}` },
+        [el('img', { class: 'gallery__img', loading: 'lazy', alt: '', src: url })]);
+      view.addEventListener('click', () => openLightbox(photos, i, view));
+      // × takes a photo off before Save (design.md §2, §3: Remove, ×).
+      const del = el('button', { class: 'btn btn-icon gallery__del', type: 'button', 'aria-label': `Remove photo ${i + 1}`, title: `Remove photo ${i + 1}` }, [window.House.icon('x')]);
+      del.addEventListener('click', () => {
+        photos.splice(i, 1);
+        renderThumbs();
+        d.setDirty(true);
+        (grid.querySelector('.gallery__del') || ta).focus();
+      });
+      grid.appendChild(el('figure', { class: 'gallery__cell' }, [view, del]));
     });
   }
-  const ta = el('textarea', { class: 'legacy-input gallery__ta', rows: '2', 'aria-label': 'Add photo URLs', placeholder: 'Paste image URLs — one per line…' });
-  const addBtn = el('button', { class: 'legacy-btn legacy-btn--primary', type: 'button', text: 'Add photos' });
+  const ta = el('textarea', { class: 'input gallery__ta', rows: '2', 'aria-label': 'Add photo links', placeholder: 'e.g. https://example.com/front.jpg, one per line' });
+  const addBtn = el('button', { class: 'btn', type: 'button', text: 'Add photos' });
   addBtn.addEventListener('click', () => {
-    const seen = new Set(prop.media.photos);
+    const seen = new Set(photos);
     const fresh = parsePhotoUrls(ta.value).filter((u) => !seen.has(u));
-    if (!fresh.length) { toast('No new photo links found. Paste http(s) image links.', { error: true }); return; }
-    prop.media.photos.push(...fresh);
+    if (!fresh.length) {
+      window.House.message(ta, 'No new photo links found. Paste links that start with http:// or https://.');
+      ta.focus();
+      return;
+    }
+    photos.push(...fresh);
     ta.value = '';
-    renderThumbs(); refreshPhotosBtn(); onEdit();
-    toast(`${fresh.length} photo${fresh.length > 1 ? 's' : ''} added.`);
+    renderThumbs();
+    d.setDirty(true);
+    window.House.message(ta, `${fresh.length} photo${fresh.length > 1 ? 's' : ''} added. Save to keep ${fresh.length > 1 ? 'them' : 'it'}.`, { kind: 'ok' });
   });
-  const closeBtn = el('button', { class: 'legacy-btn legacy-btn--ghost', type: 'button', text: 'Done' });
-  const panel = el('div', { class: 'modal__panel gallery', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Property photos' }, [
-    el('div', { class: 'gallery__head' }, [el('h2', { class: 'modal__title', text: 'Photos' }), closeBtn]),
-    grid,
-    el('div', { class: 'gallery__add' }, [ta, addBtn]),
-  ]);
-  const overlay = el('div', { class: 'modal__overlay legacy-screen' }, [panel]);
+  const save = el('button', { class: 'btn btn-primary', type: 'button', text: 'Save' });
+  d = houseDialog({
+    title: 'Photos', className: 'gallery-modal', opener: photosBtn,
+    body: [grid, field('Add photo links', ta), el('div', { class: 'gallery__add' }, [addBtn])],
+    footer: [el('button', { class: 'btn', type: 'button', 'data-dialog-close': '', text: 'Cancel' }), save],
+  });
   renderThumbs();
-  // Ignore Escape while the full-size lightbox is up — that layer owns the key,
-  // so one Escape closes the lightbox only, not the gallery beneath it.
-  const close = mountOverlay(overlay, { escapeWhen: () => !document.querySelector('.lightbox') });
-  closeBtn.addEventListener('click', close);
-  ta.focus();
+  save.addEventListener('click', () => {
+    const changed = photos.length !== prop.media.photos.length || photos.some((u, i) => u !== prop.media.photos[i]);
+    prop.media.photos = photos;
+    d.close();
+    refreshPhotosBtn();
+    if (changed) { onEdit(); toast('Photos saved.'); }
+  });
 }
 
-// Full-size viewer with keyboard/arrow navigation.
-function openLightbox(start) {
+// The photo viewer — a read-only house dialog over the gallery (§10: a dialog
+// opened from another sits above it, and Esc closes only the top one).
+// Previous and Next sit beside × in the header, not in a footer, so the photo
+// keeps the height on a short screen; ← and → step too.
+function openLightbox(photos, start, opener) {
   let idx = start;
   const img = el('img', { class: 'lightbox__img', alt: '' });
-  const cap = el('div', { class: 'lightbox__cap' });
-  const paint = () => { img.src = prop.media.photos[idx]; cap.textContent = `${idx + 1} / ${prop.media.photos.length}`; };
-  const step = (d) => { const n = prop.media.photos.length; idx = (idx + d + n) % n; paint(); };
-  const prev = el('button', { class: 'lightbox__nav', type: 'button', 'aria-label': 'Previous photo', text: '‹' });
-  const next = el('button', { class: 'lightbox__nav', type: 'button', 'aria-label': 'Next photo', text: '›' });
-  prev.addEventListener('click', (e) => { e.stopPropagation(); step(-1); });
-  next.addEventListener('click', (e) => { e.stopPropagation(); step(1); });
-  // An explicit close control, not only Escape + a backdrop tap. Both of those
-  // keep working, but neither is DISCOVERABLE on a touch screen, where there is
-  // no keyboard and the backdrop looks like part of the photo — design.md
-  // -> Cross-platform: every action works by tap, click AND keyboard.
-  const shut = el('button', { class: 'lightbox__close', type: 'button', 'aria-label': 'Close photo viewer', title: 'Close', text: '\u00d7' });
-  const box = el('div', { class: 'lightbox legacy-screen', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Photo viewer' }, [shut, prev, img, next, cap]);
-  paint();
-  const close = mountOverlay(box, {
-    onKey: (e) => { if (e.key === 'ArrowLeft') step(-1); else if (e.key === 'ArrowRight') step(1); },
+  const prev = el('button', { class: 'btn', type: 'button', text: 'Previous' });
+  const next = el('button', { class: 'btn', type: 'button', text: 'Next' });
+  const d = houseDialog({
+    title: '', className: 'lightbox-modal', opener, initialFocus: photos.length > 1 ? next : undefined,
+    actions: photos.length > 1 ? [prev, next] : [],
+    body: [img],
   });
-  shut.addEventListener('click', (e) => { e.stopPropagation(); close(); });
+  const title = d.box.querySelector('.dialog-title');
+  const paint = () => {
+    img.src = photos[idx];
+    title.textContent = `Photo ${idx + 1} of ${photos.length}`;
+    img.alt = title.textContent;
+  };
+  const step = (n) => { idx = (idx + n + photos.length) % photos.length; paint(); };
+  prev.addEventListener('click', () => step(-1));
+  next.addEventListener('click', () => step(1));
+  d.box.addEventListener('keydown', (e) => {
+    if (photos.length < 2) return;
+    if (e.key === 'ArrowLeft') { e.preventDefault(); step(-1); }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); step(1); }
+  });
+  paint();
 }
 
 // Listing details — the house dialog (design.md §10, §12): labelled fields for

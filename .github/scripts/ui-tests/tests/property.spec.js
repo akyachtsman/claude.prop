@@ -606,34 +606,68 @@ test('Formula entry — an arithmetic expression in a numeric field evaluates on
   await expect(offer).toHaveValue('1300000');
 });
 
-test('Photos gallery — add image URLs (deduped + sanitized), view in a lightbox, remove, and persist', async ({ page }) => {
+test('S30 Photos — add photo links (deduped + sanitized), view them, remove one, and Save', async ({ page }) => {
+  const errors = watchErrors(page);
+  const PNG = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==',
+    'base64');
+  await page.route('https://ex.com/**', (route) => route.fulfill({ status: 200, contentType: 'image/png', body: PNG }));
   await loadSample(page);
   const btn = page.locator('button[aria-label^="Photos"]');
   await expect(btn).toContainText('0');
   await btn.click();
-  await expect(page.locator('.gallery')).toBeVisible();
-  // paste four lines: two good URLs, a javascript: URL (dropped), and a duplicate
-  await page.fill('textarea[aria-label="Add photo URLs"]',
+  const dlg = page.locator('dialog.gallery-modal[open]');
+  await expect(dlg).toBeVisible();
+  // The house dialog (design.md §10, §12): its title, a labelled box, Cancel and Save.
+  await expect(dlg.locator('.dialog-title')).toHaveText('Photos');
+  await expect(dlg.locator('label', { hasText: 'Add photo links' })).toBeVisible();
+  await expect(dlg.locator('.dialog-footer button')).toHaveText(['Cancel', 'Save']);
+  await expect(dlg.locator('textarea[aria-label="Add photo links"]')).toBeFocused();
+  // Nothing new: the refusal sits under the box, not only in a toast (§18).
+  await page.fill('textarea[aria-label="Add photo links"]', 'javascript:alert(1)');
+  await page.click('button:has-text("Add photos")');
+  await expect(dlg.locator('.inline-msg.err')).toContainText('No new photo links found');
+  // four lines: two good URLs, a javascript: URL (dropped), and a duplicate
+  await page.fill('textarea[aria-label="Add photo links"]',
     'https://ex.com/1.jpg\nhttps://ex.com/2.jpg\njavascript:alert(1)\nhttps://ex.com/1.jpg');
   await page.click('button:has-text("Add photos")');
-  await expect(page.locator('.gallery__cell')).toHaveCount(2);   // deduped + junk dropped
-  await expect(btn).toContainText('2');
-  // full-size lightbox + keyboard nav
-  await page.locator('.gallery__img').first().click();
-  await expect(page.locator('.lightbox__cap')).toHaveText('1 / 2');
-  await page.locator('.lightbox__nav[aria-label="Next photo"]').click();
-  await expect(page.locator('.lightbox__cap')).toHaveText('2 / 2');
+  await expect(dlg.locator('.gallery__cell')).toHaveCount(2);   // deduped + junk dropped
+  await expect(dlg.locator('.inline-msg.ok')).toHaveText('2 photos added. Save to keep them.');
+  await expect(btn).toContainText('0');                        // nothing stored before Save
+  // The viewer: a house dialog over the gallery, Previous / Next and the arrow keys
+  await dlg.locator('button[aria-label="View photo 1"]').click();
+  const viewer = page.locator('dialog.lightbox-modal[open]');
+  await expect(viewer.locator('.dialog-title')).toHaveText('Photo 1 of 2');
+  await expect(viewer.locator('button', { hasText: 'Next' })).toBeFocused();
+  await viewer.locator('button', { hasText: 'Next' }).click();
+  await expect(viewer.locator('.dialog-title')).toHaveText('Photo 2 of 2');
+  await page.keyboard.press('ArrowRight');
+  await expect(viewer.locator('.dialog-title')).toHaveText('Photo 1 of 2');
   await page.keyboard.press('Escape');
-  await expect(page.locator('.lightbox')).toHaveCount(0);
-  await expect(page.locator('.gallery')).toBeVisible();          // gallery survives the lightbox's Escape
-  // remove one, close, and confirm it survives a reload (auto-saved)
-  await page.locator('.gallery__del').first().click();
-  await expect(page.locator('.gallery__cell')).toHaveCount(1);
-  await page.click('button:has-text("Done")');
+  await expect(page.locator('.lightbox-modal')).toHaveCount(0);
+  await expect(dlg).toBeVisible();                             // the gallery survives the viewer's Escape
+  await expect(dlg.locator('button[aria-label="View photo 1"]')).toBeFocused();
+  // Holding changes: Escape does nothing to the gallery (§10).
+  await page.keyboard.press('Escape');
+  await expect(dlg).toBeVisible();
+  // Remove one (×, "Remove photo N"), then Save: stored once, toasted, kept after reload
+  await dlg.locator('button[aria-label="Remove photo 1"]').click();
+  await expect(dlg.locator('.gallery__cell')).toHaveCount(1);
+  await dlg.locator('.dialog-footer button', { hasText: 'Save' }).click();
+  await expect(page.locator('.gallery-modal')).toHaveCount(0);
+  await expect(page.locator('.toast')).toHaveText('Photos saved.');
+  await expect(btn).toContainText('1');
+  await expect(btn).toBeFocused();
+  // Cancel throws changes away
+  await btn.click();
+  await dlg.locator('button[aria-label="Remove photo 1"]').click();
+  await dlg.locator('.dialog-footer button', { hasText: 'Cancel' }).click();
+  await expect(btn).toContainText('1');
   await page.waitForTimeout(600);
   await page.reload({ waitUntil: 'load' });
   await page.waitForSelector('.kpi-strip');
   await expect(page.locator('button[aria-label^="Photos"]')).toContainText('1');
+  expect(errors).toEqual([]);
 });
 
 test('S31 import — one box takes a Crexi URL (server) or LoopNet page source (parsed in-browser)', async ({ page }) => {
@@ -1176,7 +1210,7 @@ test('NAV back-flow — every drill-down returns to Properties and never revisit
 // Backdrop clicks are aimed at (5,5) — the overlay's own corner, clear of the
 // centred panel — because clicking the overlay's centre hits the panel instead and
 // the handlers deliberately only close on `e.target === overlay`.
-test('DISMISS project overlays — gallery, lightbox, Listing details, Import and the delete confirmation each close by control, Escape AND backdrop', async ({ page }) => {
+test('DISMISS project overlays — gallery, photo viewer, Listing details, Import and the delete confirmation each close by control, Escape AND backdrop', async ({ page }) => {
   // BUDGET — derived, per the kit's own convention (app.spec.js: "Every scenario
   // below sets its own test.setTimeout and derives it"); its DISMISS carries
   // 300_000. This one carried NOTHING and inherited the config's 30_000, which is
@@ -1211,40 +1245,42 @@ test('DISMISS project overlays — gallery, lightbox, Listing details, Import an
   await loadSample(page);
   const photos = page.locator('button[aria-label^="Photos"]');
 
-  // Seed one photo so the lightbox is reachable at all.
+  // Seed one photo so the viewer is reachable at all.
   await photos.click();
-  await page.fill('textarea[aria-label="Add photo URLs"]', 'https://ex.com/1.jpg');
+  await page.fill('textarea[aria-label="Add photo links"]', 'https://ex.com/1.jpg\nhttps://ex.com/2.jpg');
   await page.click('button:has-text("Add photos")');
-  await expect(page.locator('.gallery__cell')).toHaveCount(1);
+  await page.click('.gallery-modal .dialog-footer button:has-text("Save")');
+  await expect(page.locator('.gallery-modal')).toHaveCount(0);
 
-  // ── gallery: control, then Escape, then backdrop
-  await page.click('button:has-text("Done")');
-  await expect(page.locator('.gallery')).toHaveCount(0);
+  // ── gallery (a house dialog): Cancel, ×, Escape and a press on the backdrop
+  for (const dismiss of [
+    async () => page.click('.gallery-modal button:has-text("Cancel")'),
+    async () => page.locator('.gallery-modal .dialog-header button[aria-label="Close"]').click(),
+    async () => page.keyboard.press('Escape'),
+    async () => page.mouse.click(5, 5),
+  ]) {
+    await photos.click();
+    await expect(page.locator('dialog.gallery-modal[open]')).toBeVisible();
+    await dismiss();
+    await expect(page.locator('.gallery-modal')).toHaveCount(0);
+  }
+
+  // ── viewer (a house dialog over the gallery): ×, Escape and the backdrop. The
+  // gallery must SURVIVE each one: the viewer is the top dialog and owns them.
   await photos.click();
-  await page.keyboard.press('Escape');
-  await expect(page.locator('.gallery')).toHaveCount(0);
-  await photos.click();
-  await page.locator('.modal__overlay').click({ position: { x: 5, y: 5 } });
-  await expect(page.locator('.gallery')).toHaveCount(0);
-
-  // ── lightbox: control, then Escape, then backdrop. The gallery must SURVIVE
-  // each one — the lightbox is the upper layer and owns the dismissal.
-  await photos.click();
-  await page.locator('.gallery__img').first().click();
-  await page.locator('.lightbox__close').click();
-  await expect(page.locator('.lightbox')).toHaveCount(0);
-  await expect(page.locator('.gallery')).toBeVisible();
-
-  await page.locator('.gallery__img').first().click();
-  await page.keyboard.press('Escape');
-  await expect(page.locator('.lightbox')).toHaveCount(0);
-  await expect(page.locator('.gallery')).toBeVisible();
-
-  await page.locator('.gallery__img').first().click();
-  await page.locator('.lightbox').click({ position: { x: 5, y: 5 } });
-  await expect(page.locator('.lightbox')).toHaveCount(0);
-  await expect(page.locator('.gallery')).toBeVisible();
+  for (const dismiss of [
+    async () => page.locator('.lightbox-modal button[aria-label="Close"]').click(),
+    async () => page.keyboard.press('Escape'),
+    async () => page.mouse.click(5, 5),
+  ]) {
+    await page.locator('button[aria-label="View photo 1"]').click();
+    await expect(page.locator('dialog.lightbox-modal[open]')).toBeVisible();
+    await dismiss();
+    await expect(page.locator('.lightbox-modal')).toHaveCount(0);
+    await expect(page.locator('dialog.gallery-modal[open]')).toBeVisible();
+  }
   await page.keyboard.press('Escape');                       // tidy up the gallery
+  await expect(page.locator('.gallery-modal')).toHaveCount(0);
 
   // ── Listing details (Details on the dashboard), the house dialog: Cancel, ×,
   // Escape, and a press on the backdrop (outside the native <dialog>'s box).

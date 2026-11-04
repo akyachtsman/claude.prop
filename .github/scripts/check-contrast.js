@@ -243,12 +243,11 @@ const pairs = [
   // PROJECT-SPECIFIC. This app never renders --color-danger as a FOREGROUND, so
   // upstream's danger/surface and danger/bg pairs describe nothing on screen and
   // agree numerically only while --color-surface stays light (contrast is
-  // symmetric). Its one use is .gallery__del:hover's BACKGROUND under a white
-  // glyph. That glyph was a hard-coded `color: #fff` until 2026-10-05; per this
-  // script's own guidance ("declare a token for it and use var() there — do not
-  // add an exception"), it is now --color-on-danger and the real rendered pair is
-  // scoreable by name rather than excepted.
-  ['--color-on-danger', '--color-danger', AA, 'gallery delete glyph / danger hover fill'],
+  // symmetric). It was first .gallery__del:hover's BACKGROUND under a white
+  // glyph (a hard-coded `color: #fff` until 2026-10-05, then --color-on-danger,
+  // scoreable by name rather than excepted). Since the Photos move (2026-11-04)
+  // its one use is the house .btn-delete, Delete permanently's filled button.
+  ['--color-on-danger', '--color-danger', AA, 'Delete permanently text / danger fill'],
 ];
 
 // ── THE CONTROL EDGE, AND WHY IT IS CONDITIONAL (#470) ──────────────────────

@@ -76,53 +76,23 @@ export function dragScroll(el) {
   el.addEventListener('pointercancel', end);
 }
 
-/** Mount an overlay and own its whole dismissal lifecycle; returns `close`.
- *
- *  Five overlays each hand-rolled the same four things — Escape, a backdrop
- *  click, removing the node, and unregistering the keydown listener — and that
- *  duplication is exactly why their dismissal paths had drifted apart: two had no
- *  close control, one guarded Escape differently, and nothing tested the backdrop
- *  (S40, Codex #116). One implementation means one set of paths to prove.
- *
- *  `root` is the element the caller built, and is also the backdrop: a click
- *  closes only when it lands on `root` itself, never on a child, so clicking
- *  inside the panel does nothing. The caller wires its own close control to the
- *  returned function — presence, label and position are per-overlay.
- *    onKey(e, close)  extra keys beyond Escape (the lightbox's arrows).
- *    escapeWhen()     veto Escape — the gallery ignores it while the lightbox,
- *                     its upper layer, owns the key.
- *    onClose()        runs after removal (commit edits, refresh a button).
- */
-export function mountOverlay(root, { onKey, escapeWhen, onClose } = {}) {
-  const close = () => {
-    document.removeEventListener('keydown', key);
-    root.remove();
-    if (onClose) onClose();
-  };
-  const key = (e) => {
-    if (e.key === 'Escape') { if (!escapeWhen || escapeWhen()) close(); return; }
-    if (onKey) onKey(e, close);
-  };
-  root.addEventListener('click', (e) => { if (e.target === root) close(); });
-  document.addEventListener('keydown', key);
-  document.body.appendChild(root);
-  return close;
-}
-
 /** The house dialog (design.md §10): a native <dialog class="dialog"> with its
  *  title and × in the header, a body and a right-aligned footer, opened through
  *  House.dialog, which owns focus, Esc, the backdrop press, the busy and
  *  unsaved-typing rules and the return to the opener. Any button marked
- *  data-dialog-close (Cancel, Not now) closes it. The dialog takes itself out of
- *  the page once closed; `done` resolves then, with the value close() was given. */
-export function houseDialog({ title, className = '', body = [], footer = [], opener, initialFocus }) {
+ *  data-dialog-close (Cancel, Not now) closes it. A dialog with no footer (the
+ *  photo viewer) is closed by × alone. The dialog takes itself out of the page
+ *  once closed; `done` resolves then, with the value close() was given. */
+export function houseDialog({ title, className = '', body = [], footer = [], actions = [], opener, initialFocus }) {
+  const xBtn = el('button', { class: 'btn btn-icon', type: 'button', 'aria-label': 'Close', title: 'Close', 'data-dialog-close': '' }, [window.House.icon('x')]);
   const box = el('dialog', { class: 'dialog' + (className ? ' ' + className : '') }, [
     el('div', { class: 'dialog-header' }, [
       el('h2', { class: 'dialog-title', text: title }),
-      el('button', { class: 'btn btn-icon', type: 'button', 'aria-label': 'Close', title: 'Close', 'data-dialog-close': '' }, [window.House.icon('x')]),
+      // `actions` sit just before × (the photo viewer's Previous and Next).
+      actions.length ? el('div', { class: 'dialog-actions' }, [...actions, xBtn]) : xBtn,
     ]),
     el('div', { class: 'dialog-body' }, body),
-    el('div', { class: 'dialog-footer' }, footer),
+    ...(footer.length ? [el('div', { class: 'dialog-footer' }, footer)] : []),
   ]);
   document.body.appendChild(box);
   const done = window.House.dialog.open(box, { opener, initialFocus }).then((value) => { box.remove(); return value; });
@@ -130,6 +100,7 @@ export function houseDialog({ title, className = '', body = [], footer = [], ope
     box, done,
     close: (value) => window.House.dialog.close(box, value),
     setBusy: (on) => window.House.dialog.setBusy(box, on),
+    setDirty: (on) => window.House.dialog.setDirty(box, on),
   };
 }
 
