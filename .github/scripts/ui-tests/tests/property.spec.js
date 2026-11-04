@@ -103,13 +103,13 @@ test('S5 calc fidelity — sample deal KPIs match the actual-close fixture', asy
 
 test('Header pills include the 5-year NPV verdict after CAP and DSCR', async ({ page }) => {
   await loadSample(page);
-  const pills = page.locator('.topbar__pills .legacy-pill');
+  const pills = page.locator('.topbar__pills .pill');
   await expect(pills).toHaveCount(3);
   // order: CAP, DSCR, then 5Y NPV — with the explicit "> $0" benchmark shown.
   await expect(pills.nth(2)).toContainText('5Y NPV');
   await expect(pills.nth(2)).toContainText('-$29,512');   // sample's negative NPV
   await expect(pills.nth(2)).toContainText('≤ $0');       // fails the > $0 benchmark
-  await expect(pills.nth(2)).toHaveClass(/legacy-pill--fail/);   // negative → fail
+  await expect(pills.nth(2)).toHaveClass(/pill-danger/);   // negative → fail
 });
 
 test('S6 commit recalc — KPIs update when a field commits (Enter/blur), not mid-type', async ({ page }) => {
@@ -121,6 +121,39 @@ test('S6 commit recalc — KPIs update when a field commits (Enter/blur), not mi
   expect((await kpis(page))['CAP']).toBe(before);
   await offer.blur();                                    // commit → recompute (no calculate button)
   await expect.poll(async () => (await kpis(page))['CAP']).toBe('22.21%');   // NOI $66,627 ÷ 300,000
+});
+
+test('S44 Saved beside the cell — a committed edit says "Saved" by its field for a moment', async ({ page }) => {
+  const errors = watchErrors(page);
+  await loadSample(page);
+  const cue = page.locator('.cell-saved');
+  await expect(cue).not.toHaveClass(/cell-saved--on/);          // nothing on load
+  const offer = page.locator('.deal-strip input[aria-label="Offer price"]');
+  await offer.fill('1250000');
+  await expect(cue).not.toHaveClass(/cell-saved--on/);          // typing alone saves nothing
+  await offer.press('Enter');
+  await expect(cue).toHaveClass(/cell-saved--on/);
+  await expect(cue).toHaveText('Saved');
+  await expect(cue).toHaveAttribute('role', 'status');
+  // Beside the cell: its right edge lines up with the field's, just above or below it.
+  const [c, f] = await Promise.all([cue.boundingBox(), offer.boundingBox()]);
+  expect(Math.abs((c.x + c.width) - (f.x + f.width))).toBeLessThanOrEqual(2);
+  expect(c.y + c.height <= f.y + 1 || c.y >= f.y + f.height - 1).toBe(true);
+  // Brief: it goes by itself
+  await expect(cue).not.toHaveClass(/cell-saved--on/, { timeout: 4000 });
+  await expect(cue).toHaveText('');
+  // A percent cell in the loans grid says it too, beside its own field
+  const rate = page.locator('input[aria-label="Loan 1 rate"]');
+  await rate.fill('6.25'); await rate.blur();
+  await expect(cue).toHaveClass(/cell-saved--on/);
+  const [c2, r2] = await Promise.all([cue.boundingBox(), page.locator('.input-pct', { has: rate }).boundingBox()]);
+  expect(Math.abs((c2.x + c2.width) - (r2.x + r2.width))).toBeLessThanOrEqual(2);
+  // The lock is not a cell: no "Saved" for it
+  await expect(cue).not.toHaveClass(/cell-saved--on/, { timeout: 4000 });
+  await page.click('.dash-lock-btn');
+  await page.waitForTimeout(300);
+  await expect(cue).not.toHaveClass(/cell-saved--on/);
+  expect(errors).toEqual([]);
 });
 
 test('S7 persistence — a saved property survives a reload', async ({ page }) => {
@@ -219,18 +252,69 @@ test('New property defaults — Target CAP / DSCR start empty', async ({ page })
   await expect(page.locator('input[aria-label="Target DSCR"]')).toHaveValue('');
 });
 
-test('Property name/address — editable in the header, renames the deal and persists', async ({ page }) => {
+test('Property name/address — shown in full in the header; Rename opens a small house dialog, renames the deal and persists', async ({ page }) => {
+  const errors = watchErrors(page);
   await page.goto('./', { waitUntil: 'load' });
   await page.click('.empty-state button:has-text("+ Add property")');
   await page.waitForSelector('.kpi-strip');
-  const nameInput = page.locator('.switcher__name');
-  await expect(nameInput).toHaveValue('New property');     // editable name field is present in the header
-  await nameInput.fill('123 Market St — Retail');
-  await nameInput.blur();                                    // commit on blur
+  const nameBtn = page.locator('.switcher__name');
+  await expect(nameBtn).toHaveText('New property');          // the name, as text (it wraps; never scrolls in a box)
+  await expect(nameBtn).toHaveAttribute('aria-label', 'Rename New property');
+  await nameBtn.click();
+  const dlg = page.locator('dialog.rename-modal[open]');
+  await expect(dlg.locator('.dialog-title')).toHaveText('Rename property');
+  const input = dlg.locator('input');
+  await expect(dlg.locator('label', { hasText: 'Name or address' })).toBeVisible();
+  await expect(input).toBeFocused();
+  await expect(input).toHaveValue('New property');
+  // Cancel keeps the old name
+  await input.fill('Not this');
+  await dlg.locator('button', { hasText: 'Cancel' }).click();
+  await expect(nameBtn).toHaveText('New property');
+  await expect(nameBtn).toBeFocused();
+  // Save (Enter) renames; a long name wraps in the header instead of being cut
+  await nameBtn.click();
+  await input.fill('123 Market St — Retail and Office Condominium');
+  await input.press('Enter');
+  await expect(page.locator('.rename-modal')).toHaveCount(0);
+  await expect(nameBtn).toHaveText('123 Market St — Retail and Office Condominium');
+  await expect(page.locator('.toast')).toHaveText('Renamed to 123 Market St — Retail and Office Condominium.');
+  expect(await nameBtn.evaluate((b) => b.scrollWidth <= b.clientWidth + 1 && b.getBoundingClientRect().height > 30)).toBe(true);
+  // One undo step
+  await page.click('button[aria-label="Undo last change"]');
+  await expect(nameBtn).toHaveText('New property');
+  await page.click('button[aria-label="Redo change"]');
+  await expect(nameBtn).toHaveText('123 Market St — Retail and Office Condominium');
   // the new name flows to the Properties list card and survives a reload (auto-saved)
   await page.goto('./', { waitUntil: 'load' });
   await page.waitForSelector('.lcard');
-  await expect(page.locator('.lcard__name')).toContainText('123 Market St — Retail');
+  await expect(page.locator('.lcard__name')).toContainText('123 Market St — Retail and Office Condominium');
+  expect(errors).toEqual([]);
+});
+
+test('Storage full — Rename and a committed cell say the save failed, never "Renamed" or "Saved"', async ({ page }) => {
+  const errors = watchErrors(page);
+  await loadSample(page);
+  // From here on the browser refuses every write, as when storage is full.
+  await page.evaluate(() => {
+    Storage.prototype.setItem = function () { throw new DOMException('full', 'QuotaExceededError'); };
+  });
+  const warning = "Couldn't save: storage is full or the browser is in private mode. Make a backup to keep your data.";
+  const nameBtn = page.locator('.switcher__name');
+  await nameBtn.click();
+  const input = page.locator('dialog.rename-modal[open] input');
+  await input.fill('Kept only in memory');
+  await input.press('Enter');
+  await expect(page.locator('.toast')).toHaveText(warning);
+  await expect(page.locator('.toast')).not.toHaveText(/Renamed/);
+  // A committed cell: the same warning, and no "Saved" beside it
+  const offer = page.locator('.deal-strip input[aria-label="Offer price"]');
+  await offer.fill('1250000');
+  await offer.press('Enter');
+  await expect(page.locator('.toast')).toHaveText(warning);
+  await page.waitForTimeout(300);
+  await expect(page.locator('.cell-saved')).not.toHaveClass(/cell-saved--on/);
+  expect(errors).toEqual([]);
 });
 
 test('Property list cards — a fixed six KPIs always shown, no source line', async ({ page }) => {
@@ -744,16 +828,16 @@ test('S43 Listing details — the house dialog: labelled fields, Save stores, Ca
 
 test('Pills check the FIXED 8% / 1.25 benchmark — a Target goal-seek moves actual CAP but not the bar', async ({ page }) => {
   await loadSample(page);
-  const capPill = page.locator('.topbar__pills .legacy-pill').nth(0);
+  const capPill = page.locator('.topbar__pills .pill').nth(0);
   // Sample CAP 5.13% vs the fixed 8% benchmark → fail.
   await expect(capPill).toContainText('< 8.00%');
-  await expect(capPill).toHaveClass(/legacy-pill--fail/);
+  await expect(capPill).toHaveClass(/pill-danger/);
   // Target CAP is a goal-seek: 5% moves the ACTUAL CAP to 5.00%, but the pill still
   // checks the fixed 8.00% benchmark (not the Target) — so it stays fail at 5% < 8%.
   await setField(page, '.deal-strip input[aria-label="Target CAP"]', '5');
   await expect.poll(async () => (await kpis(page))['CAP']).toBe('5.00%');
   await expect(capPill).toContainText('CAP 5.00% < 8.00%');
-  await expect(capPill).toHaveClass(/legacy-pill--fail/);
+  await expect(capPill).toHaveClass(/pill-danger/);
 });
 
 test('Target CAP/DSCR are live readouts of the actual value — not a separately stored target', async ({ page }) => {

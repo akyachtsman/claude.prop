@@ -244,27 +244,46 @@ function showDashboard(id, opts = {}) {
   clear(center);
   const prevId = props[(idx - 1 + props.length) % props.length]?.id;
   const nextId = props[(idx + 1) % props.length]?.id;
-  // The property name/address is editable right here in the header (there's no
-  // room for it in the one-screen dashboard body). Committing on Enter/blur saves
-  // and is one undo step, mirroring the field-commit flow in the dashboard.
-  const nameInput = el('input', {
-    class: 'switcher__name', type: 'text', value: working.name || '',
-    'aria-label': 'Property name or address', placeholder: 'Add address / name',
-    title: 'Property name / address — click to edit',
-  });
-  const commitName = () => {
-    const v = nameInput.value.trim();
-    if (v === (working.name || '')) return;              // no change → nothing to commit
-    working.name = v;
-    if (!store.save(working)) { showDashboard(working.id, { refresh: true }); return; }   // offline reject
-    undoStack.push(committedState);
-    committedState = deepCopy(working);
-    redoStack = [];
-    refreshHistory();
+  // The deal's name in the header is shown in full and wraps (design.md §1.6);
+  // pressing it, or its pencil, opens Rename (§3 pencil, §10 a small dialog:
+  // one labelled field, Cancel and Save). Save is one undo step, like any
+  // committed dashboard edit.
+  const nameBtn = el('button', { class: 'switcher__name', type: 'button', title: 'Rename property' });
+  const paintName = () => {
+    const n = working.name || '';
+    nameBtn.replaceChildren(el('span', { text: n || 'Add a name' }), window.House.icon('pencil'));
+    nameBtn.setAttribute('aria-label', n ? `Rename ${n}` : 'Add a name');
   };
-  nameInput.addEventListener('change', commitName);       // Enter / blur
+  paintName();
+  nameBtn.addEventListener('click', () => {
+    const input = el('input', { class: 'input', type: 'text', autocomplete: 'off', placeholder: 'e.g. 715 Plumas St' });
+    input.value = working.name || '';
+    const save = el('button', { class: 'btn btn-primary', type: 'button', text: 'Save' });
+    const d = houseDialog({
+      title: 'Rename property', className: 'rename-modal', opener: nameBtn,
+      body: [field('Name or address', input)],
+      footer: [el('button', { class: 'btn', type: 'button', 'data-dialog-close': '', text: 'Cancel' }), save],
+    });
+    const commitName = () => {
+      const v = input.value.trim();
+      d.close();
+      if (v === (working.name || '')) return;            // no change → nothing to commit
+      const before = working.name;
+      working.name = v;
+      if (!store.save(working)) { working.name = before; showDashboard(working.id, { refresh: true }); return; }   // offline reject
+      undoStack.push(committedState);
+      committedState = deepCopy(working);
+      redoStack = [];
+      refreshHistory();
+      paintName();
+      if (!store.isStorageOK()) { warnStorage(); return; }   // kept in memory only: say so, never "Renamed"
+      toast(v ? `Renamed to ${v}.` : 'Name cleared.');
+    };
+    save.addEventListener('click', commitName);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); commitName(); } });
+  });
   const title = el('div', { class: 'switcher__title' }, [
-    nameInput,
+    el('h1', {}, [nameBtn]),
     el('span', { class: 'sub', text: `Property ${idx + 1} of ${props.length}` }),
   ]);
   const pills = el('div', { class: 'topbar__pills' });
@@ -286,19 +305,26 @@ function showDashboard(id, opts = {}) {
     setHeaderVerdicts: (m, p) => paintPills(pills, m, p),
     // Each committed edit: snapshot the prior state for undo, drop the redo
     // history, and persist immediately (commit = saved — no Save button).
+    // Returns whether it was saved.
     onCommit: () => {
       // Signed-in + offline rejects the write (store returns null): discard the
       // typed edit by re-rendering from the committed state; don't touch history.
-      if (!store.save(working)) { showDashboard(working.id, { refresh: true }); return; }
+      if (!store.save(working)) { showDashboard(working.id, { refresh: true }); return false; }
       undoStack.push(committedState);
       committedState = deepCopy(working);
       redoStack = [];
-      if (!store.isStorageOK()) toast("Couldn't save: storage is full or the browser is in private mode. Make a backup to keep your data.", { error: true });
       refreshHistory();
+      if (!store.isStorageOK()) { warnStorage(); return false; }
+      return true;   // saved: the dashboard says so beside the edited cell
     },
   });
 }
 
+
+// A save the store kept only in memory (storage full, or a private window).
+function warnStorage() {
+  toast("Couldn't save: storage is full or the browser is in private mode. Make a backup to keep your data.", { error: true });
+}
 
 function paintPills(host, m, p) {
   clear(host);
@@ -314,9 +340,11 @@ function paintPills(host, m, p) {
   const dscrTxt = `DSCR ${fmt.ratio(m.dscr)} ${dscr ? '≥' : '<'} ${fmt.ratio(BENCHMARK_DSCR)}`;
   // Show the > $0 benchmark explicitly, matching the CAP/DSCR pills' "≥ target" form.
   const npvTxt = `5Y NPV ${fmt.money(m.npv)} ${npvOk ? '>' : '≤'} $0`;
-  if (cap !== null) host.appendChild(el('span', { class: 'legacy-pill ' + (cap ? 'legacy-pill--pass' : 'legacy-pill--fail'), text: capTxt }));
-  if (dscr !== null) host.appendChild(el('span', { class: 'legacy-pill ' + (dscr ? 'legacy-pill--pass' : 'legacy-pill--fail'), text: dscrTxt }));
-  if (npvOk !== null) host.appendChild(el('span', { class: 'legacy-pill ' + (npvOk ? 'legacy-pill--pass' : 'legacy-pill--fail'), text: npvTxt }));
+  // The house status pill (design.md §14): green when the deal meets the bar, red when not.
+  const pill = (ok, text) => el('span', { class: 'pill ' + (ok ? 'pill-success' : 'pill-danger'), text });
+  if (cap !== null) host.appendChild(pill(cap, capTxt));
+  if (dscr !== null) host.appendChild(pill(dscr, dscrTxt));
+  if (npvOk !== null) host.appendChild(pill(npvOk, npvTxt));
 }
 
 // ── actions ────────────────────────────────────────────────────────────

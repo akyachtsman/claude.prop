@@ -43,9 +43,11 @@ with Cancel and Save, × (Remove) on each photo before Save, and the refusal
 under the box. Photos stay pasted links rather than uploads; that is the
 recommended option on the owner's decision card, not a gap (`CLAUDE.md` →
 Design).
+Then the dashboard (2026-11-04): the deal's name is shown in full and wraps,
+with Rename in a small house dialog; the verdict pills are the house `.pill`;
+and a committed cell says "Saved" beside it for a moment. Its compact cards,
+fields and buttons on a laptop are the recommended one-screen option on the
+owner's decision card, not a gap
+(`CLAUDE.md` → Design); on a touch screen they are 44px.
 
-| Screen | Group (design.md) | What breaks | File |
-|---|---|---|---|
-| Property dashboard | Principles §1 | the deal's name in the top bar is an editable field 170px wide, so a long name scrolls inside it instead of wrapping | `styles/legacy.css`, `js/app.js` |
-| Property dashboard | Cards §5, Buttons §4 | its own compact card, button and field classes (`legacy-card`, `.photos-btn`, `.dash-lock-btn`, `.topbar__action`, 26px fields) instead of the house `.card`, `.btn` and 44px targets | `js/views/dashboard.js`, `styles/legacy.css` |
-| Property dashboard | Forms §12 | the grids (tenants, loans) are labelled by their headers and save on commit like a spreadsheet, but show no brief "Saved" beside the cell | `js/views/dashboard.js` |
+Nothing is left: step 3 deletes this file and `styles/legacy.css`.
