@@ -167,7 +167,7 @@ test('S41 overlays fit — the "Move your local deals in?" prompt fits the scree
 async function topbarProblems(page) {
   return page.evaluate(() => {
     const problems = [];
-    const controls = document.querySelectorAll('.topbar button, .topbar a, .topbar .legacy-pill, .topbar .account > *');
+    const controls = document.querySelectorAll('.topbar button, .topbar a, .topbar .pill, .topbar .account > *');
     for (const c of controls) {
       const b = c.getBoundingClientRect();
       if (!b.width || !b.height) continue;

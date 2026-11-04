@@ -12,6 +12,19 @@ import { normalizeMedia } from '../media.js';
 
 const DEBOUNCE = 120;
 
+// The control whose `change` event is being handled right now, so a commit
+// knows which cell it came from (design.md §12: a spreadsheet-style grid shows
+// a brief "Saved" beside the cell). Set on the way down, cleared on the way up;
+// a commit made outside a change event (the lock, a dialog's Save) has none.
+let changing = null;
+document.addEventListener('change', (e) => { changing = e.target; }, true);
+document.addEventListener('change', () => { changing = null; });
+const SAVED_MS = 1500;
+// A scroll moves the cell away from its "Saved", so the cue goes (one listener
+// for every render; it acts on the dashboard currently shown).
+let activeCue = null;
+window.addEventListener('scroll', () => { if (activeCue) activeCue.classList.remove('cell-saved--on'); }, { passive: true, capture: true });
+
 // ── small field builders ───────────────────────────────────────────────
 function fieldNum(value, onChange, opts = {}) {
   // `type=text` (not `number`) so an arithmetic expression can be typed — the
@@ -107,9 +120,29 @@ export function renderDashboard(container, ctx) {
     paintTargetRows(m);                    // Target CAP/DSCR sliders + readouts track the live actual value
   }
   function onEdit() {
-    if (ctx.onCommit) ctx.onCommit();   // snapshot the pre-edit state for undo (one call per committed edit)
+    const from = changing;
+    const saved = ctx.onCommit ? ctx.onCommit() !== false : false;   // snapshot for undo + save (one call per committed edit)
+    if (saved) showSaved(from);
     clearTimeout(timer); timer = setTimeout(refresh, DEBOUNCE);
   }
+  // "Saved", briefly, just above the right end of the cell that was committed.
+  // One live region for the whole dashboard, so a screen reader hears it too.
+  const savedCue = el('div', { class: 'cell-saved', role: 'status', 'aria-live': 'polite' });
+  let savedTimer = null;
+  function showSaved(node) {
+    if (!node || !node.isConnected || !node.matches('input, select, textarea')) return;
+    const anchor = node.closest('.input-pct') || node;
+    savedCue.textContent = 'Saved';
+    savedCue.classList.add('cell-saved--on');
+    const a = anchor.getBoundingClientRect(), c = savedCue.getBoundingClientRect();
+    let top = a.top - c.height - 2;
+    if (top < 4) top = a.bottom + 2;
+    savedCue.style.left = Math.max(4, Math.min(a.right - c.width, window.innerWidth - c.width - 4)) + 'px';
+    savedCue.style.top = top + 'px';
+    clearTimeout(savedTimer);
+    savedTimer = setTimeout(() => { savedCue.classList.remove('cell-saved--on'); savedCue.textContent = ''; }, SAVED_MS);
+  }
+  activeCue = savedCue;
 
   // Offer inputs appear twice (the deal-summary strip atop Property Info and
   // the Offer & Debt card); offerField keeps every input bound to the same
@@ -681,6 +714,7 @@ export function renderDashboard(container, ctx) {
     dealStrip,
     el('div', { class: 'legacy-grid' }, [infoCard, incomeCard, expenseCard, debtCard, proformaCard, rightStack]),
     kpiTip,
+    savedCue,
   ]);
   paintDashLock();   // applied after every field exists in the DOM
 

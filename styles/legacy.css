@@ -78,23 +78,26 @@ body {
 }
 .switcher__btn:hover, .switcher__btn:focus-visible { background: var(--color-accent); }
 /* Cap the title's width so the switcher yields room to the verdict pills
-   instead of pushing them into the nav. The name is an input (it scrolls while
-   you edit it); the line under it wraps rather than being cut (design.md §1.6). */
-.switcher__title { flex: 0 1 auto; min-width: 0; max-width: 170px; transition: max-width 0.15s ease; }
-.switcher__title:focus-within { max-width: 260px; }   /* room to type an address when editing */
+   instead of pushing them into the nav. The name and the line under it wrap
+   rather than being cut (design.md §1.6). */
+.switcher__title { flex: 0 1 auto; min-width: 0; max-width: 170px; }
+/* A long name wraps over a few lines rather than squeezing to a word a line. */
+@media (min-width: 961px) { .switcher__title { min-width: 140px; } }
 .switcher__title h1 {
   margin: 0; font-size: var(--font-lg); font-weight: 800; line-height: 1.2;
   color: var(--color-on-navy); overflow-wrap: break-word;
 }
-/* Editable property name/address — looks like the title, hints edit on hover/focus */
+/* The deal's name: a button that opens Rename, looking like the title, with
+   the pencil after the last word. */
 .switcher__name {
-  width: 100%; margin: 0; padding: 0; font: inherit; font-size: var(--font-lg); font-weight: 800; line-height: 1.2;
-  color: var(--color-on-navy); background: transparent; border: none;
+  all: unset; box-sizing: border-box; display: block; min-height: 24px; cursor: pointer;
+  font: inherit; color: inherit; overflow-wrap: break-word;
   border-bottom: 1px solid transparent;
 }
-.switcher__name::placeholder { color: var(--color-on-navy-muted); font-weight: 600; }
+@media (pointer: coarse) { .switcher__name { min-height: 44px; display: flex; align-items: center; } }
+.switcher__name svg { width: 14px; height: 14px; margin-left: 6px; vertical-align: -1px; color: var(--color-on-navy-muted); }
 .switcher__name:hover { border-bottom-color: var(--color-on-navy-muted); }
-.switcher__name:focus { outline: none; border-bottom-color: var(--color-accent); }
+.switcher__name:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; border-radius: 2px; }
 .switcher__title .sub {
   display: block; font-size: var(--font-xs); line-height: 1.25; color: var(--color-on-navy-muted);
   overflow-wrap: break-word;
@@ -110,7 +113,6 @@ body {
 .topbar__pills { display: flex; gap: var(--space-2); flex-wrap: nowrap; margin-left: auto; }
 /* Compact the topbar verdict pills so all three (CAP, DSCR, 5Y NPV) fit the
    signed-in row without crowding the nav. */
-.topbar__pills .legacy-pill { font-size: 11px; padding: 2px 7px; }
 /* Wide rows (the owner's full-screen ≥1600 target): pin the pills to the true
    center of the topbar — not merely the middle of the switcher↔actions gap,
    which reads left-of-center because the nav on the right is heavy. Absolute
@@ -228,6 +230,16 @@ body {
   opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.12s ease;
 }
 .kpi-tip--on { opacity: 1; visibility: visible; }
+/* "Saved" beside a committed cell (design.md §12), for a moment: the house
+   success colours, fixed so it never moves the layout. */
+.cell-saved {
+  position: fixed; z-index: 100; pointer-events: none;
+  padding: 1px 6px; border-radius: var(--radius-sm);
+  background: var(--color-success-bg); color: var(--color-success);
+  font-size: 11px; font-weight: 700; line-height: 1.4;
+  opacity: 0; visibility: hidden; transition: opacity 0.12s ease;
+}
+.cell-saved--on { opacity: 1; visibility: visible; }
 .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
@@ -257,15 +269,6 @@ body {
 }
 
 /* pills ------------------------------------------------------------------ */
-.legacy-pill {
-  display: inline-flex; align-items: center; gap: var(--space-1);
-  font-size: var(--font-xs); font-weight: 700;
-  padding: 3px var(--space-2); border-radius: var(--radius-pill);
-  background: var(--color-neutral-bg); color: var(--color-neutral-text);
-  white-space: nowrap;
-}
-.legacy-pill--pass { background: var(--color-pass-bg); color: var(--color-pass-text); }
-.legacy-pill--fail { background: var(--color-fail-bg); color: var(--color-fail-text); }
 
 /* buttons ------------------------------------------------------------------ */
 .legacy-btn {
