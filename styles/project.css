@@ -587,7 +587,8 @@ body {
 
 /* top-bar actions (Save/Delete relocated from the dashboard body) */
 .topbar__actions { display: flex; gap: var(--space-1); margin-left: auto; }
-.topbar__action { background: var(--color-navy-soft); }
+/* Undo and Redo are the house icons (design.md §3), a 44px square target. */
+.topbar__action { background: var(--color-navy-soft); min-width: 44px; justify-content: center; padding-left: var(--space-2); padding-right: var(--space-2); }
 .topbar__action:hover, .topbar__action:focus-visible { background: var(--color-accent); }
 .topbar__action:disabled { opacity: 0.4; cursor: default; background: var(--color-navy-soft); }
 /* Phone width: the desktop topbar (brand + center + 4 nav links) is wider than a
