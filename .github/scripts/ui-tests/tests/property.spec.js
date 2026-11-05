@@ -949,7 +949,12 @@ test('S34 Dashboard lock — locking shades and blocks every editable field acro
   // the toggle sits right in front of Offer Price — the same deal-cell — but
   // still controls every field across the whole dashboard, not just this one
   await expect(page.locator('.deal-cell:has(.dash-lock-btn)')).toContainText('Offer Price');
+  // the house lock toggle (design.md §3): one label naming the act, whatever
+  // the state; aria-pressed and the icon (open padlock / padlock) carry it
   await expect(lockBtn).toHaveAttribute('aria-label', 'Lock all fields');
+  await expect(lockBtn).toHaveAttribute('title', 'Lock all fields');
+  await expect(lockBtn).toHaveAttribute('aria-pressed', 'false');
+  await expect(lockBtn.locator('svg')).toHaveAttribute('data-icon-name', 'lock-open');
   await expect(offer).toBeEditable();
   await expect(propType).toBeEnabled();
   await expect(tenantName).toBeEditable();
@@ -961,7 +966,9 @@ test('S34 Dashboard lock — locking shades and blocks every editable field acro
   // source (its own field is locked, so it can never fire) — but the pro-forma
   // horizon slider (a view toggle, not deal data) stays interactive
   await lockBtn.click();
-  await expect(lockBtn).toHaveAttribute('aria-label', 'Unlock all fields');
+  await expect(lockBtn).toHaveAttribute('aria-pressed', 'true');
+  await expect(lockBtn).toHaveAttribute('aria-label', 'Lock all fields');
+  await expect(lockBtn.locator('svg')).toHaveAttribute('data-icon-name', 'lock');
   await expect(offer).not.toBeEditable();
   await expect(propType).toBeDisabled();
   await expect(tenantName).not.toBeEditable();
@@ -987,7 +994,7 @@ test('S34 Dashboard lock — locking shades and blocks every editable field acro
   await page.reload({ waitUntil: 'load' });
   await page.waitForSelector('.kpi-strip');
   await expect(page.locator('input[aria-label="Offer price"]')).not.toBeEditable();
-  await expect(page.locator('.dash-lock-btn')).toHaveAttribute('aria-label', 'Unlock all fields');
+  await expect(page.locator('.dash-lock-btn')).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('S35 Lock on entry — every fresh entry into an existing deal locks it; the creation window starts unlocked', async ({ page }) => {
@@ -1004,7 +1011,7 @@ test('S35 Lock on entry — every fresh entry into an existing deal locks it; th
   await page.click('.lcard__open');
   await page.waitForSelector('.kpi-strip');
   await expect(offer).not.toBeEditable();
-  await expect(page.locator('.dash-lock-btn')).toHaveAttribute('aria-label', 'Unlock all fields');
+  await expect(page.locator('.dash-lock-btn')).toHaveAttribute('aria-pressed', 'true');
   // unlock, edit, then Undo — an in-place refresh must NOT re-lock mid-session
   await page.click('.dash-lock-btn');
   await setField(page, 'input[aria-label="Offer price"]', '999999');
@@ -1026,6 +1033,13 @@ test('S21 undo/redo — a committed edit can be reverted and replayed; typing al
   const undoBtn = page.locator('button[aria-label="Undo last change"]');
   const redoBtn = page.locator('button[aria-label="Redo change"]');
   const offer = page.locator('.deal-strip input[aria-label="Offer price"]');
+  // the house undo/redo icons (design.md §3): icon-only, with aria-label AND title
+  await expect(undoBtn.locator('svg')).toHaveAttribute('data-icon-name', 'undo');
+  await expect(redoBtn.locator('svg')).toHaveAttribute('data-icon-name', 'redo');
+  await expect(undoBtn).toHaveAttribute('title', 'Undo last change');
+  await expect(redoBtn).toHaveAttribute('title', 'Redo change');
+  await expect(undoBtn).toHaveText('');
+  await expect(redoBtn).toHaveText('');
   await expect(undoBtn).toBeDisabled();                 // nothing to undo/redo on initial load
   await expect(redoBtn).toBeDisabled();
   // typing without committing neither recomputes nor creates an undo step

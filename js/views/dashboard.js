@@ -361,7 +361,7 @@ export function renderDashboard(container, ctx) {
   // path fed by its onChange — the Target CAP/DSCR goal-seek and the
   // Asking→Offer sync both stop firing once their source fields are locked, no
   // separate guard needed. Persisted on prop.locked (auto-saved, undoable).
-  const dashLockBtn = el('button', { class: 'dash-lock-btn', type: 'button' });
+  const dashLockBtn = el('button', { class: 'dash-lock-btn', type: 'button', 'aria-label': 'Lock all fields', title: 'Lock all fields' });
   function paintDashLock() {
     const locked = !!prop.locked;
     container.classList.toggle('is-locked', locked);
@@ -370,14 +370,12 @@ export function renderDashboard(container, ctx) {
       if (node.tagName === 'SELECT' || node.type === 'checkbox' || node.type === 'range') node.disabled = locked;
       else node.readOnly = locked;
     });
-    // The padlock (§3: "you cannot change this"), pressed while the deal is
-    // locked; there is no open-padlock in the house set, so unlocked is the
-    // same icon, not pressed.
-    dashLockBtn.replaceChildren(window.House.icon('lock'));
+    // The house lock toggle (design.md §3 → Lock toggle): one button,
+    // aria-pressed = locked, the padlock while locked and the open padlock
+    // while unlocked; its label names the act and stays the same either way.
+    dashLockBtn.replaceChildren(window.House.icon(locked ? 'lock' : 'lock-open'));
     dashLockBtn.setAttribute('aria-pressed', String(locked));
     dashLockBtn.classList.toggle('dash-lock-btn--locked', locked);
-    dashLockBtn.title = locked ? 'Unlock every field in this deal' : 'Lock every field to prevent accidental edits';
-    dashLockBtn.setAttribute('aria-label', locked ? 'Unlock all fields' : 'Lock all fields');
   }
   dashLockBtn.addEventListener('click', () => {
     prop.locked = !prop.locked;

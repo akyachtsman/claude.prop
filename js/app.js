@@ -236,8 +236,12 @@ function showDashboard(id, opts = {}) {
   if (historyId !== id) { undoStack = []; redoStack = []; historyId = id; }
   committedState = deepCopy(saved);
   normalizeLoans(committedState);
-  const undoBtn = el('button', { class: 'topbar__link topbar__action', type: 'button', 'aria-label': 'Undo last change', title: 'Undo', text: 'Undo', onclick: () => undo(id) });
-  const redoBtn = el('button', { class: 'topbar__link topbar__action', type: 'button', 'aria-label': 'Redo change', title: 'Redo', text: 'Redo', onclick: () => redo(id) });
+  // The house undo/redo icons (design.md §3 → Undo / Redo, a product-wide
+  // undo per §19); icon-only, so each carries aria-label AND title.
+  const undoBtn = el('button', { class: 'topbar__link topbar__action', type: 'button', 'aria-label': 'Undo last change', title: 'Undo last change', onclick: () => undo(id) });
+  const redoBtn = el('button', { class: 'topbar__link topbar__action', type: 'button', 'aria-label': 'Redo change', title: 'Redo change', onclick: () => redo(id) });
+  undoBtn.append(window.House.icon('undo'));
+  redoBtn.append(window.House.icon('redo'));
   const refreshHistory = () => { undoBtn.disabled = undoStack.length === 0; redoBtn.disabled = redoStack.length === 0; };
   refreshHistory();
 
