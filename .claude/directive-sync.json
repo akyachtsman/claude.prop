@@ -1,7 +1,7 @@
 {
   "upstream": {
-    "sha": "d32a9d0cb6f17b77c3771503ec0bfe95931c9043",
-    "synced": "2026-10-27"
+    "sha": "e3a2f904a80a9da03d52859b2366a022b61ec8d9",
+    "synced": "2026-11-05"
   },
   "refresh_kept": {
     ".github/scripts/check-contrast.js": {
@@ -14,25 +14,10 @@
       "local": "ef2b5c39446f6f4f7b2f9f8bdf4b578514b63474",
       "reason": "TWO deliberate PROJECT-SPECIFIC hunks kept, both marked in-file: (1) import { installSignedIn } from './_supabase-mock.js'; (2) test.beforeEach(async ({ page }) => { await installSignedIn(page); }). The app is gated behind login, so the generic exploration must boot signed-in against the stubbed Supabase; the logged-out gate states live in auth.spec.js S23-S28. Everything else is the head template: the d23c822 DISMISS fit check (lib/fit.js) was taken by refresh-merge.sh with 0 conflicts (2026-10-25)."
     },
-    ".github/workflows/qa.yml": {
-      "blob": "9648a8f93a9bf215bdc3e48e96685ba6d4e4f5ab",
-      "local": "f34e31d80d825bcf82aefa64f0dcbb83140e001f",
-      "reason": "pilot of #460 step 4: a caller of claude.directives' shared-qa.yml pinned to 55af14e (claude.directives #479, re-pinned in #135); kept, never merged or overwritten from the template. Its project-specific checks (the root-absolute guard, the Node unit tests, contrast-script) live in the caller, not in a template copy."
-    },
     ".github/scripts/ui-tests/playwright.config.js": {
-      "blob": "9a2b4ad9a65ab1f9ce5afbd0395af8aaecbb3573",
-      "local": "4c62ed60fbece8343dd13b343f3fcd48ab7e9fce",
-      "reason": "ONE deliberate local hunk kept: baseURL falls back to this project's Pages URL instead of the template's REPLACE_WITH_YOUR_APP_URL placeholder, so a bare local run does not go to an invalid address. It is the template's own fill-in point, so it carries no in-file marker. Local runs pin the sandbox Chromium only through a git-excluded wrapper config (CLAUDE.md -> Sandbox Limits). Refreshed to d23c822 (2026-10-25): upstream's two comment hunks taken by refresh-merge.sh with 0 conflicts."
-    },
-    ".github/workflows/qa-live.yml": {
-      "blob": "f3381e52809fc97b6d5f1460554b1ec85bd3c7e2",
-      "local": "c88ca9aa0c84fce01bd798ac063116755c0f5ff3",
-      "reason": "pilot of #460 step 4: a caller of claude.directives' shared-qa-live.yml pinned to 55af14e (claude.directives #479, re-pinned in #135); kept, never merged or overwritten from the template. Its project-specific checks (the root-absolute guard, the Node unit tests, contrast-script) live in the caller, not in a template copy."
-    },
-    ".github/workflows/qa-response.yml": {
-      "blob": "5bd1e5d501452ef09730646ec18e6e7812de7142",
-      "local": "bd207fb1cd0e51019f7b4814e35819395e43e0a9",
-      "reason": "pilot of #460 step 4: a caller of claude.directives' shared-qa-response.yml pinned to 55af14e (claude.directives #479, re-pinned in #135); kept, never merged or overwritten from the template. Its project-specific checks (the root-absolute guard, the Node unit tests, contrast-script) live in the caller, not in a template copy."
+      "blob": "05cb0212a82247b0b3366505152b50152edd1715",
+      "local": "29dd6362665c4a07156c7c52f29a770a93cd8170",
+      "reason": "ONE deliberate local hunk kept: baseURL falls back to this project's Pages URL instead of the template's REPLACE_WITH_YOUR_APP_URL placeholder, so a bare local run does not go to an invalid address. It is the template's own fill-in point, so it carries no in-file marker. Local runs pin the sandbox Chromium only through a git-excluded wrapper config (CLAUDE.md -> Sandbox Limits). Refreshed to e3a2f90 (2026-11-05): upstream's comment hunk (qa-response retired) taken by refresh-merge.sh with 0 conflicts."
     }
   },
   "house_style": true
