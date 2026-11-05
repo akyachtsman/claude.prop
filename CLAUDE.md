@@ -315,8 +315,10 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   dispositioned file was actually written, not merely classified**.
 - **The watcher workflows are gone** (upstream #463, taken at the `d23c822` refresh,
   2026-10-25): `ci-monitor.yml`, `ci-notify.yml`, `codex-monitor.yml`, `pages-monitor.yml`
-  and `pages-retry.yml` were deleted upstream and here. The standard set is now `qa.yml`,
-  `qa-live.yml` and `qa-response.yml`. A refresh prints any copy that reappears as `RETIRED`.
+  and `pages-retry.yml` were deleted upstream and here. The standard set is now `qa.yml`
+  and `qa-live.yml`: upstream retired the `qa-response.yml` dispatch hook too (#490), and
+  the thirteenth refresh deleted the caller here (2026-11-05); `qa-live.yml`'s manual
+  dispatch runs the live suite on demand. A refresh prints any copy that reappears as `RETIRED`.
 - **The stamp-on-READ guard is NOW LIVE** (`claude.directives#397`, in `bbfdcfc2`;
   stamped here 2026-10-06). Phase 3 fetches the head before stamping and refuses the
   stamp while an installed copy differs from its template or a required one is missing.
@@ -459,6 +461,21 @@ Single-page app, plain HTML/CSS/JS ES modules, no build (static tier).
   screens `components.js`; step 2's first PR (2026-10-27) moved them to `House.confirm`
   and removed the skip, so `qa.yml` passes no `guard-skip` now; the kit's high
   `follow-redirects` advisory was fixed with `npm audit fix --package-lock-only`.
+  **The thirteenth refresh (`d32a9d0 → e3a2f90`, 2026-11-05)**, from the owner's
+  `cmd refresh-repo` in a thread whose session had no toolkit plugin installed, so it ran
+  the command and scripts from a claude.directives checkout at `e3a2f90`. Delta: 34 paths,
+  three with an installed copy: `styles/components.js` (`STALE`, taken: the house icons
+  `undo`, `redo` and `lock-open`, claude.directives #503, answering this project's #501),
+  the kit's `playwright.config.js` (one comment, taken by `refresh-merge.sh` with 0
+  conflicts; the `baseURL` hunk kept and re-recorded), and `qa-response.yml` (`RETIRED`,
+  deleted with its record). Drift: 6 compared, 4 match, 1 `STALE`, 1 `CUSTOM`
+  (`check-contrast.js`, recorded), 2 `CALLER`; `TOKENS:` all 54 house names. The
+  `refresh_kept` records for the callers bound nothing (a caller is never compared) and
+  were dropped. KD-1 `CLEAR`; broken refs 0 of 8. `PIN:` `qa.yml` on `d32a9d0` (behind on
+  `templates/actions`), `qa-live.yml` on `55af14e` (behind on `shared-qa-live.yml`,
+  `templates/actions` and `templates/scripts`): a re-pin is the owner's call. The app
+  does not use the new icons yet (Undo/Redo are still words, the lock shows `lock` in both
+  states); design.md now names them, and moving the dashboard onto them is its own change.
 - **`.claude/settings.json` matches `templates/claude-settings.json` as sets since the
   2026-10-13 refresh** (37 `allow`, 1 `ask`, 5 `enabledPlugins`; no `refresh_declined`).
   **Owner decision, 2026-10-13:** take the template whole — the 25 `allow` entries the file

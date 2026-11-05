@@ -7,7 +7,7 @@
 #
 # Pinned to an exact claude.directives commit, not a tag (owner, 2026-10-25):
 # v1.1.0's commit, which adds the web guards (claude.directives #493). The
-# qa-live and qa-response callers stay on 55af14e.
+# qa-live caller stays on 55af14e (qa-response was retired upstream, #490).
 # Rollback is reverting the pilot PR, which restores the full copy.
 #
 # Settings the old copy kept in `env:` are `with:` inputs below, because `env`
